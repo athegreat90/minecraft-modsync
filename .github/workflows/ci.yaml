@@ -1,7 +1,7 @@
 name: validate
 on:
   push:
-    branches-ignore: [master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -19,14 +19,19 @@ jobs:
       - run: python3 scripts/check-architecture.py
       - run: python3 scripts/openapi.py --check
       - run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
+      - run: python3 -m unittest discover -s scripts/repository -p 'test_*.py'
       - run: python3 -m unittest discover -s scripts/backup -p 'test_*.py'
-      - run: python3 scripts/integration/distributed.py
-      - uses: aquasecurity/trivy-action@0.33.1
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with: {scan-type: fs, scan-ref: '.', exit-code: '1', severity: 'HIGH,CRITICAL'}
+      # Scan source before the fixture generates disposable TLS keys.
+      - run: python3 scripts/integration/distributed.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: validation-evidence
+          include-hidden-files: true
           path: |
             **/build/reports/tests/
+            **/build/test-results/test/*.xml
+            build/reports/problems/
             .local/integration/results.json

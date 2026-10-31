@@ -5,7 +5,7 @@ on:
     inputs:
       sha:
         required: true
-        description: Full reachable master commit SHA
+        description: Full reachable main commit SHA
         type: string
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
         env: {SOURCE_SHA: '${{ inputs.sha }}'}
         run: |
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          git merge-base --is-ancestor "$SOURCE_SHA" origin/master
+          git merge-base --is-ancestor "$SOURCE_SHA" origin/main
           git checkout --detach "$SOURCE_SHA"
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '25'}
@@ -43,10 +43,12 @@ jobs:
       - run: python3 scripts/check-architecture.py
       - run: python3 scripts/openapi.py --check
       - run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
+      - run: python3 -m unittest discover -s scripts/repository -p 'test_*.py'
       - run: python3 -m unittest discover -s scripts/backup -p 'test_*.py'
-      - run: python3 scripts/integration/distributed.py
-      - uses: aquasecurity/trivy-action@0.33.1
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with: {scan-type: fs, scan-ref: '.', exit-code: '1', severity: 'HIGH,CRITICAL'}
+      # Scan source before the fixture generates disposable TLS keys.
+      - run: python3 scripts/integration/distributed.py
       - uses: actions/upload-artifact@v4
         with:
           name: jvm

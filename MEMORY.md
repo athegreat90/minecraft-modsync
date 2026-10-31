@@ -6,7 +6,7 @@
 - Separate Host A outbound scanner, Host B Spring/MariaDB control plane, Host C standalone client.
 - Local Argon2id accounts; UUID identities; assignment-generation fencing; staged idempotent inventory commits; explicit immutable manifest approval.
 - Private/unrecognized artifacts use exact local manual resolution, not binary hosting.
-- Java/GraalVM 25 target, Kotlin 2.2.21, Spring Boot 4.0.9, MariaDB 11.4 LTS. Patch/image compatibility still requires builds and scans.
+- Java/GraalVM 25 target, Kotlin 2.3.21, Spring Boot 4.0.9, MariaDB 11.4 LTS. Patch/image compatibility still requires builds and scans.
 - Standard CLI excludes JLine; TUI is a separate JVM distribution. No optional GUI.
 
 ## Implemented source
@@ -27,7 +27,7 @@ Ten Gradle modules; domain/protocol; sequential ZIP/TOML/JSON scanner; exact-pin
 - `./gradlew check`: blocked before Gradle download by DNS resolution failure for services.gradle.org.
 - Docker daemon check: denied by sandbox socket permissions.
 
-No Kotlin test, migration, container, TLS fixture, native executable, release publication or performance benchmark is reported as passed. Java 26 is available locally; JDK 25/GraalVM/Gradle are unavailable. The managed runtime status tool and network-policy file are absent. Do not bypass these restrictions.
+At the initial local-only checkpoint, no Kotlin test, migration, container, TLS fixture, native executable, release publication or performance benchmark had executed. Subsequent GitHub CI evidence recorded below supersedes that initial build/test limitation. Java 26 is available locally; JDK 25/GraalVM/Gradle are unavailable. The managed runtime status tool and network-policy file are absent. Do not bypass these restrictions.
 
 ## Remaining gates and limitations
 
@@ -59,3 +59,29 @@ The user created the public `athegreat90/minecraft-modsync` repository and expli
 Remote branches `main`, `master`, and `feature/distributed-mvp` contain the source. GitHub's default remains `main`; workflows use `master` as the canonical release branch. No release-enable variable, stable release or deployment was activated. CI status is not claimed. A documentation follow-up records this publication.
 
 The API import has a different commit history from the four original local commits, which remain intact. Do not force-push the local history over it. Once terminal network access is restored, fetch and reconcile the histories or use a fresh clone for subsequent Git pushes. No upstream tracking was set against an unavailable local remote object.
+
+## Main branch policy follow-up
+
+User changed the canonical branch requirement to `main` and requested branch protection plus deletion of `master` if identical. GitHub confirmed `main` is already default, and the comparison reported identical commits at `198ba186ff6ef5a8d9b0c3af14f313848f613d60` with zero file differences. Release workflows/reconciliation now target `main`; CI validates main pushes and pull requests.
+
+The current connector cannot update repository administration, protection or delete refs, and terminal `gh` cannot reach api.github.com. Protection and remote master deletion are therefore NOT reported complete. A reviewed administration helper can apply baseline protection and retire the legacy ref after verifying no unique commits or application-code differences. Existing protections are retained rather than overwritten. Publication uses a pull request; do not bypass protections or force-push.
+
+Branch-policy validation: four new repository-policy tests and the four existing release-reconciliation tests passed; Python compilation and OpenAPI drift checks passed. Live administration helper stopped on the initial GitHub read due to network failure, before any settings change or branch deletion.
+
+## CI action resolution correction
+
+Linked job 124672880701 (run 41247166000) and PR job 124674002739 (run 41247543629) both failed during runner setup because `aquasecurity/trivy-action@0.33.1` could not be resolved. CI and release workflows now pin the verified upstream v0.36.0 commit `ed142fd0673e97e23eac54620cfb913e5ce36c25`. Its action.yaml and official release commit were verified through GitHub. Build/test steps never ran in the failed jobs; a new PR run is required to verify later stages.
+
+Follow-up run 41247750936 passed runner/action setup but failed at compileKotlin: Kotlin 2.2.21 only supported JVM 24 while the Java toolchain targeted 25. Kotlin plugins/test dependencies/catalog are upgraded to 2.3.21, a runtime BOM aligns Kotlin libraries, and JVM_25 is explicit. Official Kotlin 2.3 documentation confirms Java 25 bytecode support. CI evidence uploads now include Gradle problem reports and the explicitly selected hidden integration results file; fixture secrets are not selected. Runtime validation is pending the next run.
+
+Run 41248030743 advanced beyond JVM targeting and reported three compile errors: TUI could not access the Picocli type returned by the client API, actor() ignored nullable Spring authentication, and JDBC query maps declared non-null values despite nullable SQL columns. Picocli is now an API dependency of the client library; missing actor authentication returns 401; JDBC maps accurately allow nullable values. Further CI validation is pending.
+
+Run 41248284463 compiled application sources and passed 21 scanner/protocol/resolver/installer tests. Server test compilation found conflicting wildcard imports of JUnit Test and kotlin.test.Test; JUnit imports are now explicit. Review also found first snapshot acknowledgements retained nanoseconds while MariaDB TIMESTAMP(6) only stores microseconds: commit timestamps now truncate before persistence/response, and the existing idempotency integration test additionally checks precision. Database execution is still pending.
+
+Run 41248471822 passed Gradle/package/database/static checks and reached the distributed fixture. Startup dependency review against official Spring Boot 4 documentation found that Flyway core alone no longer supplies auto-configuration and Spring Kotlin requires kotlin-reflect. The server now uses spring-boot-starter-flyway plus kotlin-reflect; a fresh-database application startup test checks actual auto-migration and administrator bootstrap. Fixture subprocess failures/readiness timeouts now retain bounded diagnostics, and Gradle emits full test failure exceptions.
+
+The distributed failure in run 41248471822 occurred at Docker port lookup after backend exit; captured process output was previously discarded. Port-lookup failures now include the bounded backend log tail. That run successfully executed all existing Gradle checks, including MariaDB tests, and all Python/contract/boundary checks before the fixture failure.
+
+Run 41248930631 passed 26 Kotlin/database tests, including the fresh backend auto-migration test, then revealed a fixture networking error: Docker did not publish port 8443 for a backend attached exclusively to internal bridges. The fixture now gives only backend instances an additional ordinary ingress bridge for their localhost-published administration port. Agent/client/data/metadata networks remain separate and internal. Port discovery has a bounded startup retry. No production networking assumptions or TLS checks were relaxed.
+
+Run 41249375173 passed the complete JVM build/package checks, 26 Kotlin/MariaDB tests, 11 Python tests, API/boundary checks and the entire distributed HTTPS fixture: initial/repeated synchronization, server-only filtering, personal profile portability, old-agent fencing, network interruption, backend/DNS migration, MariaDB export/import and rollback. The final security scan failed solely on `.local/integration/pki/key.pem`, a disposable certificate key generated by that fixture. CI and release validation now scan source before fixture key generation; secret/vulnerability scanners, severity and failure exit status are unchanged, and no scan exclusions were added. A fresh full CI run is pending. Native/ARM64 execution, production image scans, releases and performance benchmarks remain unverified.
