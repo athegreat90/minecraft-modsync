@@ -109,6 +109,8 @@ def main():
         manifest=admin(f'admin/servers/{server}/publish','POST',{'scanId':inventory['scan']['scanId'],'artifacts':artifacts[:2]})
         admin('admin/users','POST',{'username':'player','password':(fixtures/'secrets/user_password').read_text()})
         player=api('auth/login','POST',{'username':'player','password':(fixtures/'secrets/user_password').read_text(),'deviceId':str(uuid.uuid4())})['token']
+        empty_profile=str(uuid.uuid4())
+        api('personal/'+empty_profile,'PUT',{'id':empty_profile,'name':'Empty profile transport check','artifacts':[]},player)
         profile=str(uuid.uuid4()); api('personal/'+profile,'PUT',{'id':profile,'name':'Portable preferences','artifacts':[artifacts[2]]},player)
         client_setup('client',plane)
         def sync(service):
