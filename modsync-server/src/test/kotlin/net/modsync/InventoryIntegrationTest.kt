@@ -1,5 +1,6 @@
 package net.modsync
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.testcontainers.containers.MariaDBContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -27,7 +28,8 @@ class InventoryIntegrationTest {
     private fun snapshot(id: String, generation: Long, sequence: Long) = SnapshotBegin(id,UUID.randomUUID().toString(),generation,sequence,"2026-01-01T00:00:00Z",inventoryDigest(emptyList()),0)
     @Test fun `retry is idempotent and older snapshot cannot overwrite`() {
         val agent=agent(); val server=server(); val assignment=tx.execute { store.assign("test",server,Transfer(agent,"mods")) }!!
-        val first=snapshot(server,assignment.generation,1); tx.execute { store.begin(agent,first) }; val ack=tx.execute { store.commit(agent,first.scanId) }
+        val first=snapshot(server,assignment.generation,1); tx.execute { store.begin(agent,first) }; val ack=tx.execute { store.commit(agent,first.scanId) }!!
+        assertEquals(0,java.time.Instant.parse(ack.committedAt).nano % 1000)
         assertEquals(ack,tx.execute { store.commit(agent,first.scanId) })
         val next=snapshot(server,assignment.generation,3); tx.execute { store.begin(agent,next) }; tx.execute { store.commit(agent,next.scanId) }
         assertFails { tx.execute { store.begin(agent,snapshot(server,assignment.generation,2)) } }
