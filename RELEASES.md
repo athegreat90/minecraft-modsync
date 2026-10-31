@@ -1,6 +1,6 @@
 # Releases
 
-`master` is the canonical release branch. No remote has been configured or published from this workspace. Configure branch protections, authorized GHCR ownership and repository Actions permissions before enabling `MODSYNC_RELEASE_ENABLED=true` as a repository variable.
+`master` is the canonical release branch. Source is published at https://github.com/athegreat90/minecraft-modsync. GitHub default is `main`; `master` is also populated and remains the canonical release branch. Application releases are not enabled or claimed. Configure branch protections, authorized GHCR ownership and repository Actions permissions before enabling `MODSYNC_RELEASE_ENABLED=true` as a repository variable.
 
 The reconciler runs on master pushes, hourly and manually. It walks every reachable commit, excluding published releases and active jobs, and dispatches a bounded batch. Multi-commit pushes and merges are therefore covered. Failed attempts retry after six hours; new unattempted commits take priority so persistent failures cannot starve later commits. Canceled pending reconciliation/release jobs are recovered by subsequent passes. Run history and failed Actions jobs report failures; no failed validation becomes a successful prerelease.
 

@@ -2,7 +2,7 @@
 
 ## Decisions
 
-- New local monorepo; no relationship to neighboring `olp-server` and no remote repository creation.
+- Monorepo is independent of neighboring `olp-server`. User created https://github.com/athegreat90/minecraft-modsync; source was published through the connected GitHub integration. Local origin now points there.
 - Separate Host A outbound scanner, Host B Spring/MariaDB control plane, Host C standalone client.
 - Local Argon2id accounts; UUID identities; assignment-generation fencing; staged idempotent inventory commits; explicit immutable manifest approval.
 - Private/unrecognized artifacts use exact local manual resolution, not binary hosting.
@@ -40,7 +40,7 @@ No Kotlin test, migration, container, TLS fixture, native executable, release pu
 7. `modsync interactive --tui-home DIR` launches the separate JVM TUI without adding JLine to the standard CLI; runtime verification remains outstanding.
 8. No Crafty API adapter is implemented; official v2 documentation was located, but filesystem scanning remains the supported integration.
 9. Representative CPU/RSS/throughput/sync benchmarks are not measured. Hashes are recomputed each scheduled scan.
-10. Set up approved GitHub remote/protections/registry and run publication only after explicit authorization/configuration. No PR URL can exist without a remote.
+10. Configure GitHub branch protections/registry and run application release publication only after runtime validation and explicit release configuration. Source publication is complete; no application release is claimed.
 
 ## Next steps
 
@@ -51,3 +51,11 @@ Review follow-up: instance metadata is now explicit and validated against manife
 Scanner review: normalized metadata is capped globally at 2 MiB to bound memory; duplicate content/mod IDs now carry explicit evidence. Oversized scans fail without replacing prior inventory.
 
 API contract: generated OpenAPI 3.1 schemas from shared DTOs plus explicit routes; the generator checks controller route drift. Generation/check passed; live endpoint conformance remains unverified.
+
+## GitHub source publication
+
+The user created the public `athegreat90/minecraft-modsync` repository and explicitly requested uploading its contents. Terminal Git remains unable to resolve github.com, so the GitHub integration initialized the repository and imported all 97 tracked files. Remote import commit `430c6274f0dc0e84547bf69ab2dfb3c83786c1c6` has tree `6e5be5a03afa8591511e230b036b69e03f026930`, exactly matching local source commit `63d1ccaa7f56de025c953daa8f03460d7ee18561`. Executable modes were preserved.
+
+Remote branches `main`, `master`, and `feature/distributed-mvp` contain the source. GitHub's default remains `main`; workflows use `master` as the canonical release branch. No release-enable variable, stable release or deployment was activated. CI status is not claimed. A documentation follow-up records this publication.
+
+The API import has a different commit history from the four original local commits, which remain intact. Do not force-push the local history over it. Once terminal network access is restored, fetch and reconcile the histories or use a fresh clone for subsequent Git pushes. No upstream tracking was set against an unavailable local remote object.
