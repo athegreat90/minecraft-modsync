@@ -110,3 +110,13 @@ image publication failure and full manifest/registry verification. Live publicat
 is still pending: terminal gh cannot reach api.github.com; the connected GitHub app
 can publish source/PRs but has no new-workflow-dispatch tool. No prerelease has yet
 been verified in this follow-up. Do not equate green CI or a draft with publication.
+
+
+PR #2 (2083cdb7b5905932ae5b68c0a2addd1d5b18a922) CI run 41252836384
+passed JVM/database, 20 release tests, repository/backup tests, API/boundary and
+source security checks, then failed decoding an empty/non-JSON personal-profile
+response in the distributed fixture. Application source matches the previously
+passing main tree. A failed-job retry was requested; fixture diagnostics now report
+status/response length/correlation and backend log tails on failure, without
+printing response bodies or tokens. Root RELEASES.md also documents automatic
+publication. Live release validation remains pending.
