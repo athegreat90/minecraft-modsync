@@ -45,14 +45,14 @@ def main():
     for db in ['mariadb','mariadb2']:
         services[db]={'image':'mariadb:11.4.10','environment':{'MARIADB_DATABASE':'modsync','MARIADB_USER':'modsync','MARIADB_PASSWORD_FILE':'/run/secrets/db_password','MARIADB_ROOT_PASSWORD_FILE':'/run/secrets/db_root_password'},'volumes':[f'{fixtures}/secrets:/run/secrets:ro',f'{db}:/var/lib/mysql'],'networks':['database'],'healthcheck':{'test':['CMD','healthcheck.sh','--connect','--innodb_initialized'],'interval':'2s','timeout':'3s','retries':60}}
     for name,db in [('backend','mariadb'),('backend2','mariadb2')]:
-        services[name]={'image':'modsync-integration-server:local','build':{'context':str(ROOT),'dockerfile':'docker/server/Dockerfile'},'environment':{'MODSYNC_DB_URL':f'jdbc:mariadb://{db}:3306/modsync','MODSYNC_DB_PASSWORD_FILE':'/fixtures/secrets/db_password','MODSYNC_BOOTSTRAP_PASSWORD_FILE':'/fixtures/secrets/bootstrap_password','SERVER_PORT':'8443','SERVER_SSL_KEY_STORE':'file:/pki/server.p12','SERVER_SSL_KEY_STORE_PASSWORD':'fixture-only','MODSYNC_HEALTH_URL':'https://localhost:8443/actuator/health','JAVA_TOOL_OPTIONS':trust},'volumes':mounts,'ports':['127.0.0.1::8443'],'networks':{'a':{'aliases':['modsync.test']},'c':{'aliases':['modsync.test']},'metadata':{} ,'database':{}},'depends_on':{db:{'condition':'service_healthy'}}}
+        services[name]={'image':'modsync-integration-server:local','build':{'context':str(ROOT),'dockerfile':'docker/server/Dockerfile'},'environment':{'MODSYNC_DB_URL':f'jdbc:mariadb://{db}:3306/modsync','MODSYNC_DB_PASSWORD_FILE':'/fixtures/secrets/db_password','MODSYNC_BOOTSTRAP_PASSWORD_FILE':'/fixtures/secrets/bootstrap_password','SERVER_PORT':'8443','SERVER_SSL_KEY_STORE':'file:/pki/server.p12','SERVER_SSL_KEY_STORE_PASSWORD':'fixture-only','MODSYNC_HEALTH_URL':'https://localhost:8443/actuator/health','JAVA_TOOL_OPTIONS':trust},'volumes':mounts,'ports':['127.0.0.1::8443'],'networks':{'a':{'aliases':['modsync.test']},'c':{'aliases':['modsync.test']},'metadata':{} ,'database':{},'ingress':{}},'depends_on':{db:{'condition':'service_healthy'}}}
     services['modrinth']={'image':'python:3.13.7-alpine3.22','command':['python','/test/fake_modrinth.py'],'volumes':mounts+[f'{ROOT}/scripts/integration:/test:ro'],'networks':{'metadata':{'aliases':['api.modrinth.com']},'c':{'aliases':['cdn.modrinth.com']}}}
     for service,component,network,instance in [('agent','agent','a',None),('agent2','agent','a',None),('client','client','c','instance'),('client2','client','c','instance2')]:
         volumes=mounts+[f'{WORK/service}:/app/state']
         if component=='agent': volumes+=[f'{fixtures}/minecraft:/minecraft:ro']
         else: volumes+=[f'{WORK/instance}:/minecraft-instance']
         services[service]={'image':f'modsync-integration-{component}:local','build':{'context':str(ROOT),'dockerfile':'docker/agent/Dockerfile','args':{'COMPONENT':component}},'environment':{'JAVA_TOOL_OPTIONS':trust},'volumes':volumes,'networks':[network],'profiles':['tools']}
-    compose=WORK/'compose.json'; compose.write_text(json.dumps({'name':'modsync-integration','services':services,'networks':{n:{'internal':True} for n in ['a','c','metadata','database']},'volumes':{'mariadb':{},'mariadb2':{}}},indent=2))
+    compose=WORK/'compose.json'; compose.write_text(json.dumps({'name':'modsync-integration','services':services,'networks':{**{n:{'internal':True} for n in ['a','c','metadata','database']},'ingress':{}},'volumes':{'mariadb':{},'mariadb2':{}}},indent=2))
     base=['docker','compose','-f',str(compose)]
     def dc(*args): return command(base+list(args))
     def cli(service,*args): return dc('run','--rm','--no-deps',service,*args)
@@ -67,11 +67,15 @@ def main():
     def admin(path,method='GET',body=None): return api(path,method,body,admin_token)
     def wait(service):
         nonlocal endpoint
-        try:
-            port=dc('port',service,'8443').rsplit(':',1)[1]
-        except subprocess.CalledProcessError:
-            print(dc('logs','--no-color','--tail','120',service),file=sys.stderr,flush=True)
-            raise
+        for attempt in range(15):
+            try:
+                port=dc('port',service,'8443').rsplit(':',1)[1]
+                break
+            except subprocess.CalledProcessError:
+                if attempt == 14:
+                    print(dc('logs','--no-color','--tail','120',service),file=sys.stderr,flush=True)
+                    raise
+                time.sleep(1)
         endpoint='https://127.0.0.1:'+port
         for _ in range(90):
             try: return api('info')
