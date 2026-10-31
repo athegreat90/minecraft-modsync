@@ -1,0 +1,9 @@
+.gradle/
+**/build/
+.env
+*.pem
+*.key
+*.dump
+.local/
+__pycache__/
+*.pyc

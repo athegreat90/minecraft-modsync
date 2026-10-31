@@ -1,0 +1,13 @@
+# Releases
+
+`master` is the canonical release branch. No remote has been configured or published from this workspace. Configure branch protections, authorized GHCR ownership and repository Actions permissions before enabling `MODSYNC_RELEASE_ENABLED=true` as a repository variable.
+
+The reconciler runs on master pushes, hourly and manually. It walks every reachable commit, excluding published releases and active jobs, and dispatches a bounded batch. Multi-commit pushes and merges are therefore covered. Failed attempts retry after six hours; new unattempted commits take priority so persistent failures cannot starve later commits. Canceled pending reconciliation/release jobs are recovered by subsequent passes. Run history and failed Actions jobs report failures; no failed validation becomes a successful prerelease.
+
+Each build checks out the exact requested reachable SHA, validates tests and boundaries, runs the TLS distributed fixture/security scans, creates JVM distributions and requires native execution on Windows x64/Linux x64/Linux ARM64. Image publication builds amd64/arm64 images with provenance and SBOM attestations, scans immutable digests and only then finalizes a prerelease.
+
+Versions are deterministic `v0.1.0-dev.<commit-UTC-timestamp>.<full-sha>`. Immutable lightweight source tags identify the exact commit. Draft publication can be retried; finalized releases are not mutated by this workflow. GHCR tags are technically mutable by registry administrators: protect credentials and deploy by recorded digest. Registry-enforced tag immutability and GitHub immutable-release settings require operator configuration.
+
+Assets include native CLI/agent builds, JVM ZIPs, server JAR, benchmark JSON, checksums and `release-manifest.json`. Images use `ghcr.io/<owner>/minecraft-modsync-{server,agent}:<version>`. The compatibility manifest records source, API/agent protocols, minimum versions, image digests, checksums and schema/migration notes. Stable promotion and production deployment are deliberately separate, explicit procedures.
+
+Current limitations: workflows have not run; action SHA pinning, official Gradle wrapper generation, resolved dependency locks/verification metadata, signed checksums and representative resource benchmarks remain gates. Native smoke tests currently exercise command startup; full native synchronization still needs coverage. Intermediate historical commits lacking the complete system can fail validation and remain visibly failed rather than being relabeled successful.

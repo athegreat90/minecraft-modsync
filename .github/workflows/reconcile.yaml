@@ -1,0 +1,22 @@
+name: reconcile-master-releases
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: release-reconciliation
+  cancel-in-progress: false
+jobs:
+  reconcile:
+    if: vars.MODSYNC_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: master, fetch-depth: 0}
+      - run: python3 scripts/release/reconcile.py
+        env: {GH_TOKEN: '${{ github.token }}'}

@@ -1,0 +1,50 @@
+name: modsync-server
+services:
+  modsync-server:
+    image: ${MODSYNC_SERVER_IMAGE:-minecraft-modsync-server:local}
+    build:
+      context: ../..
+      dockerfile: docker/server/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp:size=128m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    ports: ["${MODSYNC_BIND_ADDRESS:-127.0.0.1}:8080:8080"]
+    environment:
+      MODSYNC_DB_URL: jdbc:mariadb://mariadb:3306/modsync
+      MODSYNC_DB_USER: modsync
+      MODSYNC_DB_PASSWORD_FILE: /run/secrets/db_password
+      MODSYNC_BOOTSTRAP_PASSWORD_FILE: /run/secrets/bootstrap_password
+      MODSYNC_MAINTENANCE: ${MODSYNC_MAINTENANCE:-false}
+    secrets: [db_password, bootstrap_password]
+    networks: [api, database]
+    depends_on:
+      mariadb: {condition: service_healthy}
+  mariadb:
+    image: mariadb:11.4.10
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: modsync
+      MARIADB_USER: modsync
+      MARIADB_PASSWORD_FILE: /run/secrets/db_password
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+    secrets: [db_password, db_root_password]
+    volumes: [database:/var/lib/mysql]
+    networks: [database]
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: 1g
+networks:
+  api: {}
+  database: {internal: true}
+volumes:
+  database: {}
+secrets:
+  db_password: {file: "${MODSYNC_SECRETS_DIR:?Set an absolute secrets directory}/db_password"}
+  db_root_password: {file: "${MODSYNC_SECRETS_DIR}/db_root_password"}
+  bootstrap_password: {file: "${MODSYNC_SECRETS_DIR}/bootstrap_password"}

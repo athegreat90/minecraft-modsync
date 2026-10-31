@@ -1,0 +1,4 @@
+# Test topology uses separate A-B and C-B networks; no A-C connection exists.
+# See scripts/integration/distributed.py for fixture enrollment and assertions.
+include:
+  - path: ../server/compose.yaml

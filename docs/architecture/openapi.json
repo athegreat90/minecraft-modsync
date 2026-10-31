@@ -1,0 +1,3327 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Minecraft ModSync API",
+    "version": "0.1.0",
+    "description": "Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation."
+  },
+  "paths": {
+    "/api/v1/info": {
+      "get": {
+        "operationId": "get_info",
+        "x-authority": "public",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capabilities"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "post_auth_login",
+        "x-authority": "public",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credentials"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "post_auth_refresh",
+        "x-authority": "public",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credentials"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/enroll": {
+      "post": {
+        "operationId": "post_enroll",
+        "x-authority": "public",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credentials"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Enrollment"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "post": {
+        "operationId": "post_admin_users",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegistration"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/enrollments": {
+      "post": {
+        "operationId": "post_admin_enrollments",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/enrollments/revoke": {
+      "post": {
+        "operationId": "post_admin_enrollments_revoke",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/agents": {
+      "get": {
+        "operationId": "get_admin_agents",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/servers": {
+      "post": {
+        "operationId": "post_admin_servers",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerRegistration"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/servers/{id}/assignment": {
+      "put": {
+        "operationId": "put_admin_servers_id_assignment",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Assignment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Transfer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agents/{id}/revoke": {
+      "post": {
+        "operationId": "post_admin_agents_id_revoke",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/assignments": {
+      "get": {
+        "operationId": "get_agent_assignments",
+        "x-authority": "AGENT",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Assignment"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/heartbeat": {
+      "post": {
+        "operationId": "post_agent_heartbeat",
+        "x-authority": "AGENT",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Heartbeat"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/credentials/rotate": {
+      "post": {
+        "operationId": "post_agent_credentials_rotate",
+        "x-authority": "AGENT",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credentials"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/snapshots": {
+      "post": {
+        "operationId": "post_agent_snapshots",
+        "x-authority": "AGENT",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotBegin"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotBegin"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/snapshots/{id}/batches": {
+      "put": {
+        "operationId": "put_agent_snapshots_id_batches",
+        "x-authority": "AGENT",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotBatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/snapshots/{id}/commit": {
+      "post": {
+        "operationId": "post_agent_snapshots_id_commit",
+        "x-authority": "AGENT",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotAck"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/servers": {
+      "get": {
+        "operationId": "get_servers",
+        "x-authority": "CLIENT or ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerInfo"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/servers/{id}/manifest": {
+      "get": {
+        "operationId": "get_servers_id_manifest",
+        "x-authority": "CLIENT or ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Manifest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/servers/{id}/inventory": {
+      "get": {
+        "operationId": "get_admin_servers_id_inventory",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/servers/{id}/identified": {
+      "get": {
+        "operationId": "get_admin_servers_id_identified",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/servers/{id}/classification": {
+      "put": {
+        "operationId": "put_admin_servers_id_classification",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/servers/{id}/preview": {
+      "post": {
+        "operationId": "post_admin_servers_id_preview",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Manifest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/servers/{id}/publish": {
+      "post": {
+        "operationId": "post_admin_servers_id_publish",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Manifest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mods/{project}/updates": {
+      "get": {
+        "operationId": "get_mods_project_updates",
+        "x-authority": "CLIENT or ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minecraft",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "loader",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/personal": {
+      "get": {
+        "operationId": "get_personal",
+        "x-authority": "CLIENT or ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonalProfile"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/personal/{id}": {
+      "put": {
+        "operationId": "put_personal_id",
+        "x-authority": "owner",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalProfile"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices": {
+      "get": {
+        "operationId": "get_devices",
+        "x-authority": "owner",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/devices/{id}/revoke": {
+      "post": {
+        "operationId": "post_devices_id_revoke",
+        "x-authority": "owner",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/sync/reports": {
+      "post": {
+        "operationId": "post_sync_reports",
+        "x-authority": "CLIENT or ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncReport"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "operationId": "get_openapi_json",
+        "x-authority": "CLIENT or ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.1.0"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Classification": {
+        "type": "string",
+        "enum": [
+          "SERVER_ONLY",
+          "CLIENT_REQUIRED",
+          "CLIENT_OPTIONAL",
+          "CLIENT_ONLY",
+          "BOTH_REQUIRED",
+          "UNKNOWN"
+        ]
+      },
+      "DependencyKind": {
+        "type": "string",
+        "enum": [
+          "REQUIRED",
+          "OPTIONAL",
+          "INCOMPATIBLE",
+          "EMBEDDED"
+        ]
+      },
+      "OperationKind": {
+        "type": "string",
+        "enum": [
+          "INSTALL",
+          "UPDATE",
+          "KEEP",
+          "DISABLE",
+          "REMOVE_MANAGED",
+          "SKIP",
+          "CONFLICT",
+          "MANUAL_ACTION_REQUIRED"
+        ]
+      },
+      "Evidence": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "detail"
+        ]
+      },
+      "ModEntry": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "sha512": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "modIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "classification": {
+            "$ref": "#/components/schemas/Classification"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "fileName",
+          "sha512",
+          "size"
+        ]
+      },
+      "Dependency": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "versionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DependencyKind"
+          }
+        },
+        "required": [
+          "projectId"
+        ]
+      },
+      "Artifact": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "versionId": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "sha512": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "minecraftVersions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "loaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "classification": {
+            "$ref": "#/components/schemas/Classification"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dependency"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "versionId",
+          "fileName",
+          "sha512",
+          "size",
+          "minecraftVersions",
+          "loaders",
+          "classification"
+        ]
+      },
+      "Manifest": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "minecraftVersion": {
+            "type": "string"
+          },
+          "loader": {
+            "type": "string"
+          },
+          "loaderVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "inventoryDigest": {
+            "type": "string"
+          },
+          "policyRevision": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "serverId",
+          "revision",
+          "minecraftVersion",
+          "loader",
+          "artifacts",
+          "createdAt",
+          "inventoryDigest"
+        ]
+      },
+      "PersonalProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "artifacts"
+        ]
+      },
+      "PlanOperation": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/OperationKind"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Artifact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "fileName",
+          "reason"
+        ]
+      },
+      "SyncPlan": {
+        "type": "object",
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/Manifest"
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanOperation"
+            }
+          },
+          "localDigest": {
+            "type": "string"
+          },
+          "includeOptional": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "manifest",
+          "operations",
+          "localDigest"
+        ]
+      },
+      "Capabilities": {
+        "type": "object",
+        "properties": {
+          "controlPlaneId": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minimumClient": {
+            "type": "string"
+          },
+          "minimumAgent": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "controlPlaneId"
+        ]
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "deviceId"
+        ]
+      },
+      "Credentials": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "format": "password"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "expiresAt"
+        ]
+      },
+      "Enrollment": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "token",
+          "agentId"
+        ]
+      },
+      "EnrollmentRequest": {
+        "type": "object",
+        "properties": {
+          "ttlSeconds": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "EnrollmentToken": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt"
+        ]
+      },
+      "ServerRegistration": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "minecraftVersion": {
+            "type": "string"
+          },
+          "loader": {
+            "type": "string"
+          },
+          "loaderVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "minecraftVersion"
+        ]
+      },
+      "Assignment": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "generation": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mapping": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "serverId",
+          "agentId",
+          "generation",
+          "mapping"
+        ]
+      },
+      "Transfer": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "mapping": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agentId",
+          "mapping"
+        ]
+      },
+      "ServerInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "minecraftVersion": {
+            "type": "string"
+          },
+          "loader": {
+            "type": "string"
+          },
+          "loaderVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inventoryAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publishedRevision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inventoryStale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "minecraftVersion",
+          "loader",
+          "loaderVersion"
+        ]
+      },
+      "SnapshotBegin": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string"
+          },
+          "scanId": {
+            "type": "string"
+          },
+          "generation": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "scannedAt": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "protocol": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "serverId",
+          "scanId",
+          "generation",
+          "sequence",
+          "scannedAt",
+          "digest",
+          "count"
+        ]
+      },
+      "SnapshotBatch": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModEntry"
+            }
+          }
+        },
+        "required": [
+          "index",
+          "entries"
+        ]
+      },
+      "SnapshotAck": {
+        "type": "object",
+        "properties": {
+          "scanId": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "committedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "scanId",
+          "sequence",
+          "digest",
+          "committedAt"
+        ]
+      },
+      "SnapshotView": {
+        "type": "object",
+        "properties": {
+          "scan": {
+            "$ref": "#/components/schemas/SnapshotBegin"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModEntry"
+            }
+          }
+        },
+        "required": [
+          "scan",
+          "entries"
+        ]
+      },
+      "ScanConfirmation": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string"
+          },
+          "generation": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "digest": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "serverId",
+          "generation",
+          "digest"
+        ]
+      },
+      "Heartbeat": {
+        "type": "object",
+        "properties": {
+          "protocol": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScanConfirmation"
+            }
+          }
+        }
+      },
+      "OverrideRequest": {
+        "type": "object",
+        "properties": {
+          "sha512": {
+            "type": "string"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/Classification"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sha512",
+          "classification",
+          "reason"
+        ]
+      },
+      "PublishRequest": {
+        "type": "object",
+        "properties": {
+          "scanId": {
+            "type": "string"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          }
+        },
+        "required": [
+          "scanId",
+          "artifacts"
+        ]
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "Failure": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "correlationId"
+        ]
+      },
+      "UserRegistration": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "SyncReport": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "serverId",
+          "revision",
+          "status"
+        ]
+      }
+    }
+  }
+}

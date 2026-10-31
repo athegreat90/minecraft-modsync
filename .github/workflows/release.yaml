@@ -1,0 +1,102 @@
+name: development-release
+run-name: release:${{ inputs.sha }}
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        required: true
+        description: Full reachable master commit SHA
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ inputs.sha }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: vars.MODSYNC_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Validate immutable source
+        env: {SOURCE_SHA: '${{ inputs.sha }}'}
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$SOURCE_SHA" origin/master
+          git checkout --detach "$SOURCE_SHA"
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '25'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '9.2.1'}
+      - id: version
+        run: |
+          python3 - <<'PYTHON' >> "$GITHUB_OUTPUT"
+          import sys, subprocess
+          sys.path.insert(0,'scripts/release')
+          from reconcile import version
+          print('version='+version(subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),subprocess.check_output(['git','show','-s','--format=%ct','HEAD'],text=True).strip()))
+          PYTHON
+      - run: gradle --no-daemon -PreleaseVersion=${{ steps.version.outputs.version }} check :modsync-server:bootJar :modsync-agent:distZip :modsync-client:distZip :modsync-client-tui:distZip
+      - run: python3 scripts/check-architecture.py
+      - run: python3 scripts/openapi.py --check
+      - run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
+      - run: python3 -m unittest discover -s scripts/backup -p 'test_*.py'
+      - run: python3 scripts/integration/distributed.py
+      - uses: aquasecurity/trivy-action@0.33.1
+        with: {scan-type: fs, scan-ref: '.', exit-code: '1', severity: 'HIGH,CRITICAL'}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jvm
+          path: |
+            modsync-*/build/distributions/*.zip
+            modsync-server/build/libs/*.jar
+  native:
+    needs: validate
+    strategy:
+      matrix:
+        include:
+          - {os: ubuntu-24.04, platform: linux-x64}
+          - {os: ubuntu-24.04-arm, platform: linux-arm64}
+          - {os: windows-2025, platform: windows-x64}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: '${{ inputs.sha }}'}
+      - uses: graalvm/setup-graalvm@v1
+        with: {java-version: '25', distribution: graalvm-community, github-token: '${{ github.token }}'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '9.2.1'}
+      - run: gradle --no-daemon :modsync-client:nativeCompile :modsync-agent:nativeCompile
+      - shell: bash
+        run: |
+          mkdir -p artifacts
+          suffix=''
+          if [[ '${{ matrix.platform }}' == windows-* ]]; then suffix='.exe'; fi
+          cp "modsync-client/build/native/nativeCompile/modsync$suffix" "artifacts/modsync-${{ matrix.platform }}$suffix"
+          cp "modsync-agent/build/native/nativeCompile/modsync-agent$suffix" "artifacts/modsync-agent-${{ matrix.platform }}$suffix"
+          "artifacts/modsync-${{ matrix.platform }}$suffix" --help
+          "artifacts/modsync-agent-${{ matrix.platform }}$suffix" --help
+          python3 scripts/benchmark.py "artifacts/modsync-${{ matrix.platform }}$suffix" > "artifacts/benchmark-${{ matrix.platform }}.json"
+      - uses: actions/upload-artifact@v4
+        with: {name: 'native-${{ matrix.platform }}', path: artifacts/}
+  publish:
+    needs: [validate, native]
+    runs-on: ubuntu-24.04
+    permissions: {contents: write, packages: write}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: '${{ inputs.sha }}', fetch-depth: 0}
+      - uses: actions/download-artifact@v4
+        with: {path: artifacts}
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: {registry: ghcr.io, username: '${{ github.actor }}', password: '${{ github.token }}'}
+      - name: Publish reconciled artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+        run: python3 scripts/release/publish.py

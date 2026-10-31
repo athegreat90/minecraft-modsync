@@ -1,0 +1,31 @@
+server:
+  port: 8080
+  max-http-request-header-size: 16KB
+  tomcat:
+    max-http-form-post-size: 2MB
+spring:
+  datasource:
+    url: ${MODSYNC_DB_URL:jdbc:mariadb://mariadb:3306/modsync}
+    username: ${MODSYNC_DB_USER:modsync}
+    password: ${MODSYNC_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 5000
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never
+modsync:
+  bootstrap-user: ${MODSYNC_BOOTSTRAP_USER:admin}
+  bootstrap-password-file: ${MODSYNC_BOOTSTRAP_PASSWORD_FILE:}
+  maintenance: ${MODSYNC_MAINTENANCE:false}
+logging:
+  structured:
+    format:
+      console: ecs

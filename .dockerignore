@@ -1,0 +1,7 @@
+.git
+.gradle
+**/build
+.local
+.env
+**/*.pem
+**/*.key
