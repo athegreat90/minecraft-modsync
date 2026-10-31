@@ -2,7 +2,7 @@
 
 Self-hosted mod inventory and client reconciliation across three independent hosts.
 
-**Status: initial implementation, not a verified production release.** Kotlin compilation, MariaDB execution, container integration and native distributions could not run in the implementation environment. See [MEMORY.md](MEMORY.md) for evidence and remaining gates.
+**Status: JVM and distributed integration validated; not a production release.** GitHub CI has passed compilation, MariaDB tests and the three-host HTTPS/migration/restore fixture on Linux amd64. Final scan ordering is being corrected; native/platform, production security and release gates remain open. See [MEMORY.md](MEMORY.md) for evidence.
 
 - **Host A:** a read-only scanner agent beside existing Crafty-managed storage; outbound HTTPS only.
 - **Host B:** Spring Boot API, immutable manifests, user profiles and MariaDB.
