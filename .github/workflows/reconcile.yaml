@@ -1,7 +1,7 @@
-name: reconcile-master-releases
+name: reconcile-main-releases
 on:
   push:
-    branches: [master]
+    branches: [main]
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
@@ -17,6 +17,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with: {ref: master, fetch-depth: 0}
+        with: {ref: main, fetch-depth: 0}
       - run: python3 scripts/release/reconcile.py
         env: {GH_TOKEN: '${{ github.token }}'}

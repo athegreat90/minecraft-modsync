@@ -5,3 +5,5 @@ Use one monorepo. Shared immutable models, protocol fixtures, scanner code and r
 Every application has its own Gradle packaging target. The server and agent have separate Dockerfiles/Compose stacks. Clients ship independently. Releases record protocol compatibility rather than requiring synchronized upgrades. Container images have separate GHCR names under the eventual approved repository owner.
 
 A hybrid infrastructure repository can be considered if operators later need independent access controls. The user created https://github.com/athegreat90/minecraft-modsync and authorized publishing the source. Local origin is configured; API import history differs from the original local history because terminal Git transport is unavailable.
+
+`main` is the default and canonical release branch. Changes use pull requests and the `validate` check. The user requested protection and retirement of the duplicate legacy branch; actual administration status is recorded in MEMORY.md.

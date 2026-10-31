@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconcile every reachable master commit, rather than just push event head."""
+"""Reconcile every reachable main commit, rather than just push event head."""
 import datetime as dt, json, os, re, subprocess
 
 def run(*args):
@@ -16,7 +16,7 @@ def candidates(commits, released, running, attempted, now):
 
 def main():
     repo = os.environ["GITHUB_REPOSITORY"]
-    commits = run("git","rev-list","--reverse","origin/master").splitlines()
+    commits = run("git","rev-list","--reverse","origin/main").splitlines()
     pages = json.loads(run("gh","api","--paginate","--slurp",f"repos/{repo}/releases?per_page=100"))
     released = {r["tag_name"].rsplit(".",1)[-1] for page in pages for r in page if not r["draft"]}
     pages = json.loads(run("gh","api","--paginate","--slurp",f"repos/{repo}/actions/workflows/release.yaml/runs?event=workflow_dispatch&per_page=100"))
@@ -32,6 +32,6 @@ def main():
     now=dt.datetime.now(dt.timezone.utc).timestamp()
     selected=candidates(commits,released,running,attempted,now)[:20]
     for sha in selected:
-        subprocess.run(["gh","workflow","run","release.yaml","--ref","master","-f",f"sha={sha}"],check=True)
+        subprocess.run(["gh","workflow","run","release.yaml","--ref","main","-f",f"sha={sha}"],check=True)
     print(json.dumps({"reachable":len(commits),"released":len(set(commits)&released),"running":len(running),"dispatched":selected,"remaining":len(set(commits)-released)},indent=2))
 if __name__ == "__main__": main()

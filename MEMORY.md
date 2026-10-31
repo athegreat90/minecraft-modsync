@@ -59,3 +59,11 @@ The user created the public `athegreat90/minecraft-modsync` repository and expli
 Remote branches `main`, `master`, and `feature/distributed-mvp` contain the source. GitHub's default remains `main`; workflows use `master` as the canonical release branch. No release-enable variable, stable release or deployment was activated. CI status is not claimed. A documentation follow-up records this publication.
 
 The API import has a different commit history from the four original local commits, which remain intact. Do not force-push the local history over it. Once terminal network access is restored, fetch and reconcile the histories or use a fresh clone for subsequent Git pushes. No upstream tracking was set against an unavailable local remote object.
+
+## Main branch policy follow-up
+
+User changed the canonical branch requirement to `main` and requested branch protection plus deletion of `master` if identical. GitHub confirmed `main` is already default, and the comparison reported identical commits at `198ba186ff6ef5a8d9b0c3af14f313848f613d60` with zero file differences. Release workflows/reconciliation now target `main`; CI validates main pushes and pull requests.
+
+The current connector cannot update repository administration, protection or delete refs, and terminal `gh` cannot reach api.github.com. Protection and remote master deletion are therefore NOT reported complete. A reviewed administration helper can apply baseline protection and retire the legacy ref after verifying no unique commits or application-code differences. Existing protections are retained rather than overwritten. Publication uses a pull request; do not bypass protections or force-push.
+
+Branch-policy validation: four new repository-policy tests and the four existing release-reconciliation tests passed; Python compilation and OpenAPI drift checks passed. Live administration helper stopped on the initial GitHub read due to network failure, before any settings change or branch deletion.
