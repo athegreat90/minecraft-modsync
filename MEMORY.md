@@ -6,7 +6,7 @@
 - Separate Host A outbound scanner, Host B Spring/MariaDB control plane, Host C standalone client.
 - Local Argon2id accounts; UUID identities; assignment-generation fencing; staged idempotent inventory commits; explicit immutable manifest approval.
 - Private/unrecognized artifacts use exact local manual resolution, not binary hosting.
-- Java/GraalVM 25 target, Kotlin 2.2.21, Spring Boot 4.0.9, MariaDB 11.4 LTS. Patch/image compatibility still requires builds and scans.
+- Java/GraalVM 25 target, Kotlin 2.3.21, Spring Boot 4.0.9, MariaDB 11.4 LTS. Patch/image compatibility still requires builds and scans.
 - Standard CLI excludes JLine; TUI is a separate JVM distribution. No optional GUI.
 
 ## Implemented source
@@ -71,3 +71,5 @@ Branch-policy validation: four new repository-policy tests and the four existing
 ## CI action resolution correction
 
 Linked job 124672880701 (run 41247166000) and PR job 124674002739 (run 41247543629) both failed during runner setup because `aquasecurity/trivy-action@0.33.1` could not be resolved. CI and release workflows now pin the verified upstream v0.36.0 commit `ed142fd0673e97e23eac54620cfb913e5ce36c25`. Its action.yaml and official release commit were verified through GitHub. Build/test steps never ran in the failed jobs; a new PR run is required to verify later stages.
+
+Follow-up run 41247750936 passed runner/action setup but failed at compileKotlin: Kotlin 2.2.21 only supported JVM 24 while the Java toolchain targeted 25. Kotlin plugins/test dependencies/catalog are upgraded to 2.3.21, a runtime BOM aligns Kotlin libraries, and JVM_25 is explicit. Official Kotlin 2.3 documentation confirms Java 25 bytecode support. CI evidence uploads now include Gradle problem reports and the explicitly selected hidden integration results file; fixture secrets are not selected. Runtime validation is pending the next run.
