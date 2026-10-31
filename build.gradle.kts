@@ -19,6 +19,6 @@ subprojects {
         "testImplementation"("org.jetbrains.kotlin:kotlin-test-junit5:2.3.21")
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
-    tasks.withType<Test>().configureEach { useJUnitPlatform(); testLogging { events("passed", "failed", "skipped") } }
+    tasks.withType<Test>().configureEach { useJUnitPlatform(); testLogging { events("passed", "failed", "skipped"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL } }
     dependencyLocking { lockAllConfigurations() }
 }

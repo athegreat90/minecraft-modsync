@@ -2,12 +2,18 @@
 """Disposable TLS three-host, independent migration and MariaDB restore drill.
 Requires Docker daemon/build access, JDK keytool and openssl. Never targets a live stack.
 """
-import hashlib, json, os, pathlib, secrets, shutil, ssl, subprocess, time, urllib.request, uuid, zipfile
+import hashlib, json, os, pathlib, secrets, shutil, ssl, subprocess, sys, time, urllib.request, uuid, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 WORK=ROOT/'.local/integration'
 
 def command(args, **kwargs):
-    return subprocess.run(args,check=True,text=True,capture_output=True,**kwargs).stdout.strip()
+    try:
+        return subprocess.run(args,check=True,text=True,capture_output=True,**kwargs).stdout.strip()
+    except subprocess.CalledProcessError as exc:
+        # Arguments contain only fixture configuration/file paths, never real account credentials.
+        for label, output in (("stdout",exc.stdout),("stderr",exc.stderr)):
+            if output: print(f"Fixture command {label}:\n{output[-16000:]}",file=sys.stderr,flush=True)
+        raise
 
 def main():
     command(['docker','info'])
@@ -61,10 +67,16 @@ def main():
     def admin(path,method='GET',body=None): return api(path,method,body,admin_token)
     def wait(service):
         nonlocal endpoint
-        port=dc('port',service,'8443').rsplit(':',1)[1]; endpoint='https://127.0.0.1:'+port
+        try:
+            port=dc('port',service,'8443').rsplit(':',1)[1]
+        except subprocess.CalledProcessError:
+            print(dc('logs','--no-color','--tail','120',service),file=sys.stderr,flush=True)
+            raise
+        endpoint='https://127.0.0.1:'+port
         for _ in range(90):
             try: return api('info')
             except Exception: time.sleep(2)
+        print(dc('logs','--no-color','--tail','120',service),file=sys.stderr,flush=True)
         raise RuntimeError('TLS backend readiness timeout')
     def enroll(service,plane):
         enrollment=admin('admin/enrollments','POST',{'ttlSeconds':600})

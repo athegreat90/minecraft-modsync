@@ -27,7 +27,7 @@ Ten Gradle modules; domain/protocol; sequential ZIP/TOML/JSON scanner; exact-pin
 - `./gradlew check`: blocked before Gradle download by DNS resolution failure for services.gradle.org.
 - Docker daemon check: denied by sandbox socket permissions.
 
-No Kotlin test, migration, container, TLS fixture, native executable, release publication or performance benchmark is reported as passed. Java 26 is available locally; JDK 25/GraalVM/Gradle are unavailable. The managed runtime status tool and network-policy file are absent. Do not bypass these restrictions.
+At the initial local-only checkpoint, no Kotlin test, migration, container, TLS fixture, native executable, release publication or performance benchmark had executed. Subsequent GitHub CI evidence recorded below supersedes that initial build/test limitation. Java 26 is available locally; JDK 25/GraalVM/Gradle are unavailable. The managed runtime status tool and network-policy file are absent. Do not bypass these restrictions.
 
 ## Remaining gates and limitations
 
@@ -77,3 +77,7 @@ Follow-up run 41247750936 passed runner/action setup but failed at compileKotlin
 Run 41248030743 advanced beyond JVM targeting and reported three compile errors: TUI could not access the Picocli type returned by the client API, actor() ignored nullable Spring authentication, and JDBC query maps declared non-null values despite nullable SQL columns. Picocli is now an API dependency of the client library; missing actor authentication returns 401; JDBC maps accurately allow nullable values. Further CI validation is pending.
 
 Run 41248284463 compiled application sources and passed 21 scanner/protocol/resolver/installer tests. Server test compilation found conflicting wildcard imports of JUnit Test and kotlin.test.Test; JUnit imports are now explicit. Review also found first snapshot acknowledgements retained nanoseconds while MariaDB TIMESTAMP(6) only stores microseconds: commit timestamps now truncate before persistence/response, and the existing idempotency integration test additionally checks precision. Database execution is still pending.
+
+Run 41248471822 passed Gradle/package/database/static checks and reached the distributed fixture. Startup dependency review against official Spring Boot 4 documentation found that Flyway core alone no longer supplies auto-configuration and Spring Kotlin requires kotlin-reflect. The server now uses spring-boot-starter-flyway plus kotlin-reflect; a fresh-database application startup test checks actual auto-migration and administrator bootstrap. Fixture subprocess failures/readiness timeouts now retain bounded diagnostics, and Gradle emits full test failure exceptions.
+
+The distributed failure in run 41248471822 occurred at Docker port lookup after backend exit; captured process output was previously discarded. Port-lookup failures now include the bounded backend log tail. That run successfully executed all existing Gradle checks, including MariaDB tests, and all Python/contract/boundary checks before the fixture failure.
