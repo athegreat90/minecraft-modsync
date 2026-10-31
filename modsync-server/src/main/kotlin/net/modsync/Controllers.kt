@@ -15,7 +15,8 @@ import java.sql.Timestamp
 import java.util.UUID
 
 inline fun <reified T> json(value: T): ResponseEntity<String> = ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(wire.encodeToString(value))
-fun actor(): String = SecurityContextHolder.getContext().authentication.name
+fun actor(): String = SecurityContextHolder.getContext().authentication?.name
+    ?: throw org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED)
 @RestController
 @RequestMapping("/api/v1")
 class Controllers(private val store: Store, private val manifests: Manifests, private val passwords: Argon2PasswordEncoder) {

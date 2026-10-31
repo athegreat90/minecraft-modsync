@@ -19,7 +19,7 @@ fun reject(message: String): Nothing = throw ResponseStatusException(HttpStatus.
 fun requireState(ok: Boolean, message: String) { if (!ok) reject(message) }
 @Service
 class Store(val db: JdbcTemplate, private val passwords: Argon2PasswordEncoder) {
-    fun rows(sql: String, vararg args: Any?): List<Map<String, Any>> = db.queryForList(sql, *args)
+    fun rows(sql: String, vararg args: Any?): List<Map<String, Any?>> = db.queryForList(sql, *args)
     fun one(sql: String, vararg args: Any?) = rows(sql, *args).singleOrNull() ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
     fun audit(actor: String, action: String, target: String) { db.update("INSERT INTO audit_events(actor,action,target,correlation_id,created_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP(6))", actor, action, target, org.slf4j.MDC.get("correlationId")) }
     private fun secret() = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32).also { SecureRandom().nextBytes(it) })
