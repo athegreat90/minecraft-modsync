@@ -45,8 +45,6 @@ class PublicationTests(unittest.TestCase):
 
     def test_draft_retry_uploads_and_finalizes_only_after_verification(self):
         def command(*args):
-            if args[:3] == ('gh', 'api', f'repos/{REPO}/releases/tags/{VERSION}'):
-                return json.dumps(self.release)
             return self.run_command(*args)
         def process(args, **kwargs):
             if args[:3] == ['docker', 'buildx', 'build']:
@@ -125,9 +123,19 @@ class PublicationTests(unittest.TestCase):
                 (root / 'release-manifest.json').write_text(json.dumps(manifest))
                 (root / 'SHA256SUMS').write_text(''.join(f'{h}  {n}\n' for n, h in checksums.items()))
             return '{}'
-        self.release['assets'] = [dict(name=n, size=5, state='uploaded') for n in state.required_assets(VERSION)]
-        with patch.object(state, 'verify_source'), patch.object(state, 'run', side_effect=command) as calls:
+        checksums = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in pathlib.Path('artifacts').iterdir()}
+        manifest = dict(version=VERSION, sourceCommit=SHA, artifactChecksums=checksums, images={c: {'image': f'ghcr.io/owner/minecraft-modsync-{c}:{VERSION}', 'digest': 'sha256:'+'b'*64} for c in ('server', 'agent')})
+        pathlib.Path('artifacts/release-manifest.json').write_text(json.dumps(manifest))
+        pathlib.Path('artifacts/SHA256SUMS').write_text(''.join(f'{h}  {n}\n' for n, h in checksums.items()))
+        self.release['assets'] = [dict(id=i, name=n, size=5, state='uploaded') for i, n in enumerate(sorted(state.required_assets(VERSION)), 1)]
+        def download(args, check, stdout):
+            self.assertEqual(args[1], 'api')
+            self.assertIn('/releases/assets/', args[2])
+            name = next(a['name'] for a in self.release['assets'] if str(a['id']) == args[2].rsplit('/', 1)[1])
+            stdout.write((pathlib.Path('artifacts') / name).read_bytes())
+        with patch.object(state, 'verify_source'), patch.object(state, 'run', side_effect=command) as calls, patch.object(state.subprocess, 'run', side_effect=download) as downloads:
             state.verify_complete(REPO, self.release, SHA)
+            self.assertEqual(downloads.call_count, len(self.release['assets']))
             self.assertEqual(sum(c.args[:3] == ('docker', 'buildx', 'imagetools') for c in calls.call_args_list), 2)
 
     def test_registry_preflight_requests_push_and_cleans_upload_sessions(self):

@@ -196,3 +196,15 @@ and is upgraded to official release 1.86, which includes the flagged fixes. Both
 runtime Dockerfiles upgrade those installed OS packages from the current Noble
 security repositories. The failed build left an unpublished zero-asset draft; the
 patched validation, image scan and visible release are pending.
+
+Both patched images passed the HIGH/CRITICAL Trivy scan and the historical 8b77bb6
+publisher uploaded all 15 assets, but GitHub's release-by-tag endpoint returned 404
+for its still-private draft. The workflow therefore stopped before checksum, manifest
+and digest verification. The publisher now resolves both drafts and visible releases
+from the paginated release list, which includes drafts, and tests the draft retry
+path before publication. No draft has been made visible yet.
+
+Draft asset verification also avoids `gh release download <tag>`: it downloads each
+asset through the authenticated release-asset API by ID, then checks local bytes
+against `SHA256SUMS` and the compatibility manifest. This keeps draft retry checks
+working even though GitHub's release-by-tag endpoint does not resolve drafts.
