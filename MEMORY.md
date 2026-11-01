@@ -168,3 +168,9 @@ for picocli.CommandLine$AutoHelpMixin, which is instantiated by standard --help
 and --version options. Both application reflection configurations now register
 this built-in class alongside their existing command classes. Native smoke tests
 and benchmarks remain mandatory; no release was finalized from the failed run.
+
+Publication preflight now tests the effective GitHub Actions contents permission by
+creating and deleting a uniquely named temporary ref, then verifies push access for
+both GHCR repositories. Repository metadata's permissions.push flag was a false
+negative for the installation token. The first live probe confirmed the temporary
+ref was deleted; GHCR access remains to be checked with the corrected preflight.
