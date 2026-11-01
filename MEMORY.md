@@ -148,3 +148,15 @@ libraries (.so/.dll), leaving no CLI executables to smoke-test. Native options n
 explicitly select executable images and bind the application main class, retaining
 no-fallback compilation and every platform startup/benchmark gate. First visible
 prerelease remains pending.
+
+
+PR #4 merged as c93d74061e3c3eb77476369f46cfa78048d9e125 after its JVM
+build/database/configuration checks passed. Its later TLS fixture failure exposed
+the actual intermittent profile problem: java.io.IOException, HTTP/1.1 header
+parser received no bytes, during a metadata POST after a successful project GET.
+The earlier JSON string-value change clarified the invariant but was not the
+transport fix. The Python fake Modrinth server used HTTP/1.0 connection closure;
+it now serves HTTP/1.1 with its existing explicit Content-Length framing so Java
+can safely reuse the connection. TLS validation and all assertions are preserved.
+Normal profile checkpoint logs are removed; exceptional metadata failures retain
+diagnostics. Native executable builds and first visible publication are pending.

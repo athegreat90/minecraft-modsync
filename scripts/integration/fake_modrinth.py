@@ -3,6 +3,7 @@ import hashlib, http.server, json, pathlib, ssl
 root=pathlib.Path('/fixtures')
 artifacts=json.loads((root/'artifacts.json').read_text())
 class Handler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     def log_message(self,*args): pass
     def respond(self, value, status=200):
         body=json.dumps(value).encode(); self.send_response(status); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body)
