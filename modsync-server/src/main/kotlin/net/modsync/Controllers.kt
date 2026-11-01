@@ -2,6 +2,8 @@ package net.modsync
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.web.bind.annotation.*
@@ -97,18 +99,30 @@ class Controllers(private val store: Store, private val manifests: Manifests, pr
     @GetMapping("/personal") fun profiles() = json(store.rows("SELECT payload FROM personal_profiles WHERE user_id=? ORDER BY name", actor()).map { wire.decodeFromString<PersonalProfile>(it["payload"].toString()) })
     @PutMapping("/personal/{id}") @Transactional fun profile(@PathVariable id: String, @RequestBody body: String): ResponseEntity<String> {
         val p = wire.decodeFromString<PersonalProfile>(body); require(p.id == uuid(id) && p.name.length in 1..200 && p.artifacts.size <= 200)
+        val logger = org.slf4j.LoggerFactory.getLogger(Controllers::class.java)
+        logger.info("profile validation started artifacts={}", p.artifacts.size)
         val old = store.rows("SELECT user_id FROM personal_profiles WHERE id=? FOR UPDATE", id).singleOrNull(); requireState(old == null || old["user_id"] == actor(), "Profile ownership mismatch")
         val modrinth = Modrinth()
-        val canonical = p.artifacts.map { a ->
+        val canonical = try { p.artifacts.map { a ->
             val project = modrinth.project(a.projectId)
-            requireState(project["server_side"]?.toString() == "\"unsupported\"", "Personal profile requires confirmed client-only Modrinth projects")
+            val serverSide = project["server_side"]?.jsonPrimitive?.contentOrNull
+            logger.info("profile project metadata resolved serverSide={}", serverSide)
+            requireState(serverSide == "unsupported", "Personal profile requires confirmed client-only Modrinth projects")
             modrinth.artifact(a.sha512, Classification.CLIENT_ONLY, listOf(Evidence("modrinth", "Server environment unsupported"))).also { requireState(it.projectId == a.projectId, "Project/hash mismatch") }
         }
+        } catch (error: Exception) {
+            logger.warn("profile metadata validation failed", error)
+            throw error
+        }
+        logger.info("profile artifact metadata resolved")
         val profile = p.copy(artifacts = canonical)
         store.db.update("INSERT INTO personal_profiles(id,user_id,name,payload) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),payload=VALUES(payload)", id, actor(), p.name, wire.encodeToString(profile))
         store.db.update("DELETE FROM personal_profile_mods WHERE profile_id=?", id)
         canonical.forEach { store.db.update("INSERT INTO personal_profile_mods(profile_id,project_id,payload) VALUES (?,?,?)", id, it.projectId, wire.encodeToString(it)) }
-        store.audit(actor(), "profile-saved", id); return json(profile)
+        store.audit(actor(), "profile-saved", id)
+        val response = json(profile)
+        logger.info("profile response created bytes={}", response.body?.length)
+        return response
     }
     @GetMapping("/devices") fun devices() = json(store.rows("SELECT id FROM client_devices WHERE user_id=? AND revoked=FALSE", actor()).map { it["id"].toString() })
     @PostMapping("/devices/{id}/revoke") @Transactional fun revokeDevice(@PathVariable id: String): ResponseEntity<String> {

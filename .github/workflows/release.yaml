@@ -14,7 +14,6 @@ concurrency:
   cancel-in-progress: false
 jobs:
   validate:
-    if: vars.MODSYNC_RELEASE_ENABLED == 'true'
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -71,7 +70,7 @@ jobs:
         with: {java-version: '25', distribution: graalvm-community, github-token: '${{ github.token }}'}
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: '9.2.1'}
-      - run: gradle --no-daemon :modsync-client:nativeCompile :modsync-agent:nativeCompile
+      - run: gradle --no-daemon -PreleaseVersion=${{ needs.validate.outputs.version }} :modsync-client:nativeCompile :modsync-agent:nativeCompile
       - shell: bash
         run: |
           mkdir -p artifacts
@@ -90,6 +89,10 @@ jobs:
     permissions: {contents: write, packages: write}
     steps:
       - uses: actions/checkout@v4
+        with: {ref: main}
+      - name: Preserve current publication tooling for historical sources
+        run: cp -r scripts/release "$RUNNER_TEMP/release-tools"
+      - uses: actions/checkout@v4
         with: {ref: '${{ inputs.sha }}', fetch-depth: 0}
       - uses: actions/download-artifact@v4
         with: {path: artifacts}
@@ -101,4 +104,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ needs.validate.outputs.version }}
-        run: python3 scripts/release/publish.py
+        run: python3 "$RUNNER_TEMP/release-tools/publish.py"

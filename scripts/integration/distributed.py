@@ -63,7 +63,12 @@ def main():
     def api(path,method='GET',body=None,token=None):
         data=None if body is None else json.dumps(body).encode()
         req=urllib.request.Request(endpoint+'/api/v1/'+path,data=data,method=method,headers={'Content-Type':'application/json','X-ModSync-Protocol':'1','X-ModSync-Version':'0.1.0',**({'Authorization':'Bearer '+token} if token else {})})
-        with urllib.request.urlopen(req,context=context,timeout=30) as response: return json.load(response)
+        with urllib.request.urlopen(req,context=context,timeout=30) as response:
+            payload = response.read()
+            try:
+                return json.loads(payload)
+            except json.JSONDecodeError as error:
+                raise RuntimeError(f'Fixture API {method} {path}: status={response.status}, bytes={len(payload)}, correlation={response.headers.get("X-Correlation-ID")}') from error
     def admin(path,method='GET',body=None): return api(path,method,body,admin_token)
     def wait(service):
         nonlocal endpoint
@@ -104,6 +109,8 @@ def main():
         manifest=admin(f'admin/servers/{server}/publish','POST',{'scanId':inventory['scan']['scanId'],'artifacts':artifacts[:2]})
         admin('admin/users','POST',{'username':'player','password':(fixtures/'secrets/user_password').read_text()})
         player=api('auth/login','POST',{'username':'player','password':(fixtures/'secrets/user_password').read_text(),'deviceId':str(uuid.uuid4())})['token']
+        empty_profile=str(uuid.uuid4())
+        api('personal/'+empty_profile,'PUT',{'id':empty_profile,'name':'Empty profile transport check','artifacts':[]},player)
         profile=str(uuid.uuid4()); api('personal/'+profile,'PUT',{'id':profile,'name':'Portable preferences','artifacts':[artifacts[2]]},player)
         client_setup('client',plane)
         def sync(service):
@@ -138,6 +145,9 @@ def main():
         cli('agent2','scan'); cli('client','connection','test'); cli('client2','connection','test'); sync('client2')
         results['backend_migration_dns_change_and_mariadb_restore']='passed'
         cli('client2','sync','rollback','--instance','game'); results['rollback']='passed'
+    except Exception:
+        print(dc('logs','--no-color','--tail','120','backend','backend2'),file=sys.stderr,flush=True)
+        raise
     finally:
         (WORK/'results.json').write_text(json.dumps(results,indent=2)+'\n')
         if os.environ.get('MODSYNC_KEEP_FIXTURES')!='true': dc('down','--volumes','--remove-orphans')
