@@ -57,6 +57,7 @@ jobs:
   native:
     needs: validate
     strategy:
+      fail-fast: false
       matrix:
         include:
           - {os: ubuntu-24.04, platform: linux-x64}
@@ -70,7 +71,8 @@ jobs:
         with: {java-version: '25', distribution: graalvm-community, github-token: '${{ github.token }}'}
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: '9.2.1'}
-      - run: gradle --no-daemon -PreleaseVersion=${{ needs.validate.outputs.version }} :modsync-client:nativeCompile :modsync-agent:nativeCompile
+      - shell: bash
+        run: gradle --no-daemon "-PreleaseVersion=${{ needs.validate.outputs.version }}" :modsync-client:nativeCompile :modsync-agent:nativeCompile
       - shell: bash
         run: |
           mkdir -p artifacts

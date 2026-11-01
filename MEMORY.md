@@ -120,3 +120,20 @@ passing main tree. A failed-job retry was requested; fixture diagnostics now rep
 status/response length/correlation and backend log tails on failure, without
 printing response bodies or tokens. Root RELEASES.md also documents automatic
 publication. Live release validation remains pending.
+
+
+PR #2 merged as 8c72eab788c45e03c5e56a05ad868e1454dfdb00 after CI
+41255153019 passed all JVM/database/Python/source-security/distributed gates.
+The full fixture exposed a personal-profile metadata comparison; reading the
+JSON string value directly preserved the client-only policy and passed the full
+HTTPS/migration/restore/rollback fixture. HTTP regression and bounded fixture
+failure diagnostics were added; synchronization DTOs/routes are unchanged.
+
+Reconciliation run 41256231427 dispatched all 18 reachable commits with the new
+main head first. A live rerun dispatched nothing, retained active jobs and
+reported historical failures in cooldown. Head release run 41256251830 passed
+validation, then Windows PowerShell split the unquoted dotted release-version
+argument. The follow-up quotes the property and uses Bash consistently for the
+native command. Native matrix fail-fast is disabled so all required platforms
+report results; publication still requires every platform to succeed. First
+visible prerelease and image publication remain pending.
