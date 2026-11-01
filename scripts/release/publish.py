@@ -27,6 +27,15 @@ def registry_preflight(repo):
         # session verifies push permission; its empty session expires server-side.
 
 
+def release_by_tag(repo, tag):
+    """Find visible releases and drafts; GitHub's tag endpoint omits drafts."""
+    pages = json.loads(run('gh', 'api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'))
+    matches = [release for page in pages for release in page if release['tag_name'] == tag]
+    if len(matches) != 1:
+        raise ValueError(f'Expected exactly one release or draft for {tag}, found {len(matches)}')
+    return matches[0]
+
+
 def preflight(repo):
     # Repository permissions.push describes user access, not the effective
     # contents permission of an Actions installation token. Verify the write API.
@@ -92,10 +101,10 @@ def main():
     pathlib.Path("SHA256SUMS").write_text(''.join(f"{h}  {name}\n" for name,h in checksums.items()))
     for p in [*files,pathlib.Path("release-manifest.json"),pathlib.Path("SHA256SUMS")]:
         subprocess.run(["gh","release","upload",version,str(p),"--clobber"],check=True)
-    release = json.loads(run('gh', 'api', f'repos/{repo}/releases/tags/{version}'))
+    release = release_by_tag(repo, version)
     verify_complete(repo, release, sha)
     subprocess.run(["gh","release","edit",version,"--draft=false","--prerelease"],check=True)
-    visible = json.loads(run('gh', 'api', f'repos/{repo}/releases/tags/{version}'))
+    visible = release_by_tag(repo, version)
     if visible['draft'] or not visible['prerelease']:
         raise ValueError('Release did not become a visible prerelease')
     verify_complete(repo, visible, sha)

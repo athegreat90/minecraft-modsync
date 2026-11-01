@@ -45,8 +45,6 @@ class PublicationTests(unittest.TestCase):
 
     def test_draft_retry_uploads_and_finalizes_only_after_verification(self):
         def command(*args):
-            if args[:3] == ('gh', 'api', f'repos/{REPO}/releases/tags/{VERSION}'):
-                return json.dumps(self.release)
             return self.run_command(*args)
         def process(args, **kwargs):
             if args[:3] == ['docker', 'buildx', 'build']:
