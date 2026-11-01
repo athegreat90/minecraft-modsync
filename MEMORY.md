@@ -137,3 +137,14 @@ argument. The follow-up quotes the property and uses Bash consistently for the
 native command. Native matrix fail-fast is disabled so all required platforms
 report results; publication still requires every platform to succeed. First
 visible prerelease and image publication remain pending.
+
+
+Follow-up PR #3 merged as ae6d401f3d9070b3f511d08999b636e5254c32fa.
+Reconciliation dispatched only the two newly reachable commits, latest main first;
+earlier attempts remained in cooldown. Head release run 41257085759 passed full
+validation and native compilation on Linux x64, Linux ARM64 and Windows x64.
+Packaging then failed because the java-library plugin made GraalVM produce shared
+libraries (.so/.dll), leaving no CLI executables to smoke-test. Native options now
+explicitly select executable images and bind the application main class, retaining
+no-fallback compilation and every platform startup/benchmark gate. First visible
+prerelease remains pending.
