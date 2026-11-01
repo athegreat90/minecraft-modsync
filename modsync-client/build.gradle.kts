@@ -6,5 +6,14 @@ dependencies {
     implementation(project(":modsync-resolver"))
 }
 application { mainClass.set("net.modsync.ClientKt") }
-graalvmNative { binaries { named("main") { imageName.set("modsync"); buildArgs.add("--no-fallback") } } }
+graalvmNative {
+    binaries {
+        named("main") {
+            imageName.set("modsync")
+            mainClass.set(application.mainClass)
+            sharedLibrary.set(false)
+            buildArgs.add("--no-fallback")
+        }
+    }
+}
 dependencies { testImplementation(project(":modsync-test-fixtures")) }

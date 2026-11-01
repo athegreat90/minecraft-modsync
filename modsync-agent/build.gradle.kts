@@ -5,4 +5,13 @@ dependencies {
     implementation("info.picocli:picocli:4.7.7")
 }
 application { mainClass.set("net.modsync.AgentKt") }
-graalvmNative { binaries { named("main") { imageName.set("modsync-agent"); buildArgs.add("--no-fallback") } } }
+graalvmNative {
+    binaries {
+        named("main") {
+            imageName.set("modsync-agent")
+            mainClass.set(application.mainClass)
+            sharedLibrary.set(false)
+            buildArgs.add("--no-fallback")
+        }
+    }
+}
