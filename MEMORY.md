@@ -186,3 +186,13 @@ The effective GHCR permission probe obtained push-scoped upload sessions for bot
 images. GHCR returns HTTP 405 for DELETE on those upload sessions, so the probe now
 uses successful scoped session creation as its authorization result and lets empty
 sessions expire. No image layer or manifest is uploaded by the probe.
+
+The first main image publication reached the immutable image scan but failed the
+unchanged HIGH/CRITICAL gate. Trivy found stale Noble `libssl3t64`/OpenSSL and
+`libbrotli1` packages in the pinned Temurin runtime image, plus four Bouncy Castle
+findings in `bcprov` 1.82. An initial removal attempt broke Spring Security Argon2
+startup because that encoder needs Bouncy Castle indirectly; the dependency remains
+and is upgraded to official release 1.86, which includes the flagged fixes. Both
+runtime Dockerfiles upgrade those installed OS packages from the current Noble
+security repositories. The failed build left an unpublished zero-asset draft; the
+patched validation, image scan and visible release are pending.

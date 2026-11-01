@@ -6,6 +6,7 @@ WORKDIR /workspace
 COPY . .
 RUN gradle --no-daemon -PreleaseVersion=${RELEASE_VERSION} :modsync-${COMPONENT}:installDist && cp -r modsync-${COMPONENT}/build/install/modsync-${COMPONENT} /opt/distribution
 FROM eclipse-temurin:25.0.1_8-jre-noble
+RUN apt-get update && apt-get install -y --only-upgrade --no-install-recommends libbrotli1 libssl3t64 openssl && rm -rf /var/lib/apt/lists/*
 ARG COMPONENT
 ARG RELEASE_VERSION=0.1.0-SNAPSHOT
 WORKDIR /app
