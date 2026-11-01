@@ -2,6 +2,8 @@ package net.modsync
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.web.bind.annotation.*
@@ -101,11 +103,16 @@ class Controllers(private val store: Store, private val manifests: Manifests, pr
         logger.info("profile validation started artifacts={}", p.artifacts.size)
         val old = store.rows("SELECT user_id FROM personal_profiles WHERE id=? FOR UPDATE", id).singleOrNull(); requireState(old == null || old["user_id"] == actor(), "Profile ownership mismatch")
         val modrinth = Modrinth()
-        val canonical = p.artifacts.map { a ->
+        val canonical = try { p.artifacts.map { a ->
             val project = modrinth.project(a.projectId)
-            logger.info("profile project metadata resolved")
-            requireState(project["server_side"]?.toString() == "\"unsupported\"", "Personal profile requires confirmed client-only Modrinth projects")
+            val serverSide = project["server_side"]?.jsonPrimitive?.contentOrNull
+            logger.info("profile project metadata resolved serverSide={}", serverSide)
+            requireState(serverSide == "unsupported", "Personal profile requires confirmed client-only Modrinth projects")
             modrinth.artifact(a.sha512, Classification.CLIENT_ONLY, listOf(Evidence("modrinth", "Server environment unsupported"))).also { requireState(it.projectId == a.projectId, "Project/hash mismatch") }
+        }
+        } catch (error: Exception) {
+            logger.warn("profile metadata validation failed", error)
+            throw error
         }
         logger.info("profile artifact metadata resolved")
         val profile = p.copy(artifacts = canonical)
