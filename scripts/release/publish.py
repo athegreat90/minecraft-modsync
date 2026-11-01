@@ -23,8 +23,8 @@ def registry_preflight(repo):
             location = urllib.parse.urljoin('https://ghcr.io', response.headers['Location'])
         if urllib.parse.urlparse(location).netloc != 'ghcr.io':
             raise ValueError('Unexpected registry upload location')
-        with urllib.request.urlopen(urllib.request.Request(location, headers=headers, method='DELETE'), timeout=30):
-            pass
+        # GHCR rejects DELETE on upload sessions (405). Creating the scoped
+        # session verifies push permission; its empty session expires server-side.
 
 
 def preflight(repo):

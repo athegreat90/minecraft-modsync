@@ -145,7 +145,7 @@ class PublicationTests(unittest.TestCase):
             return context
         with patch('urllib.request.urlopen', side_effect=response):
             publish.registry_preflight(REPO)
-        self.assertEqual([r.get_method() for r in calls], ['GET', 'POST', 'DELETE'] * 2)
+        self.assertEqual([r.get_method() for r in calls], ['GET', 'POST'] * 2)
         self.assertIn('pull%2Cpush', calls[0].full_url)
 
     def test_tag_target_mismatch_is_rejected(self):
