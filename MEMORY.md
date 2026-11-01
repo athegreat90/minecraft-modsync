@@ -203,3 +203,8 @@ for its still-private draft. The workflow therefore stopped before checksum, man
 and digest verification. The publisher now resolves both drafts and visible releases
 from the paginated release list, which includes drafts, and tests the draft retry
 path before publication. No draft has been made visible yet.
+
+Draft asset verification also avoids `gh release download <tag>`: it downloads each
+asset through the authenticated release-asset API by ID, then checks local bytes
+against `SHA256SUMS` and the compatibility manifest. This keeps draft retry checks
+working even though GitHub's release-by-tag endpoint does not resolve drafts.

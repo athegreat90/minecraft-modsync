@@ -3,6 +3,7 @@ import hashlib
 import json
 import pathlib
 import re
+import subprocess
 import tempfile
 from reconcile import run
 
@@ -45,8 +46,16 @@ def verify_complete(repo, release, sha):
     if any(a['size'] <= 0 or a['state'] != 'uploaded' for a in assets):
         raise ValueError('Incomplete uploaded assets')
     with tempfile.TemporaryDirectory() as tmp:
-        run('gh', 'release', 'download', tag, '--repo', repo, '--dir', tmp)
         root = pathlib.Path(tmp)
+        for asset in assets:
+            name = asset['name']
+            if pathlib.Path(name).name != name:
+                raise ValueError('Invalid release asset filename')
+            with (root / name).open('wb') as output:
+                subprocess.run([
+                    'gh', 'api', f'repos/{repo}/releases/assets/{asset["id"]}',
+                    '-H', 'Accept: application/octet-stream',
+                ], check=True, stdout=output)
         manifest = json.loads((root / 'release-manifest.json').read_text())
         if manifest['sourceCommit'] != sha or manifest['version'] != tag:
             raise ValueError('Manifest source/version mismatch')
