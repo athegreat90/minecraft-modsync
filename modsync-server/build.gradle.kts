@@ -13,7 +13,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.flywaydb:flyway-mysql")
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.6")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.82")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:mariadb:1.21.3")
