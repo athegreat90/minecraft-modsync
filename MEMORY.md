@@ -160,3 +160,11 @@ it now serves HTTP/1.1 with its existing explicit Content-Length framing so Java
 can safely reuse the connection. TLS validation and all assertions are preserved.
 Normal profile checkpoint logs are removed; exceptional metadata failures retain
 diagnostics. Native executable builds and first visible publication are pending.
+
+
+Executable native compilation reached startup on Linux ARM64 in release run
+41258213876. The mandatory help smoke test exposed missing reflection metadata
+for picocli.CommandLine$AutoHelpMixin, which is instantiated by standard --help
+and --version options. Both application reflection configurations now register
+this built-in class alongside their existing command classes. Native smoke tests
+and benchmarks remain mandatory; no release was finalized from the failed run.
