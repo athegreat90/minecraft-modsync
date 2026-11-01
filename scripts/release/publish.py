@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import hashlib, json, os, pathlib, subprocess, tempfile
+import hashlib, json, os, pathlib, subprocess, tempfile, uuid
 from reconcile import run, version as release_version
 from state import required_assets, verify_complete, verify_source
 
@@ -23,15 +23,20 @@ def registry_preflight(repo):
             location = urllib.parse.urljoin('https://ghcr.io', response.headers['Location'])
         if urllib.parse.urlparse(location).netloc != 'ghcr.io':
             raise ValueError('Unexpected registry upload location')
-        with urllib.request.urlopen(urllib.request.Request(location, headers=headers, method='DELETE'), timeout=30):
-            pass
+        # GHCR rejects DELETE on upload sessions (405). Creating the scoped
+        # session verifies push permission; its empty session expires server-side.
 
 
 def preflight(repo):
-    permissions = json.loads(run('gh', 'api', f'repos/{repo}'))['permissions']
-    if not permissions.get('push'):
-        raise ValueError('Publication requires repository write permission')
-    registry_preflight(repo)
+    # Repository permissions.push describes user access, not the effective
+    # contents permission of an Actions installation token. Verify the write API.
+    sha = run('git', 'rev-parse', 'HEAD')
+    ref = 'heads/modsync-release-preflight-' + uuid.uuid4().hex
+    run('gh', 'api', '--method', 'POST', f'repos/{repo}/git/refs', '-f', f'ref=refs/{ref}', '-f', f'sha={sha}')
+    try:
+        registry_preflight(repo)
+    finally:
+        run('gh', 'api', '--method', 'DELETE', f'repos/{repo}/git/refs/{ref}')
 
 
 def main():

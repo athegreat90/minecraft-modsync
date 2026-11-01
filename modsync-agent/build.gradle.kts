@@ -1,4 +1,4 @@
-plugins { kotlin("plugin.serialization"); `java-library`; application; id("org.graalvm.buildtools.native") }
+plugins { kotlin("plugin.serialization"); `java`; application; id("org.graalvm.buildtools.native") }
 dependencies {
     implementation(project(":modsync-protocol"))
     implementation(project(":modsync-scanner"))

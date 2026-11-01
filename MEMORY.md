@@ -168,3 +168,21 @@ for picocli.CommandLine$AutoHelpMixin, which is instantiated by standard --help
 and --version options. Both application reflection configurations now register
 this built-in class alongside their existing command classes. Native smoke tests
 and benchmarks remain mandatory; no release was finalized from the failed run.
+
+Publication preflight now tests the effective GitHub Actions contents permission by
+creating and deleting a uniquely named temporary ref, then verifies push access for
+both GHCR repositories. Repository metadata's permissions.push flag was a false
+negative for the installation token. The first live probe confirmed the temporary
+ref was deleted; GHCR access remains to be checked with the corrected preflight.
+
+On main 8e0c6e0098d6a8df395fd9b24fc940f1a8576152, JVM/database, source-security,
+and distributed integration validation passed, but native packaging still failed:
+the Gradle Java Library plugin selected Graal shared-library output despite the
+per-binary `sharedLibrary=false` setting. The CLI projects now use the Java plugin
+and keep their APIs through the normal application/JVM distributions; executable
+native outputs remain required and all smoke/benchmark gates remain enabled.
+
+The effective GHCR permission probe obtained push-scoped upload sessions for both
+images. GHCR returns HTTP 405 for DELETE on those upload sessions, so the probe now
+uses successful scoped session creation as its authorization result and lets empty
+sessions expire. No image layer or manifest is uploaded by the probe.

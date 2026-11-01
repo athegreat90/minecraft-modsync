@@ -74,15 +74,32 @@ class PublicationTests(unittest.TestCase):
             preflight.assert_not_called()
 
     def test_denied_registry_permission_prevents_publication(self):
-        with patch.object(publish, 'run', return_value=json.dumps({'permissions': {'push': True}})), patch.object(publish, 'registry_preflight', side_effect=PermissionError('GHCR denied')):
+        with patch.object(publish, 'run', return_value=SHA) as commands, patch.object(publish, 'registry_preflight', side_effect=PermissionError('GHCR denied')):
             with self.assertRaises(PermissionError):
                 publish.preflight(REPO)
+            self.assertEqual(commands.call_args.args[3], 'DELETE')
+            self.assertIn('/git/refs/heads/modsync-release-preflight-', commands.call_args.args[4])
 
     def test_repository_permission_required(self):
-        with patch.object(publish, 'run', return_value=json.dumps({'permissions': {'push': False}})), patch.object(publish, 'registry_preflight') as registry:
-            with self.assertRaises(ValueError):
+        def command(*args):
+            if args[0] == 'git':
+                return SHA
+            raise subprocess.CalledProcessError(1, args)
+        with patch.object(publish, 'run', side_effect=command), patch.object(publish, 'registry_preflight') as registry:
+            with self.assertRaises(subprocess.CalledProcessError):
                 publish.preflight(REPO)
             registry.assert_not_called()
+
+    def test_effective_write_permission_probe_is_cleaned_after_success(self):
+        with patch.object(publish, 'run', return_value=SHA) as commands, patch.object(publish, 'registry_preflight') as registry:
+            publish.preflight(REPO)
+            registry.assert_called_once_with(REPO)
+            create = commands.call_args_list[1].args
+            delete = commands.call_args_list[2].args
+            self.assertEqual(create[3], 'POST')
+            self.assertEqual(delete[3], 'DELETE')
+            self.assertEqual(create[8], 'sha='+SHA)
+            self.assertEqual(create[6].removeprefix('ref=refs/'), delete[4].split('/git/refs/',1)[1])
 
     def test_image_failure_leaves_draft(self):
         with patch.object(publish, 'run', side_effect=self.run_command), patch.object(state, 'tag_source', return_value=SHA), patch.object(publish, 'verify_source'), patch.object(publish, 'preflight'), patch.object(publish.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'docker')) as calls:
@@ -128,7 +145,7 @@ class PublicationTests(unittest.TestCase):
             return context
         with patch('urllib.request.urlopen', side_effect=response):
             publish.registry_preflight(REPO)
-        self.assertEqual([r.get_method() for r in calls], ['GET', 'POST', 'DELETE'] * 2)
+        self.assertEqual([r.get_method() for r in calls], ['GET', 'POST'] * 2)
         self.assertIn('pull%2Cpush', calls[0].full_url)
 
     def test_tag_target_mismatch_is_rejected(self):
