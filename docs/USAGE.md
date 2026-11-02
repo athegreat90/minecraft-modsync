@@ -383,7 +383,7 @@ Token lifetimes: access 1 h, refresh 30 d, agent credential 30 d.
 
 ## 11. Deploy scripts (one per phase)
 
-`scripts/deploy/` automates each phase with the same options in **zsh** (`.zsh`) and **PowerShell** (`.ps1`). Each script is fail-fast, prints no secrets, supports `--help` (`Get-Help .\script.ps1` in PowerShell), and runs on the host where that phase belongs.
+`scripts/deploy/` automates each phase with the same options in **zsh** (`.zsh`) and **PowerShell** (`.ps1`); see [scripts/deploy/README.md](../scripts/deploy/README.md) for per-phase options and ready-made prompts for Claude Code, Codex and Antigravity. Each script is fail-fast, prints no secrets, supports `--help` (`Get-Help .\script.ps1` in PowerShell), and runs on the host where that phase belongs.
 
 | Phase | Host | zsh | PowerShell | What it does |
 |---|---|---|---|---|
