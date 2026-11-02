@@ -6,7 +6,7 @@ plugins {
     id("org.springframework.boot") version "4.1.2" apply false
     id("org.graalvm.buildtools.native") version "0.11.5" apply false
 }
-allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.2.0-SNAPSHOT").get() }
+allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.2.1-SNAPSHOT").get() }
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {

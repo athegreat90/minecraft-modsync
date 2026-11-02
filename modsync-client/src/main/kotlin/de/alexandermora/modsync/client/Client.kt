@@ -58,7 +58,7 @@ class Client: Runnable {
         c.instances.keys.forEach { name -> require(Files.isDirectory(instance(name))); println("Instance registered: $name") }
         println("Local diagnostics passed; use connection test to check online authentication")
     }
-    @Command(name="interactive") fun interactive(@Option(names=["--tui-home"], defaultValue="\${env:MODSYNC_TUI_HOME}") home: Path?) {
+    @Command(name="interactive") fun interactive(@Option(names=["--tui-home"], defaultValue=$$"${env:MODSYNC_TUI_HOME}") home: Path?) {
         val library=(home ?: error("Set MODSYNC_TUI_HOME to the extracted modsync-client-tui distribution")).resolve("lib")
         require(Files.isDirectory(library)) { "TUI distribution lib directory is missing" }
         val javaHome=System.getenv("JAVA_HOME")

@@ -69,7 +69,7 @@ class InventoryIntegrationTest {
 
     private fun agent(): String {
         val id = UUID.randomUUID().toString()
-        val token = tx.execute { agents.createEnrollment("test", 600) }!!
+        val token = tx.execute { agents.createEnrollment("test",         600) }
         tx.execute { agents.enroll(Enrollment(token.token, id)) }
         return id
     }
@@ -86,9 +86,9 @@ class InventoryIntegrationTest {
     private fun acceptedSnapshot(server: String) = db.queryForObject("SELECT snapshot_id FROM minecraft_servers WHERE id=?", String::class.java, server)
 
     @Test fun `retry is idempotent and older snapshot cannot overwrite`() {
-        val agent = agent(); val server = server(); val assignment = tx.execute { agents.transfer("test", server, Transfer(agent, "mods")) }!!
+        val agent = agent(); val server = server(); val assignment = tx.execute { agents.transfer("test", server, Transfer(agent, "mods")) }
         val first = snapshot(server, assignment.generation, 1); tx.execute { inventory.begin(agent, first) }
-        val ack = tx.execute { inventory.commit(agent, first.scanId) }!!
+        val ack = tx.execute { inventory.commit(agent, first.scanId) }
         assertEquals(0, java.time.Instant.parse(ack.committedAt).nano % 1000)
         assertEquals(ack, tx.execute { inventory.commit(agent, first.scanId) })
         val next = snapshot(server, assignment.generation, 3); tx.execute { inventory.begin(agent, next) }; tx.execute { inventory.commit(agent, next.scanId) }
@@ -98,9 +98,9 @@ class InventoryIntegrationTest {
 
     @Test fun `migration fences old agent and preserves server identity`() {
         val old = agent(); val replacement = agent(); val server = server()
-        val assignment = tx.execute { agents.transfer("test", server, Transfer(old, "mods")) }!!
+        val assignment = tx.execute { agents.transfer("test", server, Transfer(old, "mods")) }
         val scan = snapshot(server, assignment.generation, 1); tx.execute { inventory.begin(old, scan) }; tx.execute { inventory.commit(old, scan.scanId) }
-        val newer = tx.execute { agents.transfer("test", server, Transfer(replacement, "newmods")) }!!
+        val newer = tx.execute { agents.transfer("test", server, Transfer(replacement, "newmods")) }
         assertTrue(newer.generation > assignment.generation); assertFails { tx.execute { inventory.begin(old, snapshot(server, assignment.generation, 2)) } }
         assertEquals(scan.scanId, acceptedSnapshot(server))
         val replacementScan = snapshot(server, newer.generation, 1); tx.execute { inventory.begin(replacement, replacementScan) }; tx.execute { inventory.commit(replacement, replacementScan.scanId) }
@@ -108,14 +108,14 @@ class InventoryIntegrationTest {
     }
 
     @Test fun `incomplete scan never changes authoritative inventory`() {
-        val a = agent(); val s = server(); val assignment = tx.execute { agents.transfer("test", s, Transfer(a, "mods")) }!!
+        val a = agent(); val s = server(); val assignment = tx.execute { agents.transfer("test", s, Transfer(a, "mods")) }
         val scan = snapshot(s, assignment.generation, 1).copy(count = 1); tx.execute { inventory.begin(a, scan) }
         assertFails { tx.execute { inventory.commit(a, scan.scanId) } }
         assertNull(acceptedSnapshot(s))
     }
 
     @Test fun `enrollment is single use`() {
-        val token = tx.execute { agents.createEnrollment("test", 600) }!!
+        val token = tx.execute { agents.createEnrollment("test",         600) }
         tx.execute { agents.enroll(Enrollment(token.token, UUID.randomUUID().toString())) }
         assertFails { tx.execute { agents.enroll(Enrollment(token.token, UUID.randomUUID().toString())) } }
     }
