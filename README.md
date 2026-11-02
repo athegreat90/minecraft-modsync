@@ -10,6 +10,22 @@ Self-hosted mod inventory and client reconciliation across three independent hos
 
 One monorepo produces independently deployable artifacts. Minecraft worlds, Crafty configuration and launcher files are never managed by ModSync.
 
+## How it works (30-second version)
+
+```mermaid
+flowchart LR
+  A["Host A: agent scans mods/ read-only"] -->|"inventory (HTTPS, outbound)"| B["Host B: API + MariaDB"]
+  ADM["Administrator"] -->|"classify + publish immutable manifest"| B
+  B -->|"manifest"| C["Host C: modsync CLI"]
+  C -->|"plan -> verified download -> apply/rollback"| MC[("Minecraft instance mods/")]
+```
+
+1. The **agent** hashes every JAR on the server and uploads a complete, fenced inventory.
+2. An **administrator** approves a classification per mod and publishes a numbered manifest of exact Modrinth versions.
+3. Each player's **client** builds a plan (install/update/keep/remove managed/skip unmanaged), downloads only from the official CDN with SHA-512 and CRC checks, applies atomically with backups, and can roll back.
+
+New here? Read the full step-by-step [project guide](docs/GUIDE.md): glossary, module map, auth and sync sequence diagrams, resolver rules, database schema, deployment and CI.
+
 ## Build and verification
 
 Install JDK 25, Python 3, network access to Gradle/Maven repositories, and Docker daemon access for Testcontainers. The local environment only supplied Java 26.
@@ -53,6 +69,6 @@ Offline scans and diagnostics do not authenticate or claim current synchronizati
 
 ## Documentation
 
-[Architecture](ARCHITECTURE.md) · [Distributed topology](DISTRIBUTED_ARCHITECTURE.md) · [Networking](NETWORKING.md) · [Migration](HOST_MIGRATION.md) · [Database](DATABASE.md) · [Docker](DOCKER.md) · [Security](SECURITY.md) · [Release process](RELEASES.md) · [Performance](CLIENT_PERFORMANCE.md) · [Repository strategy](REPOSITORY_STRATEGY.md) · [API](docs/architecture/API.md)
+[**Project guide**](docs/GUIDE.md) · [Architecture](ARCHITECTURE.md) · [Distributed topology](DISTRIBUTED_ARCHITECTURE.md) · [Networking](NETWORKING.md) · [Migration](HOST_MIGRATION.md) · [Database](DATABASE.md) · [Docker](DOCKER.md) · [Security](SECURITY.md) · [Release process](RELEASES.md) · [Performance](CLIENT_PERFORMANCE.md) · [Repository strategy](REPOSITORY_STRATEGY.md) · [API](docs/architecture/API.md)
 
 [Implementation report](IMPLEMENTATION_REPORT.md) covers delivered source, actual checks and remaining release gates.
