@@ -173,6 +173,69 @@ Without Docker (JVM): `modsync-agent --state-dir DIR setup|register|map|scan|run
 
 ## 5. Player: Host C
 
+### 5.0 Install the client (detailed)
+
+The client is a JVM application (Kotlin, Picocli). There is no installer package yet; you build it from source. Every step below has a check so you know it worked.
+
+**Step 1 — Install prerequisites**
+
+| Tool | Version | Why | Check |
+|---|---|---|---|
+| JDK | 25 or newer | Runs and builds the client | `java -version` must report 25+ |
+| Git | any | Get the source | `git --version` |
+
+If `java -version` reports an older version, install JDK 25 (any vendor) and make sure it is first on `PATH`/`JAVA_HOME`.
+PowerShell: `java -version; $env:JAVA_HOME`.
+
+**Step 2 — Get the source**
+
+```bash
+git clone https://github.com/athegreat90/minecraft-modsync.git
+cd minecraft-modsync
+```
+
+**Step 3 — Build the launcher**
+
+```bash
+./gradlew :modsync-client:installDist
+```
+PowerShell: `.\gradlew.bat :modsync-client:installDist`
+
+The first run downloads Gradle and dependencies, so it needs internet access. The result is `modsync-client/build/install/modsync-client/`, containing `bin/modsync-client` (Linux/macOS) and `bin/modsync-client.bat` (Windows).
+
+**Step 4 — Check that it runs**
+
+```bash
+modsync-client/build/install/modsync-client/bin/modsync-client --help
+```
+PowerShell: `.\modsync-client\build\install\modsync-client\bin\modsync-client.bat --help`
+
+You should see the `modsync` command list (`setup`, `login`, `servers`, `instances`, `sync`, ...).
+
+**Step 5 — Put it on your PATH (optional but recommended)**
+
+zsh:
+```zsh
+echo 'export PATH="$PWD/modsync-client/build/install/modsync-client/bin:$PATH"' >> ~/.zshrc
+exec zsh
+modsync-client --help
+```
+PowerShell (persists for your user; open a new terminal afterwards):
+```powershell
+$bin = "$PWD\modsync-client\build\install\modsync-client\bin"
+[Environment]::SetEnvironmentVariable('Path', "$([Environment]::GetEnvironmentVariable('Path','User'));$bin", 'User')
+```
+Below, `modsync` is shorthand for `modsync-client`.
+
+**Step 6 — Get four values from your administrator**: the server URL, the `CONTROL_PLANE_UUID`, your username and your password (the password should arrive over a safe channel; save it to a file readable only by you, e.g. `~/alex.pw`).
+
+**Step 7 — Optional: interactive TUI.** `modsync-client-tui` is built with `./gradlew :modsync-client-tui:installDist` and needs Java 25. Start it with `modsync interactive --tui-home DIR` (or set `MODSYNC_TUI_HOME`).
+
+**Upgrade:** `git pull` then repeat Step 3. Your state in `~/.modsync` is kept.
+**Uninstall:** delete the cloned folder, remove the PATH entry, and delete `~/.modsync` (this also removes your saved login and cached manifests; it does not touch your Minecraft folder).
+
+Or run the automated version: `scripts/deploy/04-client.zsh` / `04-client.ps1` (see [section 11](#11-deploy-scripts-one-per-phase)).
+
 ### 5.1 First-time setup
 
 ```bash
@@ -292,3 +355,55 @@ On Windows use `.\gradlew.bat` and `python` instead of `python3`.
 | `MODSYNC_SCAN_INTERVAL` | agent | Seconds between scans (default 300) |
 
 Token lifetimes: access 1 h, refresh 30 d, agent credential 30 d.
+
+## 11. Deploy scripts (one per phase)
+
+`scripts/deploy/` automates each phase with the same options in **zsh** (`.zsh`) and **PowerShell** (`.ps1`). Each script is fail-fast, prints no secrets, supports `--help` (`Get-Help .\script.ps1` in PowerShell), and runs on the host where that phase belongs.
+
+| Phase | Host | zsh | PowerShell | What it does |
+|---|---|---|---|---|
+| 1 | B | `01-server.zsh` | `01-server.ps1` | Generate secrets, write `docker/server/.env`, `docker compose up -d --build`, wait for health, print `/api/v1/info` |
+| 2 | Admin machine | `02-admin.zsh` | `02-admin.ps1` | Pin the server, log in as `admin`, register a Minecraft server, write an enrollment token file |
+| 3 | A | `03-agent.zsh` | `03-agent.ps1` | Write `docker/agent/.env`, build, pin, register (token deleted afterwards), map, optional first scan, start |
+| 4 | C (player) | `04-client.zsh` | `04-client.ps1` | Check Java 25, build the client, optional PATH entry, pin, login, connection test, add or discover an instance |
+
+Run from the repository root.
+
+```zsh
+# Phase 1, on Host B
+scripts/deploy/01-server.zsh --url http://127.0.0.1:8080
+
+# Phase 2, admin machine (needs the controlPlaneId printed by phase 1)
+scripts/deploy/02-admin.zsh --server-url https://modsync.example.org --control-plane-id CONTROL_PLANE_UUID \
+  --password-file .local/secrets/bootstrap_password --name survival --minecraft-version 1.21.1
+
+# Phase 3, on Host A (token file from phase 2)
+scripts/deploy/03-agent.zsh --server-url https://modsync.example.org --control-plane-id CONTROL_PLANE_UUID \
+  --token-file ./enrollment-token --state-path /srv/modsync/agent --servers-path /srv/crafty/servers \
+  --alias survival --mods-dir survival/mods
+
+# Phase 4, on the player's machine
+scripts/deploy/04-client.zsh --server-url https://modsync.example.org --control-plane-id CONTROL_PLANE_UUID \
+  --username alex --password-file ~/alex.pw --instance-name survival --instance-path ~/mc/survival \
+  --minecraft-version 1.21.1 --loader neoforge --add-to-path
+```
+
+```powershell
+.\scripts\deploy\01-server.ps1 -Url http://127.0.0.1:8080
+.\scripts\deploy\02-admin.ps1 -ServerUrl https://modsync.example.org -ControlPlaneId CONTROL_PLANE_UUID `
+  -PasswordFile .\.local\secrets\bootstrap_password -Name survival -MinecraftVersion 1.21.1
+.\scripts\deploy\03-agent.ps1 -ServerUrl https://modsync.example.org -ControlPlaneId CONTROL_PLANE_UUID `
+  -TokenFile .\enrollment-token -StatePath D:\modsync\agent -ServersPath D:\crafty\servers -Alias survival -ModsDir survival/mods
+.\scripts\deploy\04-client.ps1 -ServerUrl https://modsync.example.org -ControlPlaneId CONTROL_PLANE_UUID `
+  -Username alex -PasswordFile $HOME\alex.pw -InstanceName survival -InstancePath "$env:APPDATA\.minecraft" `
+  -MinecraftVersion 1.21.1 -Loader neoforge -AddToPath
+```
+If PowerShell blocks scripts: `Set-ExecutionPolicy -Scope Process Bypass`.
+
+Notes:
+
+- Between phases 3 and 4 the administrator still has to **assign the agent, classify, preview and publish** ([section 3](#3-administrator-log-in-and-drive-the-api)); those steps depend on human decisions, so they are not scripted. Phase 2 prints `SERVER_UUID`; the agent id comes from `GET admin/agents`.
+- Phase 1 does not set up TLS; put a reverse proxy in front before phases 2-4, which require HTTPS.
+- On Linux the server container reads secrets as UID 10001: run phase 1 as root or `chown -R 10001:10001` the secrets directory. On Windows/Docker Desktop, check file sharing if the container cannot read them.
+- `MODSYNC_CLIENT` overrides the client launcher used by phase 2.
+- The scripts were syntax-checked (zsh `-n`, PowerShell parser) and their `--help`/argument validation exercised, but a live end-to-end deployment has not been run.
