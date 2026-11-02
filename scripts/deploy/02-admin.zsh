@@ -35,7 +35,7 @@ for v in url cpid pwfile name mcv; do
   [[ -n ${(P)v} ]] || { print -u2 "Missing required option for: $v"; usage 1; }
 done
 [[ -r $pwfile ]] || { print -u2 "Cannot read password file"; exit 1; }
-(( ttl >= 60 && ttl <= 3600 )) || { print -u2 "--ttl must be 60..3600"; exit 1; }
+(( ttl >= 60 && ttl <= 3600 )) || { print -u2 -- "--ttl must be 60..3600"; exit 1; }
 command -v python3 >/dev/null || { print -u2 "python3 is required"; exit 1; }
 
 client=${MODSYNC_CLIENT:-$root/modsync-client/build/install/modsync-client/bin/modsync-client}

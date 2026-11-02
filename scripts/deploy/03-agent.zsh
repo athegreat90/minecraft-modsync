@@ -32,7 +32,7 @@ done
 for v in url cpid token state servers alias_name mods; do
   [[ -n ${(P)v} ]] || { print -u2 "Missing required option for: $v"; usage 1; }
 done
-(( interval >= 30 && interval <= 86400 )) || { print -u2 "--interval must be 30..86400"; exit 1; }
+(( interval >= 30 && interval <= 86400 )) || { print -u2 -- "--interval must be 30..86400"; exit 1; }
 [[ -r $token ]] || { print -u2 "Cannot read token file"; exit 1; }
 [[ -d $servers ]] || { print -u2 "Servers path not found: $servers"; exit 1; }
 [[ -d $servers/$mods ]] || { print -u2 "Mods directory not found: $servers/$mods"; exit 1; }

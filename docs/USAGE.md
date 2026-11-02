@@ -74,6 +74,31 @@ Work in `docker/server`. Full reference: [docker/server/README.md](../docker/ser
    `/api/v1/info` returns `controlPlaneId` — **write it down**; it is the `CONTROL_PLANE_UUID` every client and agent pins.
 6. First start creates user `admin` only if no users exist. Its password is the content of `.local/secrets/bootstrap_password`.
 
+### 2.1 Use an existing (external) MariaDB instead of the bundled one
+
+The server needs **MariaDB 11.4.x**. Ask your DBA (or run as root) once; the deploy script only verifies, it never creates anything:
+
+```sql
+CREATE DATABASE modsync CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'modsync'@'%' IDENTIFIED BY '<password>';
+GRANT ALL PRIVILEGES ON modsync.* TO 'modsync'@'%';
+```
+Flyway runs migrations at startup, so the user needs DDL rights on that schema.
+
+```bash
+scripts/deploy/01-server.zsh --db-host db.example.org --db-password-file ./modsync-db.pw --db-ssl-mode verify-full
+```
+```powershell
+.\scripts\deploy\01-server.ps1 -DbHost db.example.org -DbPasswordFile .\modsync-db.pw -DbSslMode verify-full
+```
+Without a password file, an existing `secrets/db_password` or a silent prompt is used. The script tests login, version and a create/drop-table probe (skip with `--skip-db-check`), writes `.env`, and starts only `modsync-server`. `localhost` is mapped to `host.docker.internal`.
+
+Manual equivalent (needs Docker Compose >= 2.24), with `MODSYNC_DB_URL`/`MODSYNC_DB_USER` set in `.env`:
+```bash
+docker compose --env-file .env -f compose.yaml -f compose.external-db.yaml up -d --build modsync-server
+```
+The `db_password` secret must contain the DB user's password. The bundled-DB backup scripts do not apply; use `mariadb-dump` on your DB host.
+
 ## 3. Administrator: log in and drive the API
 
 ### 3.1 Log in as admin (creates the config file `admin.py` uses)
@@ -310,7 +335,7 @@ modsync interactive --tui-home DIR   # JLine TUI from modsync-client-tui (or env
 scripts/backup/export.sh docker/server/compose.yaml backup.sql        # refuses to overwrite; writes backup.sql.sha256
 MODSYNC_RESTORE_CONFIRMED=fresh-database scripts/backup/import.sh docker/server/compose.yaml backup.sql
 ```
-Restore only into an isolated, fresh database. Set `MODSYNC_MAINTENANCE` in `.env` and recreate the container for maintenance mode. See [HOST_MIGRATION.md](../HOST_MIGRATION.md) and [DATABASE.md](../DATABASE.md).
+These scripts target the bundled `mariadb` service; with an external MariaDB ([2.1](#21-use-an-existing-external-mariadb-instead-of-the-bundled-one)) back up with `mariadb-dump`. Restore only into an isolated, fresh database. Set `MODSYNC_MAINTENANCE` in `.env` and recreate the container for maintenance mode. See [HOST_MIGRATION.md](../HOST_MIGRATION.md) and [DATABASE.md](../DATABASE.md).
 
 ## 8. Developer commands
 
@@ -403,6 +428,7 @@ If PowerShell blocks scripts: `Set-ExecutionPolicy -Scope Process Bypass`.
 Notes:
 
 - Between phases 3 and 4 the administrator still has to **assign the agent, classify, preview and publish** ([section 3](#3-administrator-log-in-and-drive-the-api)); those steps depend on human decisions, so they are not scripted. Phase 2 prints `SERVER_UUID`; the agent id comes from `GET admin/agents`.
+- Phase 1 supports an existing MariaDB via `--db-host` / `-DbHost` (also `--db-port`, `--db-name`, `--db-user`, `--db-password-file`, `--db-ssl-mode`, `--db-url`, `--skip-db-check`); see [2.1](#21-use-an-existing-external-mariadb-instead-of-the-bundled-one).
 - Phase 1 does not set up TLS; put a reverse proxy in front before phases 2-4, which require HTTPS.
 - On Linux the server container reads secrets as UID 10001: run phase 1 as root or `chown -R 10001:10001` the secrets directory. On Windows/Docker Desktop, check file sharing if the container cannot read them.
 - `MODSYNC_CLIENT` overrides the client launcher used by phase 2.

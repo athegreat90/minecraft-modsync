@@ -32,7 +32,7 @@ while (( $# )); do
 done
 for v in url cpid user; do [[ -n ${(P)v} ]] || { print -u2 "Missing required option for: $v"; usage 1; }; done
 if [[ -n $ipath ]]; then
-  for v in iname mcv loader; do [[ -n ${(P)v} ]] || { print -u2 "--instance-path needs --instance-name, --minecraft-version and --loader"; exit 1; }; done
+  for v in iname mcv loader; do [[ -n ${(P)v} ]] || { print -u2 -- "--instance-path needs --instance-name, --minecraft-version and --loader"; exit 1; }; done
   [[ -d $ipath ]] || { print -u2 "Instance path not found: $ipath"; exit 1; }
 fi
 
