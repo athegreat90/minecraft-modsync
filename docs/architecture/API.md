@@ -1,6 +1,6 @@
 # API v1
 
-Protocol messages are defined in `modsync-protocol/.../Protocol.kt`; domain payloads in `modsync-domain/.../Domain.kt`. Requests require `X-ModSync-Protocol: 1` and `X-ModSync-Version: 0.1.0`, except public info. Authenticated calls use a bearer token. JSON unknown fields support compatible additions; incompatible protocol/minimum versions return 426. The checked [OpenAPI contract](openapi.json) is generated from domain/protocol DTOs and an explicit route registry with `python3 scripts/openapi.py`. CI checks it with `--check`; authenticated users can retrieve it at `/api/v1/openapi.json`. Framework-level contract execution remains unverified.
+Protocol messages are defined in `modsync-protocol/.../Protocol.kt`; domain payloads in `modsync-domain/.../Domain.kt`. Requests require `X-ModSync-Protocol: 1` and `X-ModSync-Version: 0.2.0` (or newer), except public info. Authenticated calls use a bearer token. JSON unknown fields support compatible additions; incompatible protocol/minimum versions return 426. The checked [OpenAPI contract](openapi.json) is generated from domain/protocol DTOs and an explicit route registry with `python3 scripts/openapi.py`. CI checks it with `--check`; authenticated users can retrieve it at `/api/v1/openapi.json`. Framework-level contract execution remains unverified.
 
 | Route | Authority | Purpose |
 |---|---|---|

@@ -1,11 +1,11 @@
-plugins { kotlin("plugin.serialization"); `java-library`; kotlin("plugin.spring"); id("org.springframework.boot") }
+plugins { kotlin("plugin.serialization"); `java-library`; kotlin("plugin.spring"); kotlin("plugin.jpa"); id("org.springframework.boot") }
 dependencies {
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.0.9"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation(project(":modsync-protocol"))
     implementation(project(":modsync-modrinth"))

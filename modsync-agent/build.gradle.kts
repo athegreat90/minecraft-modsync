@@ -4,7 +4,7 @@ dependencies {
     implementation(project(":modsync-scanner"))
     implementation("info.picocli:picocli:4.7.7")
 }
-application { mainClass.set("net.modsync.AgentKt") }
+application { mainClass.set("de.alexandermora.modsync.agent.AgentKt") }
 graalvmNative {
     binaries {
         named("main") {

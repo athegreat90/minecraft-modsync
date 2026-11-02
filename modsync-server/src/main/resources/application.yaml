@@ -4,6 +4,9 @@ server:
   tomcat:
     max-http-form-post-size: 2MB
 spring:
+  http:
+    converters:
+      preferred-json-mapper: kotlinx-serialization
   datasource:
     url: ${MODSYNC_DB_URL:jdbc:mariadb://mariadb:3306/modsync}
     username: ${MODSYNC_DB_USER:modsync}
@@ -13,6 +16,14 @@ spring:
       connection-timeout: 5000
   flyway:
     enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP
 management:
   endpoints:
     web:

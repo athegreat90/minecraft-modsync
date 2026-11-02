@@ -79,7 +79,7 @@ Rules enforced by design: A and C never talk to each other; only B talks to Mari
 
 ## 4. Repository and module map
 
-Ten Gradle modules (`settings.gradle.kts`), all Kotlin, package `net.modsync`, JDK 25.
+Ten Gradle modules (`settings.gradle.kts`), all Kotlin, one root package per module (`de.alexandermora.modsync.domain`, `.protocol`, `.scanner`, `.resolver`, `.modrinth`, `.agent`, `.client`, `.client.tui`, `.server`, `.fixtures`), JDK 25.
 
 ```mermaid
 flowchart TD
@@ -107,13 +107,13 @@ flowchart TD
 | Module | Key file | What it does |
 |---|---|---|
 | domain | `Domain.kt` | `ModEntry`, `Artifact`, `Manifest`, `SyncPlan`, `sha512`, `safeFileName` (rejects path separators, reserved Windows names, non-`.jar`), `inventoryDigest` (SHA-512 over sorted `name\0hash\0size`). |
-| protocol | `Protocol.kt`, `Transport.kt` | Wire messages (protocol version 1, component 0.1.0). `Api` enforces HTTPS only, no redirects, 8 MiB response cap, headers `X-ModSync-Protocol/Version`. `secureWrite` = temp file + atomic move, mode 0600 on POSIX. |
+| protocol | `Protocol.kt`, `Transport.kt` | Wire messages (protocol version 1, component 0.2.0). `Api` enforces HTTPS only, no redirects, 8 MiB response cap, headers `X-ModSync-Protocol/Version`. `secureWrite` = temp file + atomic move, mode 0600 on POSIX. |
 | scanner | `Scanner.kt` | Lists `*.jar`, refuses symlinks, hashes with SHA-512, reads `neoforge.mods.toml`, `mods.toml`, `fabric.mod.json`, `jarjar/metadata.json` (≤1 MiB each, 2 MiB total), extracts mod ids, flags duplicate hashes/ids, aborts if a file or the directory changes during the scan. Never executes JARs. |
 | resolver | `Resolver.kt` | Pure function `plan(manifest, personal, local, managed, includeOptional)` → `SyncPlan`. Also used by the server to validate manifests before publishing. |
 | modrinth | `Modrinth.kt` | Hash lookup (`version_files`, batches of 100), project/version, compatible versions. 1-hour in-memory cache, retries on 429/5xx with jitter, size/timeouts. |
 | agent | `Agent.kt` | Commands `setup, register, map, scan, run, status, doctor`. |
 | client | `Client.kt`, `Installer.kt` | Commands `setup, login, config, connection, servers, instances, mods, personal, sync, doctor, interactive`. |
-| server | `Server.kt, Security.kt, Controllers.kt, Store.kt, Manifests.kt, Observability.kt` | REST API, auth, persistence, publishing. |
+| server | `de.alexandermora.modsync.server.{auth,agent,inventory,manifest,profile,catalog,system,common,config,observability}` | REST API, auth, persistence, publishing; each feature has its controller, service and persistence. |
 | tui | `Interactive.kt` | Separate JVM app so the normal client stays JLine-free. |
 | fixtures | `Fixtures.kt` | Builds fake JARs for tests. |
 
@@ -206,7 +206,7 @@ sequenceDiagram
   end
 ```
 
-Safety properties (see `Store.kt`):
+Safety properties (see `InventoryService` and `AgentService`):
 - `ownership()` locks the server row and checks `agent_id` and `generation`; a stale agent after a transfer is rejected.
 - Re-sending the same `begin`/batch is accepted only if byte-identical (otherwise 409 "Conflicting retry").
 - A snapshot is only visible after `commit`; partial uploads never replace the accepted state. Payload cap 6 MiB per snapshot, max 10 000 files.
@@ -218,13 +218,13 @@ Safety properties (see `Store.kt`):
 flowchart TD
   I["GET /admin/servers/{id}/inventory\n(latest committed snapshot)"] --> M["GET /admin/servers/{id}/identified\nModrinth lookup by SHA-512"]
   M --> O["PUT /admin/servers/{id}/classification\nper hash + reason\n(policy_revision++)"]
-  O --> P["POST /admin/servers/{id}/preview\nManifests.validate"]
+  O --> P["POST /admin/servers/{id}/preview\nManifestService.preview"]
   P -->|"blocked / missing approvals"| O
   P --> U["POST /admin/servers/{id}/publish"]
   U --> R[("manifest_revisions\nrevision = previous+1")]
 ```
 
-`Manifests.validate` requires:
+`ManifestService.preview` requires:
 1. The request's `scanId` is the server's latest committed snapshot.
 2. **Every** scanned file has an explicit classification override.
 3. Every artifact is either rebuilt from Modrinth by hash (URL present) or is a *manual* artifact matching the scanned file (no URL; clients must supply the exact file locally).
@@ -338,10 +338,10 @@ Standalone tables: `system_settings` (control_plane_id), `credentials` (hashed t
 
 ## 12. Server internals
 
-- **Entry**: `ServerApplication` (`Server.kt`): inserts control-plane id, bootstraps the admin from a protected password file (16–256 chars) only if no users exist.
+- **Entry**: `ServerApplication` (`ServerApplication.kt`): inserts control-plane id, bootstraps the admin from a protected password file (16–256 chars) only if no users exist.
 - **Security chain** (`Security.kt`): stateless, CSRF/CORS off. Public: `/info`, `/auth/login`, `/auth/refresh`, `/enroll`, health. `/admin/**` + Prometheus → ADMIN; `/agent/**` → AGENT; rest of `/api/v1/**` → CLIENT or ADMIN; everything else denied.
 - **`Guard` filter**: correlation id header per request; maintenance mode (`MODSYNC_MAINTENANCE`) rejects non-GET with 503; 20 req/min/IP on login/refresh/enroll (429); requires matching protocol and ≥ component version headers (426); body ≤ 2 MiB (413); looks up bearer token hash, checks agent/device not revoked.
-- **`Controllers.kt`**: thin REST layer; `Store.kt` holds SQL/transaction logic (credentials, enrollment, assignment, snapshots); `Manifests.kt` validate/publish; `Observability.kt` Micrometer/Actuator.
+- **Controllers** (one per feature package) are thin: they take typed request bodies and return DTOs directly (no `ResponseEntity`); the kotlinx-serialization converter uses the shared `wire` format and `common/Support.kt`'s `Errors` advice maps invalid input to a 400 `Failure`. **Services** hold the transactions (`CredentialService`, `AuthService`, `AgentService`, `InventoryService`, `ManifestService`, `ProfileService`, `CatalogService`); `observability/Observability.kt` is Micrometer/Actuator.
 - **API reference**: [docs/architecture/API.md](architecture/API.md), generated `openapi.json` (`scripts/openapi.py --check` in CI).
 - **Config** (`application.yaml`): `MODSYNC_DB_URL/USER/PASSWORD`, bootstrap user/password file, maintenance, ECS-format structured logs, Hikari pool 5.
 
@@ -386,7 +386,7 @@ flowchart LR
   PR[push / PR] --> CI["ci.yaml: Gradle check + bootJar/installDist,\narchitecture, OpenAPI, Python tests,\nTrivy scan, distributed fixture"]
   main[main push / hourly] --> REC["reconcile.yaml:\nfind unreleased reachable commits"]
   REC --> REL["release.yaml: exact SHA build,\nnative (Win x64, Linux x64/ARM64),\nimages amd64/arm64 + SBOM, scans"]
-  REL --> PRE["prerelease v0.1.0-dev.<time>.<sha>"]
+  REL --> PRE["prerelease v0.2.0-dev.<time>.<sha>"]
 ```
 Details: [RELEASES.md](../RELEASES.md).
 
