@@ -27,7 +27,7 @@ def main():
     opener=urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),NoRedirect())
     def request(path,method='GET',body=None,token=None):
         data=None if body is None else json.dumps(body).encode()
-        headers={'Content-Type':'application/json','X-ModSync-Protocol':'1','X-ModSync-Version':'0.1.0'}
+        headers={'Content-Type':'application/json','X-ModSync-Protocol':'1','X-ModSync-Version':'0.2.0'}
         if token: headers['Authorization']='Bearer '+token
         with opener.open(urllib.request.Request(endpoint+'/api/v1/'+path,data=data,headers=headers,method=method),timeout=60) as response:
             raw=response.read(8*1024*1024+1)

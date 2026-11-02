@@ -2,7 +2,18 @@
 """Generate the checked API schema from the small shared Kotlin DTO vocabulary."""
 import json, pathlib, re, sys
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-SOURCES=[ROOT/'modsync-domain/src/main/kotlin/net/modsync/Domain.kt',ROOT/'modsync-protocol/src/main/kotlin/net/modsync/Protocol.kt']
+BASE='de/alexandermora/modsync'
+SOURCES=[ROOT/f'modsync-domain/src/main/kotlin/{BASE}/domain/Domain.kt',ROOT/f'modsync-protocol/src/main/kotlin/{BASE}/protocol/Protocol.kt']
+CONTROLLERS=ROOT/f'modsync-server/src/main/kotlin/{BASE}/server'
+
+def controller_routes():
+    routes=set()
+    for file in CONTROLLERS.rglob('*Controller.kt'):
+        text=file.read_text()
+        prefix=re.search(r'@RequestMapping\("([^"]*)"\)',text).group(1)
+        for method,route in re.findall(r'@(Get|Post|Put)Mapping(?:\("([^"]*)"\))?',text):
+            routes.add((method.lower(),prefix+route))
+    return routes
 
 def parts(text):
     result=[]; start=0; depth=0; quoted=False; escaped=False
@@ -102,20 +113,19 @@ def build():
             operation['responses'][str(code)]={'description':description}
         parameters=[]
         if path!='info':
-            parameters += [{'name':'X-ModSync-Protocol','in':'header','required':True,'schema':{'type':'integer','enum':[1]}},{'name':'X-ModSync-Version','in':'header','required':True,'schema':{'type':'string','example':'0.1.0'}}]
+            parameters += [{'name':'X-ModSync-Protocol','in':'header','required':True,'schema':{'type':'integer','enum':[1]}},{'name':'X-ModSync-Version','in':'header','required':True,'schema':{'type':'string','example':'0.2.0'}}]
         for name in re.findall(r'\{(\w+)\}',path): parameters.append({'name':name,'in':'path','required':True,'schema':{'type':'string',**({'format':'uuid'} if name=='id' else {})}})
         if path=='servers/{id}/manifest': parameters.append({'name':'revision','in':'query','required':False,'schema':{'type':'integer','format':'int64'}})
         if path=='mods/{project}/updates': parameters += [{'name':name,'in':'query','required':True,'schema':{'type':'string'}} for name in ('minecraft','loader')]
         if parameters: operation['parameters']=parameters
         if request: operation['requestBody']={'required':True,'content':{'application/json':{'schema':model_schema(request)}}}
         paths.setdefault('/api/v1/'+path,{})[method.lower()]=operation
-    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.1.0','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
+    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.2.0','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
 
 def main():
     path=ROOT/'docs/architecture/openapi.json'
     contract=build()
-    controller=(ROOT/'modsync-server/src/main/kotlin/net/modsync/Controllers.kt').read_text()
-    actual={(method.lower(),'/api/v1'+route) for method,route in re.findall(r'@(Get|Post|Put)Mapping\("([^"]+)"\)',controller)}
+    actual=controller_routes()
     declared={(method,route) for route,operations in contract['paths'].items() for method in operations}
     assert actual==declared,('OpenAPI route drift',actual-declared,declared-actual)
     data=json.dumps(contract,indent=2)+'\n'

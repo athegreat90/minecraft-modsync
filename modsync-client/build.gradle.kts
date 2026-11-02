@@ -5,7 +5,7 @@ dependencies {
     implementation("info.picocli:picocli:4.7.7")
     implementation(project(":modsync-resolver"))
 }
-application { mainClass.set("net.modsync.ClientKt") }
+application { mainClass.set("de.alexandermora.modsync.client.ClientKt") }
 graalvmNative {
     binaries {
         named("main") {

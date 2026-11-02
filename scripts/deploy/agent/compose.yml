@@ -1,0 +1,21 @@
+# Host A: read-only mods scanner from the published GHCR image (no build, no repository needed).
+# Written next to .env by scripts/deploy/03-agent; MODSYNC_VERSION and MODSYNC_REPO come from .env.
+name: modsync-agent
+services:
+  agent:
+    image: ghcr.io/${MODSYNC_REPO:-athegreat90/minecraft-modsync}-agent:${MODSYNC_VERSION:?Set MODSYNC_VERSION (release tag)}
+    restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    tmpfs: [/tmp:size=64m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.5
+    environment:
+      MODSYNC_SERVER_URL: ${MODSYNC_SERVER_URL:?Set the trusted HTTPS API endpoint}
+      MODSYNC_SCAN_INTERVAL: ${MODSYNC_SCAN_INTERVAL:-300}
+      MODSYNC_STATE_DIR: /app/state
+    volumes:
+      - ${MODSYNC_STATE_PATH:?Set writable agent state path}:/app/state
+      - ${MINECRAFT_SERVERS_PATH:?Set actual host Crafty server directory}:/minecraft:ro

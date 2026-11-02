@@ -16,6 +16,10 @@
 
 `modsync-client-tui` adds JLine as a separate JVM application. The standard client has no GUI/JLine dependency. `modsync-test-fixtures` provides deterministic synthetic JAR construction.
 
-No component uses a shared cross-host mount, database access from a client, Docker socket, or an inbound scanner API. Initial protocol version is 1 and minimum component compatibility is 0.1.0. See API documentation for limits and failure behavior.
+No component uses a shared cross-host mount, database access from a client, Docker socket, or an inbound scanner API. Initial protocol version is 1 and minimum component compatibility is 0.2.0 (the server rejects older `X-ModSync-Version` values with 426). See API documentation for limits and failure behavior.
+
+## Package layout
+
+Every module uses the base package `de.alexandermora.modsync.<module>` (for example `de.alexandermora.modsync.domain`, `de.alexandermora.modsync.protocol`). `modsync-server` is split into feature packages: `auth`, `agent`, `inventory`, `manifest`, `profile`, `catalog`, `system`, `common`, `config` and `observability`. Each feature owns its controller (thin, typed request bodies, returns DTOs directly rather than `ResponseEntity`) and its service. See `docs/GUIDE.md` for details.
 
 Instance registration requires explicit game/loader metadata, checked against manifests during planning/apply/verify. This metadata must match the actual launcher configuration; ModSync does not install the game/loader or claim to detect every launcher. Verified artifact hashes are recorded separately from managed ownership so pre-existing required files are checked without being adopted for later deletion.

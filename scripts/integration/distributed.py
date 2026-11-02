@@ -62,7 +62,7 @@ def main():
     admin_token=None
     def api(path,method='GET',body=None,token=None):
         data=None if body is None else json.dumps(body).encode()
-        req=urllib.request.Request(endpoint+'/api/v1/'+path,data=data,method=method,headers={'Content-Type':'application/json','X-ModSync-Protocol':'1','X-ModSync-Version':'0.1.0',**({'Authorization':'Bearer '+token} if token else {})})
+        req=urllib.request.Request(endpoint+'/api/v1/'+path,data=data,method=method,headers={'Content-Type':'application/json','X-ModSync-Protocol':'1','X-ModSync-Version':'0.2.0',**({'Authorization':'Bearer '+token} if token else {})})
         with urllib.request.urlopen(req,context=context,timeout=30) as response:
             payload = response.read()
             try:

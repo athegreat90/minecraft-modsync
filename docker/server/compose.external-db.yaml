@@ -1,0 +1,13 @@
+# Override for an existing, external MariaDB. Use together with compose.yaml and start only the API:
+#   docker compose --env-file .env -f compose.yaml -f compose.external-db.yaml up -d --build modsync-server
+# Requires Docker Compose >= 2.24 (!reset / !override). The bundled mariadb service is never started.
+# MODSYNC_DB_URL and MODSYNC_DB_USER are read from .env (written by scripts/deploy/01-server).
+services:
+  modsync-server:
+    environment:
+      MODSYNC_DB_URL: ${MODSYNC_DB_URL:?Set MODSYNC_DB_URL in .env}
+      MODSYNC_DB_USER: ${MODSYNC_DB_USER:?Set MODSYNC_DB_USER in .env}
+    depends_on: !reset {}
+    networks: !override [api]
+    # Lets "localhost" databases on the Docker host be reached as host.docker.internal.
+    extra_hosts: ["host.docker.internal:host-gateway"]

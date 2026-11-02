@@ -20,3 +20,13 @@ docker compose --env-file .env -f compose.yaml ps
 Configure HTTPS routing to `127.0.0.1:8080`. Verify `/actuator/health` and `/api/v1/info` through TLS. First startup creates `admin` only if users are absent, reading `bootstrap_password`; subsequent starts preserve users and never reset a password. Login using a console or `--password-file`. Remove bootstrap material from routine operations after a controlled Compose update; never lose database/proxy/CA backups.
 
 Administer with `scripts/admin.py` and [API.md](../../docs/architecture/API.md). No web administration UI is included.
+
+## External MariaDB
+
+To use an existing MariaDB 11.4.x, pre-create the database and a user with DDL rights on it (Flyway migrates at startup), put the password in the `db_password` secret, set `MODSYNC_DB_URL` (`jdbc:mariadb://HOST:3306/modsync?sslMode=verify-full`) and `MODSYNC_DB_USER` in `.env`, then:
+
+```sh
+docker compose --env-file .env -f compose.yaml -f compose.external-db.yaml up -d --build modsync-server
+```n
+Requires Docker Compose >= 2.24. `scripts/deploy/01-server.*` automates this and verifies the connection (see [USAGE.md](../../docs/USAGE.md)). `scripts/backup/*` target the bundled database only; use `mariadb-dump` instead.
+

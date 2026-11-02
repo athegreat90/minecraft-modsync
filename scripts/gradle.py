@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Pinned, checksum-verified Gradle bootstrap (not the official wrapper JAR)."""
 import hashlib, os, pathlib, subprocess, sys, tempfile, urllib.request, zipfile
-VERSION = "9.2.1"
-SHA256 = "72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f"
+VERSION = "9.8.2"
+SHA256 = "21bd5da2de49b642904077f38c0efdc7778e92b3ed0889392dca61b97e389607"
 root = pathlib.Path(__file__).resolve().parents[1]
 cache = root / ".gradle" / "bootstrap"
 gradle = cache / ("gradle-" + VERSION) / "bin" / ("gradle.bat" if os.name == "nt" else "gradle")
