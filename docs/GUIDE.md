@@ -1,6 +1,6 @@
 # ModSync project guide (start here)
 
-A step-by-step explanation of what ModSync is, how its parts fit together and how data moves through it. Everything below was derived from the source code; file names are given so you can follow along. Project status caveats live in [MEMORY.md](../MEMORY.md) — this is an initial implementation, not a production release.
+A step-by-step explanation of what ModSync is, how its parts fit together and how data moves through it. Everything below was derived from the source code; file names are given so you can follow along. Project status caveats live in [MEMORY.md](../MEMORY.md) — this is an initial implementation, not a production release. For the exact commands to run, see the [command runbook](USAGE.md).
 
 ## Contents
 
