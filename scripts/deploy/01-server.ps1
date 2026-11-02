@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Phase 1 (Host B): create secrets, write .env, start the API (+ bundled MariaDB), verify health.
 .DESCRIPTION
@@ -6,7 +6,11 @@ By default the bundled MariaDB container is used. With -DbHost (or -DbMode exter
 is used instead: the database and user must already exist, nothing is created for you.
 The DB password comes from -DbPasswordFile, an existing secrets\db_password, or a secure prompt.
 Secrets are never printed; existing files are kept.
-.PARAMETER SecretsDir  Directory for generated secrets (default <repo>\.local\secrets).
+.PARAMETER SecretsDir  Directory for generated secrets (default <WorkDir>\secrets).
+.PARAMETER Version     Release tag whose GHCR images are used (default: latest GitHub release).
+.PARAMETER Repo        GitHub OWNER/REPO that publishes the images (default athegreat90/minecraft-modsync).
+.PARAMETER WorkDir     Where compose files, .env and secrets live (default .\modsync-deploy). The repository is not needed;
+                       compose files are downloaded from GitHub when not found next to this script.
 .PARAMETER Bind        Listen address (default 127.0.0.1).
 .PARAMETER Url         Base URL used for health checks (default http://127.0.0.1:8080).
 .PARAMETER Maintenance 'true' or 'false'.
@@ -25,6 +29,9 @@ Secrets are never printed; existing files are kept.
 [CmdletBinding()]
 param(
   [string]$SecretsDir,
+  [string]$Version,
+  [ValidatePattern('^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')][string]$Repo = 'athegreat90/minecraft-modsync',
+  [string]$WorkDir = (Join-Path (Get-Location).Path 'modsync-deploy'),
   [string]$Bind = '127.0.0.1',
   [string]$Url = 'http://127.0.0.1:8080',
   [ValidateSet('true', 'false')][string]$Maintenance = 'false',
@@ -39,9 +46,23 @@ param(
   [switch]$SkipDbCheck
 )
 $ErrorActionPreference = 'Stop'
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$srv = Join-Path $root 'docker\server'
-if (-not $SecretsDir) { $SecretsDir = Join-Path $root '.local\secrets' }
+$srv = Join-Path $WorkDir 'server'
+New-Item -ItemType Directory -Force -Path $srv | Out-Null
+$WorkDir = (Resolve-Path $WorkDir).Path
+if (-not $SecretsDir) { $SecretsDir = Join-Path $WorkDir 'secrets' }
+if (-not $Version) {
+  $Version = (& { try { (Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest").tag_name } catch { (@(Invoke-RestMethod "https://api.github.com/repos/$Repo/releases?per_page=1"))[0].tag_name } })
+  if (-not $Version) { throw "Cannot resolve the latest release of $Repo; pass -Version TAG" }
+}
+Write-Host "==> Using $Repo release $Version"
+function Get-DeployFile($name) {
+  $local = Join-Path $PSScriptRoot "server\$name"
+  if (Test-Path $local) { Copy-Item $local (Join-Path $srv $name) -Force; return }
+  try { Invoke-WebRequest "https://raw.githubusercontent.com/$Repo/$Version/scripts/deploy/server/$name" -OutFile (Join-Path $srv $name) -UseBasicParsing }
+  catch { Invoke-WebRequest "https://raw.githubusercontent.com/$Repo/main/scripts/deploy/server/$name" -OutFile (Join-Path $srv $name) -UseBasicParsing }
+}
+Get-DeployFile 'compose.yml'
+if ($DbHost -or $DbUrl -or $DbMode -eq 'external') { Get-DeployFile 'compose.external-db.yml' }
 $Url = $Url.TrimEnd('/')
 if ($DbHost -or $DbUrl) { $DbMode = 'external' }
 $external = $DbMode -eq 'external'
@@ -124,12 +145,14 @@ if ($external) {
 
 Write-Host "==> Writing $srv\.env"
 $envFile = Join-Path $srv '.env'
-if (-not (Test-Path $envFile)) { Copy-Item (Join-Path $srv '.env.example') $envFile }
+if (-not (Test-Path $envFile)) { New-Item -ItemType File -Path $envFile | Out-Null }
 function Set-EnvValue($key, $value) {
   $lines = @(Get-Content $envFile | Where-Object { $_ -notmatch "^$([regex]::Escape($key))=" })
   Set-Content -Path $envFile -Value ($lines + "$key=$value")
 }
 # Compose accepts forward slashes in Windows paths.
+Set-EnvValue 'MODSYNC_VERSION' $Version
+Set-EnvValue 'MODSYNC_REPO' $Repo
 Set-EnvValue 'MODSYNC_SECRETS_DIR' ($SecretsDir -replace '\\', '/')
 Set-EnvValue 'MODSYNC_BIND_ADDRESS' $Bind
 Set-EnvValue 'MODSYNC_MAINTENANCE' $Maintenance
@@ -138,9 +161,11 @@ if ($external) { Set-EnvValue 'MODSYNC_DB_URL' $DbUrl; Set-EnvValue 'MODSYNC_DB_
 Write-Host "==> Starting containers ($DbMode database)"
 Push-Location $srv
 try {
-  $files = @('-f', 'compose.yaml'); $services = @()
-  if ($external) { $files += '-f', 'compose.external-db.yaml'; $services = @('modsync-server') }
-  docker compose --env-file .env @files up -d --build @services
+  $files = @('-f', 'compose.yml'); $services = @()
+  if ($external) { $files += '-f', 'compose.external-db.yml'; $services = @('modsync-server') }
+  docker compose --env-file .env @files pull @services
+  if ($LASTEXITCODE -ne 0) { throw 'docker compose pull failed' }
+  docker compose --env-file .env @files up -d @services
   if ($LASTEXITCODE -ne 0) { throw 'docker compose up failed' }
   docker compose --env-file .env @files ps
 } finally { Pop-Location }

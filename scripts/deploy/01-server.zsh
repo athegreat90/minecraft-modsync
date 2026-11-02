@@ -6,15 +6,17 @@
 #          --db-host HOST [--db-port 3306] [--db-name modsync] [--db-user modsync]
 #          [--db-password-file FILE] [--db-ssl-mode disable|trust|verify-ca|verify-full]
 #          [--db-url JDBC_URL] [--skip-db-check]
+# Images come from GHCR; works without the repository (compose files are downloaded when missing):
+#          [--version TAG (default: latest release)] [--repo OWNER/REPO] [--work-dir DIR (default ./modsync-deploy)]
 # --db-host implies --db-mode external. The DB password comes from --db-password-file, an existing
 # secrets/db_password, or a silent prompt. Secrets are never printed; existing files are kept.
 setopt err_exit no_unset pipe_fail no_function_argzero
 
-usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
-root=${0:A:h:h:h}
-srv=$root/docker/server
-secrets=$root/.local/secrets
+here=${0:A:h}
+repo=athegreat90/minecraft-modsync; version=; work=$PWD/modsync-deploy
+secrets=
 bind=127.0.0.1
 url=http://127.0.0.1:8080
 maintenance=false
@@ -23,6 +25,9 @@ dbhost=; dbport=3306; dbname=modsync; dbuser=modsync; dbpwfile=; dbssl=; dburl=;
 
 while (( $# )); do
   case $1 in
+    --version) version=$2; shift 2 ;;
+    --repo) repo=$2; shift 2 ;;
+    --work-dir) work=$2; shift 2 ;;
     --secrets-dir) secrets=$2; shift 2 ;;
     --bind) bind=$2; shift 2 ;;
     --url) url=${2%/}; shift 2 ;;
@@ -51,6 +56,7 @@ if [[ -n $dburl && $skipcheck -eq 0 && -z $dbhost ]]; then
   print -u2 "With --db-url also pass --db-host/--db-port/--db-name for the pre-flight check, or use --skip-db-check"; exit 1
 fi
 
+[[ $repo =~ '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' ]] || { print -u2 -- "--repo must be OWNER/REPO"; exit 1; }
 for tool in docker openssl curl; do
   command -v $tool >/dev/null || { print -u2 "Missing required tool: $tool"; exit 1; }
 done
@@ -60,6 +66,26 @@ if [[ $dbmode == external ]]; then
   autoload -Uz is-at-least
   is-at-least 2.24 "$cv" || { print -u2 "External mode needs Docker Compose >= 2.24 (found $cv)"; exit 1; }
 fi
+
+mkdir -p "$work"; work=${work:A}
+srv=$work/server; mkdir -p "$srv"
+[[ -n $secrets ]] || secrets=$work/secrets
+if [[ -z $version ]]; then
+  for ep in releases/latest "releases?per_page=1"; do  # /latest ignores pre-releases
+      version=$(curl -fsS "https://api.github.com/repos/$repo/$ep" 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1) || true
+      [[ -n $version ]] && break
+    done
+  [[ -n $version ]] || { print -u2 "Cannot resolve the latest release of $repo; pass --version TAG"; exit 1; }
+fi
+print "==> Using $repo release $version"
+fetch() { # file: copy from next to this script, else download at the release tag
+  if [[ -f $here/server/$1 ]]; then cp "$here/server/$1" "$srv/$1"
+  else curl -fsSL "https://raw.githubusercontent.com/$repo/$version/scripts/deploy/server/$1" -o "$srv/$1" \
+    || curl -fsSL "https://raw.githubusercontent.com/$repo/main/scripts/deploy/server/$1" -o "$srv/$1" \
+    || { print -u2 "Cannot download $1 for $version"; exit 1; }; fi
+}
+fetch compose.yml
+[[ $dbmode == external ]] && fetch compose.external-db.yml
 
 print "==> Preparing secrets in $secrets"
 mkdir -p "$secrets"; chmod 700 "$secrets"
@@ -132,12 +158,14 @@ if [[ $dbmode == external ]]; then
 fi
 
 print "==> Writing $srv/.env"
-[[ -f $srv/.env ]] || cp "$srv/.env.example" "$srv/.env"
+[[ -f $srv/.env ]] || ( umask 077; : > "$srv/.env" )
 set_env() {
   local tmp=$srv/.env.tmp
   ( umask 077; grep -v "^$1=" "$srv/.env" > "$tmp" || true; print -r -- "$1=$2" >> "$tmp" )
   mv "$tmp" "$srv/.env"
 }
+set_env MODSYNC_VERSION "$version"
+set_env MODSYNC_REPO "$repo"
 set_env MODSYNC_SECRETS_DIR "$secrets"
 set_env MODSYNC_BIND_ADDRESS "$bind"
 set_env MODSYNC_MAINTENANCE "$maintenance"
@@ -149,13 +177,15 @@ fi
 print "==> Starting containers ($dbmode database)"
 cd "$srv"
 if [[ $dbmode == external ]]; then
-  compose=(docker compose --env-file .env -f compose.yaml -f compose.external-db.yaml)
+  compose=(docker compose --env-file .env -f compose.yml -f compose.external-db.yml)
   services=(modsync-server)
 else
-  compose=(docker compose --env-file .env -f compose.yaml)
+  compose=(docker compose --env-file .env -f compose.yml)
   services=()
 fi
-$compose up -d --build $services
+print "==> Pulling images"
+$compose pull $services
+$compose up -d $services
 $compose ps
 
 print "==> Waiting for health at $url/actuator/health"

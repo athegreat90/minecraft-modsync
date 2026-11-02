@@ -387,12 +387,35 @@ Token lifetimes: access 1 h, refresh 30 d, agent credential 30 d.
 
 | Phase | Host | zsh | PowerShell | What it does |
 |---|---|---|---|---|
-| 1 | B | `01-server.zsh` | `01-server.ps1` | Generate secrets, write `docker/server/.env`, `docker compose up -d --build`, wait for health, print `/api/v1/info` |
-| 2 | Admin machine | `02-admin.zsh` | `02-admin.ps1` | Pin the server, log in as `admin`, register a Minecraft server, write an enrollment token file |
-| 3 | A | `03-agent.zsh` | `03-agent.ps1` | Write `docker/agent/.env`, build, pin, register (token deleted afterwards), map, optional first scan, start |
-| 4 | C (player) | `04-client.zsh` | `04-client.ps1` | Check Java 25, build the client, optional PATH entry, pin, login, connection test, add or discover an instance |
+| 1 | B | `01-server.zsh` | `01-server.ps1` | Generate secrets, write `modsync-deploy/server/.env`, pull the GHCR image, `docker compose up -d`, wait for health, print `/api/v1/info` |
+| 2 | Admin machine | `02-admin.zsh` | `02-admin.ps1` | Download the client + `admin.py` from the GitHub Release, pin the server, log in as `admin`, register a Minecraft server, write an enrollment token file |
+| 3 | A | `03-agent.zsh` | `03-agent.ps1` | Write `modsync-deploy/agent/.env`, pull the GHCR image, pin, register (token deleted afterwards), map, optional first scan, start |
+| 4 | C (player) | `04-client.zsh` | `04-client.ps1` | Download the native client from the Release (checksum-verified), optional PATH entry, pin, login, connection test, add or discover an instance |
 
-Run from the repository root.
+### 11.1 Run without the repository (GHCR images and Release downloads)
+
+The scripts never build anything. They use the images published to GHCR (`ghcr.io/athegreat90/minecraft-modsync-server` and `-agent`) and the native client from the GitHub Release, so you only need the script you want to run (plus Docker for phases 1 and 3, and Python 3 for phase 2):
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/athegreat90/minecraft-modsync/main/scripts/deploy/01-server.zsh
+chmod +x 01-server.zsh && ./01-server.zsh --url http://127.0.0.1:8080
+```
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/athegreat90/minecraft-modsync/main/scripts/deploy/01-server.ps1 -OutFile 01-server.ps1
+.\01-server.ps1 -Url http://127.0.0.1:8080
+```
+
+Shared options on every phase:
+
+| zsh | PowerShell | Meaning |
+|---|---|---|
+| `--version TAG` | `-Version TAG` | Release tag for the images and client. Default: the newest GitHub release (pre-releases included if there is no stable one) |
+| `--repo OWNER/REPO` | `-Repo OWNER/REPO` | Publisher of the images/release (default `athegreat90/minecraft-modsync`; use it for a fork) |
+| `--work-dir DIR` | `-WorkDir DIR` | Where compose files, `.env`, secrets and the downloaded client live (default `./modsync-deploy`) |
+
+What gets created under the work dir: `server/compose.yml` (+ `compose.external-db.yml`), `server/.env`, `secrets/` (phase 1), `agent/compose.yml` and `agent/.env` (phase 3), `bin/modsync` (phases 2 and 4). A compose file next to the script (`scripts/deploy/server/compose.yml`, `agent/compose.yml`) is used when present; otherwise it is downloaded from the release tag, falling back to `main` if the tag predates it. Phases 2 and 4 download `modsync-<platform>` and verify it against the release's `SHA256SUMS`; native builds exist for linux-x64, linux-arm64 and windows-x64 (other platforms use the Java client zip and need Java 25+). If the GHCR packages are private, run `docker login ghcr.io` first.
+
+The phase 2 password file is now `modsync-deploy/secrets/bootstrap_password` (adjust the examples below if you used another `--work-dir` or `--secrets-dir`).
 
 ```zsh
 # Phase 1, on Host B
@@ -400,7 +423,7 @@ scripts/deploy/01-server.zsh --url http://127.0.0.1:8080
 
 # Phase 2, admin machine (needs the controlPlaneId printed by phase 1)
 scripts/deploy/02-admin.zsh --server-url https://modsync.example.org --control-plane-id CONTROL_PLANE_UUID \
-  --password-file .local/secrets/bootstrap_password --name survival --minecraft-version 1.21.1
+  --password-file modsync-deploy/secrets/bootstrap_password --name survival --minecraft-version 1.21.1
 
 # Phase 3, on Host A (token file from phase 2)
 scripts/deploy/03-agent.zsh --server-url https://modsync.example.org --control-plane-id CONTROL_PLANE_UUID \
@@ -416,7 +439,7 @@ scripts/deploy/04-client.zsh --server-url https://modsync.example.org --control-
 ```powershell
 .\scripts\deploy\01-server.ps1 -Url http://127.0.0.1:8080
 .\scripts\deploy\02-admin.ps1 -ServerUrl https://modsync.example.org -ControlPlaneId CONTROL_PLANE_UUID `
-  -PasswordFile .\.local\secrets\bootstrap_password -Name survival -MinecraftVersion 1.21.1
+  -PasswordFile .\modsync-deploy\secrets\bootstrap_password -Name survival -MinecraftVersion 1.21.1
 .\scripts\deploy\03-agent.ps1 -ServerUrl https://modsync.example.org -ControlPlaneId CONTROL_PLANE_UUID `
   -TokenFile .\enrollment-token -StatePath D:\modsync\agent -ServersPath D:\crafty\servers -Alias survival -ModsDir survival/mods
 .\scripts\deploy\04-client.ps1 -ServerUrl https://modsync.example.org -ControlPlaneId CONTROL_PLANE_UUID `

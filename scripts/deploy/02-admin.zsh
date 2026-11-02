@@ -1,14 +1,16 @@
 #!/usr/bin/env zsh
-# Phase 2 (admin machine): log in as admin, register a Minecraft server, create an enrollment token.
+# Phase 2 (admin machine): log in as admin (downloads the client and admin.py from the GitHub Release; no repository needed), register a Minecraft server, create an enrollment token.
 # Usage: 02-admin.zsh --server-url https://HOST --control-plane-id UUID --password-file FILE \
 #          --name NAME --minecraft-version VER [--loader neoforge] [--loader-version V] \
-#          [--state-dir DIR] [--out-dir DIR] [--ttl 600] [--ca-file CA.pem]
+#          [--state-dir DIR] [--out-dir DIR] [--ttl 600] [--ca-file CA.pem] \
+#          [--version TAG (default: latest release)] [--repo OWNER/REPO] [--work-dir DIR (default ./modsync-deploy)]
 # Outputs in --out-dir: server-response.json and enrollment-token (give only the token to the agent operator).
 setopt err_exit no_unset pipe_fail no_function_argzero
 
-usage() { sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
-root=${0:A:h:h:h}
+here=${0:A:h}
+repo=athegreat90/minecraft-modsync; version=; work=$PWD/modsync-deploy
 state=$HOME/.modsync-admin
 out=$PWD/admin-out
 loader=neoforge; loaderv=; ttl=600; ca=
@@ -27,6 +29,9 @@ while (( $# )); do
     --out-dir) out=$2; shift 2 ;;
     --ttl) ttl=$2; shift 2 ;;
     --ca-file) ca=$2; shift 2 ;;
+    --version) version=$2; shift 2 ;;
+    --repo) repo=$2; shift 2 ;;
+    --work-dir) work=$2; shift 2 ;;
     -h|--help) usage 0 ;;
     *) print -u2 "Unknown option: $1"; usage 1 ;;
   esac
@@ -38,12 +43,57 @@ done
 (( ttl >= 60 && ttl <= 3600 )) || { print -u2 -- "--ttl must be 60..3600"; exit 1; }
 command -v python3 >/dev/null || { print -u2 "python3 is required"; exit 1; }
 
-client=${MODSYNC_CLIENT:-$root/modsync-client/build/install/modsync-client/bin/modsync-client}
-if [[ ! -x $client ]]; then
-  print "==> Building the client"
-  (cd "$root" && ./gradlew :modsync-client:installDist)
+resolve_version() {
+  if [[ -z $version ]]; then
+    for ep in releases/latest "releases?per_page=1"; do  # /latest ignores pre-releases
+      version=$(curl -fsS "https://api.github.com/repos/$repo/$ep" 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1) || true
+      [[ -n $version ]] && break
+    done
+    [[ -n $version ]] || { print -u2 "Cannot resolve the latest release of $repo; pass --version TAG"; exit 1; }
+  fi
+  print "==> Using $repo release $version"
+}
+sha256_of() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi }
+get_client() { # sets $client: native binary from the GitHub Release, or the Java zip where none is published
+  local bin=$work/bin plat= base=https://github.com/$repo/releases/download/$version
+  mkdir -p "$bin"
+  case "$(uname -s)-$(uname -m)" in
+    Linux-x86_64) plat=linux-x64 ;;
+    Linux-aarch64|Linux-arm64) plat=linux-arm64 ;;
+  esac
+  if [[ -n $plat ]]; then
+    client=$bin/modsync-$version-$plat
+    if [[ ! -x $client ]]; then
+      print "==> Downloading the client (modsync-$plat)"
+      curl -fsSL "$base/modsync-$plat" -o "$client.part" || { print -u2 "Cannot download modsync-$plat from $base"; exit 1; }
+      want=$(curl -fsSL "$base/SHA256SUMS" | awk -v n="modsync-$plat" '$2==n {print $1}')
+      [[ -n $want && $want == $(sha256_of "$client.part") ]] || { rm -f "$client.part"; print -u2 "Checksum mismatch or missing for modsync-$plat"; exit 1; }
+      chmod +x "$client.part"; mv "$client.part" "$client"
+    fi
+    ln -sf "$client" "$bin/modsync"
+  else
+    command -v unzip >/dev/null && command -v java >/dev/null || { print -u2 "No native build for this platform: install unzip and Java 25+ to use the client zip"; exit 1; }
+    if [[ ! -d $bin/client-$version ]]; then
+      print "==> Downloading the client zip (requires Java 25+)"
+      curl -fsSL "$base/modsync-client-$version.zip" -o "$bin/client.zip" || { print -u2 "Cannot download the client zip"; exit 1; }
+      mkdir -p "$bin/client-$version"; unzip -q -o "$bin/client.zip" -d "$bin/client-$version"; rm -f "$bin/client.zip"
+    fi
+    client=$(find "$bin/client-$version" -path '*/bin/modsync-client' | head -n1)
+    [[ -n $client ]] || { print -u2 "Launcher not found in the client zip"; exit 1; }
+    chmod +x "$client"; ln -sf "$client" "$bin/modsync"
+  fi
+}
+[[ $repo =~ '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' ]] || { print -u2 -- "--repo must be OWNER/REPO"; exit 1; }
+command -v curl >/dev/null || { print -u2 "curl is required"; exit 1; }
+mkdir -p "$work"; work=${work:A}
+resolve_version
+if [[ -n ${MODSYNC_CLIENT:-} ]]; then client=$MODSYNC_CLIENT; else get_client; fi
+if [[ -f $here/../admin.py ]]; then adminpy=$here/../admin.py
+else
+  adminpy=$work/admin-$version.py
+  [[ -f $adminpy ]] || curl -fsSL "https://raw.githubusercontent.com/$repo/$version/scripts/admin.py" -o "$adminpy" \
+    || { rm -f "$adminpy"; print -u2 "Cannot download admin.py for $version"; exit 1; }
 fi
-
 mkdir -p "$out"; chmod 700 "$out"
 print "==> Pinning server and logging in as admin"
 "$client" --state-dir "$state" setup --server-url "$url" --trust-server-id "$cpid"
@@ -54,7 +104,7 @@ admin() { # method route data out [extra...]
   local args=(--config "$state/config.json" --method $m --out "$o")
   [[ -n $d ]] && args+=(--data "$d")
   [[ -n $ca ]] && args+=(--ca-file "$ca")
-  python3 "$root/scripts/admin.py" "${args[@]}" "$@" "$r"
+  python3 "$adminpy" "${args[@]}" "$@" "$r"
 }
 
 print "==> Registering server '$name'"

@@ -1,7 +1,8 @@
-<#
+﻿<#
 .SYNOPSIS
-Phase 4 (player machine): build/install the client, pin the server, log in, register an instance.
+Phase 4 (player machine): download the client, pin the server, log in, register an instance.
 .DESCRIPTION
+Downloads the native client from the GitHub release (-Version, default latest; -Repo; -WorkDir default .\modsync-deploy); the repository is not needed.
 Without -InstancePath the script tries 'instances discover'.
 -AddToPath adds the launcher directory to the user PATH (opt-in).
 .EXAMPLE
@@ -19,27 +20,50 @@ param(
   [string]$Loader,
   [string]$LoaderVersion,
   [string]$StateDir,
-  [switch]$AddToPath
+  [switch]$AddToPath,
+  [string]$Version,
+  [ValidatePattern('^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$')][string]$Repo = 'athegreat90/minecraft-modsync',
+  [string]$WorkDir = (Join-Path (Get-Location).Path 'modsync-deploy')
 )
 $ErrorActionPreference = 'Stop'
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if ($InstancePath) {
   if (-not ($InstanceName -and $MinecraftVersion -and $Loader)) { throw '-InstancePath needs -InstanceName, -MinecraftVersion and -Loader' }
   if (-not (Test-Path $InstancePath)) { throw "Instance path not found: $InstancePath" }
 }
 
-Write-Host '==> Checking Java'
-if (-not (Get-Command java -ErrorAction SilentlyContinue)) { throw 'Java 25 is required (java not found)' }
-$first = (& java -version 2>&1 | Select-Object -First 1).ToString()
-if ($first -notmatch 'version "(\d+)') { throw "Cannot parse Java version: $first" }
-if ([int]$Matches[1] -lt 25) { throw "Java 25+ required, found $($Matches[1])" }
-
-$binDir = Join-Path $root 'modsync-client\build\install\modsync-client\bin'
-$launcher = Join-Path $binDir 'modsync-client.bat'
-if (-not (Test-Path $launcher)) {
-  Write-Host '==> Building the client'
-  Push-Location $root; try { & .\gradlew.bat :modsync-client:installDist; if ($LASTEXITCODE) { throw 'build failed' } } finally { Pop-Location }
+if (-not $Version) {
+  $Version = (& { try { (Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest").tag_name } catch { (@(Invoke-RestMethod "https://api.github.com/repos/$Repo/releases?per_page=1"))[0].tag_name } })
+  if (-not $Version) { throw "Cannot resolve the latest release of $Repo; pass -Version TAG" }
 }
+Write-Host "==> Using $Repo release $Version"
+New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
+$WorkDir = (Resolve-Path $WorkDir).Path
+$ProgressPreference = 'SilentlyContinue'
+$base = "https://github.com/$Repo/releases/download/$Version"
+function Get-Client {
+  $bin = Join-Path $WorkDir 'bin'
+  New-Item -ItemType Directory -Force -Path $bin | Out-Null
+  $arch = $env:PROCESSOR_ARCHITECTURE
+  if (-not ($IsLinux -or $IsMacOS) -and $arch -ne 'AMD64') { throw "No native Windows build for $arch; use the Java client zip from $base" }
+  $asset = 'modsync-windows-x64.exe'
+  $exe = Join-Path $bin "modsync-$Version-windows-x64.exe"
+  if (-not (Test-Path $exe)) {
+    Write-Host "==> Downloading the client ($asset)"
+    $part = "$exe.part"
+    Invoke-WebRequest "$base/$asset" -OutFile $part -UseBasicParsing
+    $sums = Join-Path $bin 'SHA256SUMS.tmp'
+    Invoke-WebRequest "$base/SHA256SUMS" -OutFile $sums -UseBasicParsing
+    $line = Get-Content $sums | Where-Object { ($_ -split '\s+')[1] -eq $asset } | Select-Object -First 1
+    Remove-Item $sums -Force
+    $want = if ($line) { ($line -split '\s+')[0] } else { '' }
+    if (-not $want -or (Get-FileHash $part -Algorithm SHA256).Hash -ne $want.ToUpper()) { Remove-Item $part -Force; throw "Checksum mismatch or missing for $asset" }
+    Move-Item $part $exe -Force
+  }
+  Copy-Item $exe (Join-Path $bin 'modsync.exe') -Force
+  $exe
+}
+$launcher = Get-Client
+$binDir = Split-Path $launcher
 $sf = @(); if ($StateDir) { $sf = @('--state-dir', $StateDir) }
 function Invoke-Client { & $launcher @sf @args; if ($LASTEXITCODE) { throw "modsync failed: $args" } }
 
@@ -47,7 +71,7 @@ if ($AddToPath) {
   $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
   if (($userPath -split ';') -notcontains $binDir) {
     [Environment]::SetEnvironmentVariable('Path', "$userPath;$binDir", 'User')
-    Write-Host "==> Added $binDir to the user PATH (open a new terminal to use 'modsync-client')."
+    Write-Host "==> Added $binDir to the user PATH (open a new terminal to use 'modsync')."
   }
 }
 
@@ -68,5 +92,5 @@ if ($InstancePath) {
   & $launcher @sf instances discover
 }
 Write-Host "`nDone. Next: close Minecraft, then:"
-Write-Host '  modsync-client sync plan --instance NAME --server SERVER_UUID --out plan.json'
-Write-Host '  modsync-client sync apply --instance NAME --plan plan.json'
+Write-Host '  modsync sync plan --instance NAME --server SERVER_UUID --out plan.json'
+Write-Host '  modsync sync apply --instance NAME --plan plan.json'
