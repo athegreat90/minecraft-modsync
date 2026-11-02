@@ -22,7 +22,7 @@ import kotlin.system.exitProcess
 @Serializable data class AgentProgress(val generation: Long, val sequence: Long, val digest: String, val acknowledgedAt: String)
 @Command(name="modsync-agent", mixinStandardHelpOptions=true, description=["Outbound-only Minecraft inventory scanner"])
 class Agent : Runnable {
-    @Option(names=["--state-dir"], defaultValue="\${env:MODSYNC_STATE_DIR:-.modsync-agent}") lateinit var stateDir: Path
+    @Option(names=["--state-dir"], defaultValue=$$"${env:MODSYNC_STATE_DIR:-.modsync-agent}") lateinit var stateDir: Path
     private val configFile get() = stateDir.resolve("config.json")
     private fun config() = wire.decodeFromString<AgentConfig>(Files.readString(configFile))
     private fun save(config: AgentConfig) = secureWrite(configFile, wire.encodeToString(config))
@@ -32,7 +32,7 @@ class Agent : Runnable {
         return api
     }
     override fun run() { CommandLine(this).usage(System.out) }
-    @Command(name="setup") fun setup(@Option(names=["--server-url"], required=true, defaultValue="\${env:MODSYNC_SERVER_URL}") endpoint: String, @Option(names=["--trust-server-id"], required=true) trust: String) {
+    @Command(name="setup") fun setup(@Option(names=["--server-url"], required=true, defaultValue=$$"${env:MODSYNC_SERVER_URL}") endpoint: String, @Option(names=["--trust-server-id"], required=true) trust: String) {
         val capabilities = Api(endpoint, component="agent").capabilities(); require(capabilities.controlPlaneId == uuid(trust)) { "Server identity does not match explicit trust" }
         val old = if (Files.exists(configFile)) config() else null
         save(AgentConfig(endpoint.trimEnd('/'), capabilities.controlPlaneId, old?.agentId ?: UUID.randomUUID().toString(), old?.takeIf { it.controlPlaneId == capabilities.controlPlaneId }?.credentials, old?.mappings ?: emptyMap()))
@@ -93,7 +93,7 @@ class Agent : Runnable {
         api.request("/api/v1/agent/heartbeat", "POST", wire.encodeToString(Heartbeat(scans=confirmations)))
         secureWrite(stateDir.resolve("healthy-at"), Instant.now().toString())
     }
-    @Command(name="run") fun loop(@Option(names=["--interval"], defaultValue="\${env:MODSYNC_SCAN_INTERVAL:-300}") interval: Long) {
+    @Command(name="run") fun loop(@Option(names=["--interval"], defaultValue=$$"${env:MODSYNC_SCAN_INTERVAL:-300}") interval: Long) {
         require(interval in 30..86400)
         var failures=0
         while (!Thread.currentThread().isInterrupted) {

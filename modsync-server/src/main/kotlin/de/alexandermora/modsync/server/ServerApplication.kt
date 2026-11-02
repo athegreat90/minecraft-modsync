@@ -18,8 +18,8 @@ private const val PASSWORD_LENGTHS_ERROR = "Bootstrap password must have 16-256 
 @SpringBootApplication
 class ServerApplication {
     @Bean fun initialize(db: JdbcTemplate, passwords: Argon2PasswordEncoder,
-        @Value("\${modsync.bootstrap-user}") user: String,
-        @Value("\${modsync.bootstrap-password-file}") file: String) = CommandLineRunner {
+        @Value($$"${modsync.bootstrap-user}") user: String,
+        @Value($$"${modsync.bootstrap-password-file}") file: String) = CommandLineRunner {
         db.update("INSERT IGNORE INTO system_settings(name,value) VALUES ('control_plane_id',?)", UUID.randomUUID().toString())
         if (db.queryForObject("SELECT COUNT(*) FROM users", Long::class.java) == 0L) {
             require(file.isNotBlank()) { "First startup requires MODSYNC_BOOTSTRAP_PASSWORD_FILE" }

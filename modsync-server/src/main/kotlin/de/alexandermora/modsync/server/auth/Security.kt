@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Configuration
 class SecurityConfiguration {
-    @Bean fun chain(http: HttpSecurity, db: JdbcTemplate, @Value("\${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
+    @Bean fun chain(http: HttpSecurity, db: JdbcTemplate, @Value($$"${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
         http.csrf { it.disable() }.cors { it.disable() }.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/api/v1/info", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/enroll", "/actuator/health", "/actuator/health/**").permitAll()
