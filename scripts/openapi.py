@@ -105,6 +105,8 @@ def build():
         ('POST','sync/reports','SyncReport','Boolean','CLIENT or ADMIN'),
         ('POST','client/inventory','ClientInventoryReport','ClientInventoryAck','CLIENT or ADMIN'),
         ('GET','admin/servers/{id}/coverage',None,'ServerCoverage','ADMIN'),
+        ('PUT','admin/servers/{id}/publication-policy','PublicationPolicyRequest','Boolean','ADMIN'),
+        ('GET','admin/servers/{id}/publications',None,'List<PublicationRecord>','ADMIN'),
         ('GET','openapi.json',None,'raw','CLIENT or ADMIN'),
     ]
     paths={}

@@ -2603,6 +2603,181 @@
         ]
       }
     },
+    "/api/v1/admin/servers/{id}/publication-policy": {
+      "put": {
+        "operationId": "put_admin_servers_id_publication_policy",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.2.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicationPolicyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/servers/{id}/publications": {
+      "get": {
+        "operationId": "get_admin_servers_id_publications",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicationRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.2.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/openapi.json": {
       "get": {
         "operationId": "get_openapi_json",
@@ -2716,6 +2891,14 @@
           "SKIP",
           "CONFLICT",
           "MANUAL_ACTION_REQUIRED"
+        ]
+      },
+      "PublicationPolicy": {
+        "type": "string",
+        "enum": [
+          "MANUAL",
+          "TRUSTED_AUTO",
+          "REVIEW_UNKNOWN"
         ]
       },
       "CoverageStatus": {
@@ -3699,6 +3882,64 @@
           "serverId",
           "manifestRevision",
           "rows"
+        ]
+      },
+      "PublicationPolicyRequest": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/PublicationPolicy"
+          }
+        },
+        "required": [
+          "policy"
+        ]
+      },
+      "PublicationRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "scanId": {
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PublicationPolicy"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scanId",
+          "policy",
+          "outcome",
+          "detail",
+          "actor",
+          "createdAt"
         ]
       },
       "SyncReport": {

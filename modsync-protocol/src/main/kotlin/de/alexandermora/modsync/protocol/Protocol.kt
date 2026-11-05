@@ -44,4 +44,6 @@ fun versionAtLeast(actual: String, minimum: String): Boolean {
 @Serializable data class ClientInventoryAck(val instanceId: String, val sequence: Long, val accepted: Boolean, val verifiedAt: String)
 @Serializable data class CoverageRow(val instanceId: String, val instanceName: String, val status: CoverageStatus, val appliedRevision: Long? = null, val verifiedAt: String? = null, val missingCount: Int = 0)
 @Serializable data class ServerCoverage(val serverId: String, val manifestRevision: Long, val rows: List<CoverageRow>)
+@Serializable data class PublicationPolicyRequest(val policy: PublicationPolicy)
+@Serializable data class PublicationRecord(val id: Long, val scanId: String, val policy: PublicationPolicy, val outcome: String, val revision: Long? = null, val detail: String, val actor: String, val createdAt: String)
 @Serializable data class SyncReport(val serverId: String, val revision: Long, val status: String)

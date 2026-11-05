@@ -27,3 +27,9 @@ Keep major-version upgrades separate from relocation. Roll back by stopping dest
 - `client_instance_inventory`: one row per registered client instance with Minecraft/loader metadata, selected server, sync policy, activity, applied manifest revision, monotonically increasing report `sequence` and verification time.
 - `client_instance_mods`: installed artifacts per instance keyed by SHA-512, with file name only (no local paths), recognized Modrinth project/version ids and managed/unmanaged ownership.
 
+
+## Publication policy (V3)
+
+- `minecraft_servers.publication_policy` (`MANUAL` default, `REVIEW_UNKNOWN`, `TRUSTED_AUTO`).
+- `publication_history`: one row per automatic evaluation with outcome, published revision, detail and actor; identical effective client requirements never create a new manifest revision.
+
