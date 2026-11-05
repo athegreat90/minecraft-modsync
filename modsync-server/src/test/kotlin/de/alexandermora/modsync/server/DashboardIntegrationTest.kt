@@ -30,7 +30,10 @@ import kotlin.test.assertTrue
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DashboardIntegrationTest {
-    companion object { @Container @JvmField val database = MariaDBContainer<Nothing>("mariadb:11.4.10") }
+    companion object {
+        @Container @JvmField
+        val database = MariaDBContainer<Nothing>("mariadb:11.4.10")
+    }
 
     private val state: Path = Files.createTempDirectory("modsync-ui-test")
     private lateinit var context: ConfigurableApplicationContext
@@ -44,10 +47,14 @@ class DashboardIntegrationTest {
     @BeforeAll fun start() {
         val passwordFile = state.resolve("bootstrap-password")
         Files.writeString(passwordFile, adminPassword)
-        context = SpringApplicationBuilder(ServerApplication::class.java).run(
-            "--server.port=0", "--spring.datasource.url=${database.jdbcUrl}", "--spring.datasource.username=${database.username}",
-            "--spring.datasource.password=${database.password}", "--modsync.bootstrap-password-file=$passwordFile"
-        )
+        context =
+            SpringApplicationBuilder(ServerApplication::class.java).run(
+                "--server.port=0",
+                "--spring.datasource.url=${database.jdbcUrl}",
+                "--spring.datasource.username=${database.username}",
+                "--spring.datasource.password=${database.password}",
+                "--modsync.bootstrap-password-file=$passwordFile"
+            )
         base = "http://127.0.0.1:${requireNotNull((context as WebServerApplicationContext).webServer).port}"
         db = context.getBean(JdbcTemplate::class.java)
         db.update("INSERT INTO minecraft_servers (id, name, minecraft_version, loader) VALUES (?,?,?,?)", serverId, "Survival", "1.21.1", "neoforge")
@@ -55,11 +62,19 @@ class DashboardIntegrationTest {
     }
 
     /** Stops the application. */
-    @AfterAll fun stop() { context.close(); state.toFile().deleteRecursively() }
+    @AfterAll fun stop() {
+        context.close()
+        state.toFile().deleteRecursively()
+    }
 
     /** Minimal browser: cookie jar, no automatic redirects. */
     private inner class Browser {
-        private val http = HttpClient.newBuilder().cookieHandler(CookieManager()).followRedirects(HttpClient.Redirect.NEVER).build()
+        private val http =
+            HttpClient
+                .newBuilder()
+                .cookieHandler(CookieManager())
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build()
 
         /** Sends a GET and returns the response. */
         fun get(path: String): HttpResponse<String> =
@@ -70,7 +85,11 @@ class DashboardIntegrationTest {
             val fields = form + (csrf?.let { mapOf("_csrf" to it) } ?: emptyMap())
             val body = fields.entries.joinToString("&") { "${URLEncoder.encode(it.key, Charsets.UTF_8)}=${URLEncoder.encode(it.value, Charsets.UTF_8)}" }
             return http.send(
-                HttpRequest.newBuilder(URI("$base$path")).header("Content-Type", "application/x-www-form-urlencoded").POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+                HttpRequest
+                    .newBuilder(URI("$base$path"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build(),
                 HttpResponse.BodyHandlers.ofString()
             )
         }
@@ -88,7 +107,13 @@ class DashboardIntegrationTest {
         val browser = Browser()
         val response = browser.get("/ui")
         assertEquals(302, response.statusCode())
-        assertTrue(response.headers().firstValue("Location").get().endsWith("/login"))
+        assertTrue(
+            response
+                .headers()
+                .firstValue("Location")
+                .get()
+                .endsWith("/login")
+        )
         assertEquals(401, browser.get("/api/v1/servers").statusCode())
         assertEquals(200, browser.get("/ui/assets/ui.css").statusCode())
     }
@@ -96,8 +121,22 @@ class DashboardIntegrationTest {
     /** Wrong credentials are rejected; the administrator reaches the overview and server page. */
     @Test fun adminCanBrowse() {
         val browser = Browser()
-        assertTrue(browser.login("admin", "wrong-password-value").headers().firstValue("Location").get().contains("error"))
-        assertTrue(browser.login("admin", adminPassword).headers().firstValue("Location").get().endsWith("/ui"))
+        assertTrue(
+            browser
+                .login("admin", "wrong-password-value")
+                .headers()
+                .firstValue("Location")
+                .get()
+                .contains("error")
+        )
+        assertTrue(
+            browser
+                .login("admin", adminPassword)
+                .headers()
+                .firstValue("Location")
+                .get()
+                .endsWith("/ui")
+        )
         val overview = browser.get("/ui")
         assertEquals(200, overview.statusCode())
         assertTrue(overview.body().contains("Survival"))
@@ -112,7 +151,14 @@ class DashboardIntegrationTest {
         val body = browser.get("/ui").body()
         assertFalse(body.contains("<script>alert(1)</script>"))
         assertTrue(body.contains("&lt;script&gt;alert(1)&lt;/script&gt;"))
-        assertTrue(browser.get("/ui").headers().firstValue("Content-Security-Policy").get().contains("script-src 'none'"))
+        assertTrue(
+            browser
+                .get("/ui")
+                .headers()
+                .firstValue("Content-Security-Policy")
+                .get()
+                .contains("script-src 'none'")
+        )
     }
 
     /** State changes require a CSRF token and are applied and audited with it. */
@@ -138,9 +184,14 @@ class DashboardIntegrationTest {
 
     /** Inventory, manifest, coverage matrix and history render from persisted data, with review forms for unapproved mods. */
     @Test fun serverPageRendersPersistedData() {
-        val server = UUID.randomUUID().toString(); val scan = UUID.randomUUID().toString(); val hash = "c".repeat(128)
-        val host = UUID.randomUUID().toString(); val agent = UUID.randomUUID().toString(); val user = UUID.randomUUID().toString()
-        val device = UUID.randomUUID().toString(); val instance = UUID.randomUUID().toString()
+        val server = UUID.randomUUID().toString()
+        val scan = UUID.randomUUID().toString()
+        val hash = "c".repeat(128)
+        val host = UUID.randomUUID().toString()
+        val agent = UUID.randomUUID().toString()
+        val user = UUID.randomUUID().toString()
+        val device = UUID.randomUUID().toString()
+        val instance = UUID.randomUUID().toString()
         val now = java.sql.Timestamp.from(java.time.Instant.now())
         db.update("INSERT INTO minecraft_servers (id, name, minecraft_version, loader, snapshot_id, inventory_at, revision) VALUES (?,?,?,?,?,?,?)", server, "Data", "1.21.1", "neoforge", null, null, 1)
         db.update("INSERT INTO minecraft_hosts (id, name) VALUES (?,?)", host, "h")
@@ -149,8 +200,13 @@ class DashboardIntegrationTest {
         db.update("INSERT INTO inventory_entries (snapshot_id, batch_index, payload) VALUES (?,?,?)", scan, 0, """{"index":0,"entries":[{"fileName":"unreviewed-mod.jar","sha512":"$hash","size":1}]}""")
         db.update("UPDATE minecraft_servers SET snapshot_id=?, inventory_at=? WHERE id=?", scan, now, server)
         db.update("INSERT INTO server_manifests (server_id, latest_revision) VALUES (?,?)", server, 1)
-        db.update("INSERT INTO manifest_revisions (server_id, revision, payload, created_at) VALUES (?,?,?,?)", server, 1,
-            """{"serverId":"$server","revision":1,"minecraftVersion":"1.21.1","loader":"neoforge","artifacts":[{"projectId":"proj","versionId":"ver","fileName":"client-mod.jar","sha512":"${"e".repeat(128)}","size":1,"minecraftVersions":["1.21.1"],"loaders":["neoforge"],"classification":"CLIENT_REQUIRED"}],"createdAt":"2026-01-01T00:00:00Z","inventoryDigest":"d"}""", now)
+        db.update(
+            "INSERT INTO manifest_revisions (server_id, revision, payload, created_at) VALUES (?,?,?,?)",
+            server,
+            1,
+            """{"serverId":"$server","revision":1,"minecraftVersion":"1.21.1","loader":"neoforge","artifacts":[{"projectId":"proj","versionId":"ver","fileName":"client-mod.jar","sha512":"${"e".repeat(128)}","size":1,"minecraftVersions":["1.21.1"],"loaders":["neoforge"],"classification":"CLIENT_REQUIRED"}],"createdAt":"2026-01-01T00:00:00Z","inventoryDigest":"d"}""",
+            now
+        )
         db.update("INSERT INTO users (id, username, password_hash, role) VALUES (?,?,?,?)", user, "u-$user", "x", "CLIENT")
         db.update("INSERT INTO client_devices (id, user_id) VALUES (?,?)", device, user)
         db.update("INSERT INTO client_instances (id, device_id, name) VALUES (?,?,?)", instance, device, "player-main")

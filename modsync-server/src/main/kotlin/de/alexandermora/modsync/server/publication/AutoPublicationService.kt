@@ -84,7 +84,11 @@ class ManifestServiceGateway(private val manifests: ManifestService) : ManifestG
      * @return Latest manifest or null.
      */
     override fun latest(serverId: String): Manifest? =
-        try { manifests.manifest(serverId, null) } catch (e: ResponseStatusException) { if (e.statusCode.value() == 404) null else throw e }
+        try {
+            manifests.manifest(serverId, null)
+        } catch (e: ResponseStatusException) {
+            if (e.statusCode.value() == 404) null else throw e
+        }
 
     /**
      * Previews a candidate manifest.
@@ -117,7 +121,7 @@ class AutoPublicationService(
     private val inventory: InventoryService,
     private val manifests: ManifestGateway,
     private val resolver: ArtifactResolver,
-    private val persistence: PublicationPersistence,
+    private val persistence: PublicationPersistence
 ) {
     private val logger = LoggerFactory.getLogger(AutoPublicationService::class.java)
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, "auto-publication").apply { isDaemon = true } }
@@ -127,14 +131,21 @@ class AutoPublicationService(
      *
      * @param scanId Committed snapshot id.
      */
+    @Suppress("TooGenericExceptionCaught") // the background worker must survive any single evaluation failure
     fun onSnapshotCommitted(scanId: String) {
         executor.execute {
-            try { evaluate(scanId) } catch (error: Exception) { logger.warn("automatic publication failed unexpectedly", error) }
+            try {
+                evaluate(scanId)
+            } catch (error: Exception) {
+                logger.warn("automatic publication failed unexpectedly", error)
+            }
         }
     }
 
     /** Stops the background worker on shutdown. */
-    @PreDestroy fun shutdown() { executor.shutdown() }
+    @PreDestroy fun shutdown() {
+        executor.shutdown()
+    }
 
     /**
      * Evaluates a committed snapshot synchronously and records the result.
@@ -149,13 +160,19 @@ class AutoPublicationService(
         val serverId = inventory.committedSnapshot(scanId).serverId
         val policy = persistence.policy(serverId) ?: return null
         if (policy == PublicationPolicy.MANUAL) return null
+
         fun outcome(name: String, detail: String, revision: Long? = null): String {
             persistence.record(serverId, scanId, policy, name, revision, detail, SYSTEM_ACTOR)
             return name
         }
         val latest = manifests.latest(serverId)
         val approved = inventory.overridesFor(serverId).mapValues { Classification.valueOf(it.value.classification) }
-        val trusted = latest?.artifacts.orEmpty().filter { it.classification != Classification.UNKNOWN }.associate { it.projectId to it.classification }
+        val trusted =
+            latest
+                ?.artifacts
+                .orEmpty()
+                .filter { it.classification != Classification.UNKNOWN }
+                .associate { it.projectId to it.classification }
         val decision = decidePublication(policy, inventory.entries(scanId), approved, trusted, resolver::resolve)
         if (decision is PublicationDecision.ReviewRequired) return outcome(REVIEW_REQUIRED, "Needs review: " + decision.files.joinToString(", "))
         decision as PublicationDecision.Ready
@@ -171,7 +188,7 @@ class AutoPublicationService(
         } catch (error: ResponseStatusException) {
             outcome(if (error.statusCode.is4xxClientError) REVIEW_REQUIRED else FAILED, reasonOf(error.statusCode, error.reason))
         } catch (error: IllegalArgumentException) {
-            outcome(REVIEW_REQUIRED, "Invalid manifest candidate")
+            outcome(REVIEW_REQUIRED, "Invalid manifest candidate: ${error.message ?: error.javaClass.simpleName}")
         }
     }
 
@@ -184,6 +201,7 @@ class AutoPublicationService(
      */
     private fun reasonOf(status: HttpStatusCode, reason: String?) = "HTTP ${status.value()}: ${reason ?: "no detail"}"
 
+    /** Outcome names recorded in the publication history. */
     companion object {
         const val PUBLISHED = "PUBLISHED"
         const val SKIPPED_NO_CHANGE = "SKIPPED_NO_CHANGE"

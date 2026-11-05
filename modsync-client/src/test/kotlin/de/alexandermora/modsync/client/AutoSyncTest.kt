@@ -35,10 +35,21 @@ class AutoSyncTest {
         val inventories = mutableListOf<ClientInventoryReport>()
         val syncs = mutableListOf<SyncReport>()
         var manifestFetches = 0
+
         override fun publishedRevision(serverId: String) = revision
-        override fun manifest(serverId: String): Manifest { manifestFetches++; return manifest }
-        override fun reportInventory(report: ClientInventoryReport) { inventories += report }
-        override fun reportSync(report: SyncReport) { syncs += report }
+
+        override fun manifest(serverId: String): Manifest {
+            manifestFetches++
+            return manifest
+        }
+
+        override fun reportInventory(report: ClientInventoryReport) {
+            inventories += report
+        }
+
+        override fun reportSync(report: SyncReport) {
+            syncs += report
+        }
     }
 
     /** Creates an instance configured for 1.21.1 NeoForge. */
@@ -48,10 +59,18 @@ class AutoSyncTest {
     }
 
     /** Builds a client-required artifact whose hash is [hash]. */
-    private fun artifact(name: String, hash: String, project: String = name) = Artifact(
-        project, "v-$hash".take(20), name, hash, 10, "https://cdn.modrinth.com/data/x/versions/y/$name",
-        setOf("1.21.1"), setOf("neoforge"), Classification.CLIENT_REQUIRED
-    )
+    private fun artifact(name: String, hash: String, project: String = name) =
+        Artifact(
+            project,
+            "v-$hash".take(20),
+            name,
+            hash,
+            10,
+            "https://cdn.modrinth.com/data/x/versions/y/$name",
+            setOf("1.21.1"),
+            setOf("neoforge"),
+            Classification.CLIENT_REQUIRED
+        )
 
     /** Builds a manifest at [revision] with the supplied artifacts. */
     private fun manifest(revision: Long, vararg artifacts: Artifact) =
@@ -59,8 +78,11 @@ class AutoSyncTest {
 
     /** Creates a runner with the supplied collaborators. */
     private fun runner(
-        gateway: FakeGateway, policy: SyncPolicy = SyncPolicy.AUTO_APPROVED_INSTALL, running: Boolean = false,
-        settings: AutoSettings = AutoSettings(instanceId, server, policy, "2026-01-01T00:00:00Z"), apply: (SyncPlan) -> Unit = {}
+        gateway: FakeGateway,
+        policy: SyncPolicy = SyncPolicy.AUTO_APPROVED_INSTALL,
+        running: Boolean = false,
+        settings: AutoSettings = AutoSettings(instanceId, server, policy, "2026-01-01T00:00:00Z"),
+        apply: (SyncPlan) -> Unit = {}
     ) = AutoSyncRunner(installer, "main", settings, gateway, { running }, apply = apply)
 
     /** Policies permit strictly growing operation sets and never allow blocked plans. */
@@ -145,7 +167,11 @@ class AutoSyncTest {
         val (outcome, _) = runner(gateway, SyncPolicy.AUTO_ALL_MANAGED).runOnce()
         assertEquals(AutoOutcome.UpToDate(1), outcome)
         assertTrue(Files.exists(personal))
-        val mod = gateway.inventories.single().mods.single()
+        val mod =
+            gateway.inventories
+                .single()
+                .mods
+                .single()
         assertEquals("personal.jar", mod.fileName)
         assertFalse(mod.managed)
     }

@@ -1,0 +1,41 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MatchingDeclarationName:Transport.kt:Api</ID>
+    <ID>MaxLineLength:Protocol.kt:ClientInventoryReport$@Serializable data</ID>
+    <ID>MaxLineLength:Protocol.kt:CoverageRow$@Serializable data</ID>
+    <ID>MaxLineLength:Protocol.kt:PublicationRecord$@Serializable data</ID>
+    <ID>MaxLineLength:Protocol.kt:ServerInfo</ID>
+    <ID>MaxLineLength:Protocol.kt:SnapshotBegin</ID>
+    <ID>MaxLineLength:Transport.kt:Api$fun capabilities</ID>
+    <ID>MaxLineLength:Transport.kt:Api$val response = client.send(builder.method(method, body?.let { HttpRequest.BodyPublishers.ofString(it) } ?: HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofInputStream())</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Assignment</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Capabilities</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Credentials</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Enrollment</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:EnrollmentRequest</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:EnrollmentToken</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Failure</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Heartbeat</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Login</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:OverrideRequest</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:PublishRequest</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:RefreshRequest</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:ScanConfirmation</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:ServerInfo</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:ServerRegistration</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:SnapshotAck</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:SnapshotBatch</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:SnapshotBegin</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:SnapshotView</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:SyncReport</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:Transfer</ID>
+    <ID>UndocumentedPublicClass:Protocol.kt:UserRegistration</ID>
+    <ID>UndocumentedPublicClass:Transport.kt:Api</ID>
+    <ID>UndocumentedPublicFunction:Protocol.kt:fun versionAtLeast: Boolean</ID>
+    <ID>UndocumentedPublicFunction:Transport.kt:Api$fun capabilities</ID>
+    <ID>UndocumentedPublicFunction:Transport.kt:Api$fun request: String</ID>
+    <ID>UndocumentedPublicFunction:Transport.kt:fun secureWrite</ID>
+  </CurrentIssues>
+</SmellBaseline>

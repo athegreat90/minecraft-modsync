@@ -35,7 +35,7 @@ data class ServerPage(
     val manifestRevision: Long?,
     val manifest: List<ManifestRow>,
     val coverage: ServerCoverage?,
-    val history: List<PublicationRecord>,
+    val history: List<PublicationRecord>
 )
 
 /** Assembles dashboard view models from persisted data only. */
@@ -44,7 +44,7 @@ class DashboardService(
     private val inventory: InventoryService,
     private val manifests: ManifestGateway,
     private val coverage: CoverageService,
-    private val persistence: PublicationPersistence,
+    private val persistence: PublicationPersistence
 ) {
     /**
      * Lists all servers with their publication policies, using two queries.
@@ -69,15 +69,24 @@ class DashboardService(
         val id = uuid(serverId)
         val row = inventory.listServers().firstOrNull { it.id == id } ?: notFound()
         val approvals = inventory.overridesFor(id)
-        val entries = if (inventory.server(id).snapshotId == null) emptyList() else inventory.inventory(id).entries.map {
-            EntryRow(it.fileName, it.sha512, it.sha512.take(SHORT_HASH), approvals[it.sha512]?.classification)
-        }
+        val entries =
+            if (inventory.server(id).snapshotId == null) {
+                emptyList()
+            } else {
+                inventory.inventory(id).entries.map {
+                    EntryRow(it.fileName, it.sha512, it.sha512.take(SHORT_HASH), approvals[it.sha512]?.classification)
+                }
+            }
         val manifest: Manifest? = manifests.latest(id)
         return ServerPage(
-            row, persistence.policy(id) ?: PublicationPolicy.MANUAL, entries, entries.count { it.classification == null },
+            row,
+            persistence.policy(id) ?: PublicationPolicy.MANUAL,
+            entries,
+            entries.count { it.classification == null },
             manifest?.revision,
             manifest?.artifacts.orEmpty().map { ManifestRow(it.fileName, it.projectId, it.versionId, it.classification) },
-            manifest?.let { coverage.forServer(id) }, persistence.history(id, HISTORY_LIMIT)
+            manifest?.let { coverage.forServer(id) },
+            persistence.history(id, HISTORY_LIMIT)
         )
     }
 }

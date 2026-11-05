@@ -1,8 +1,8 @@
 package de.alexandermora.modsync.server.clientinventory
 
 import de.alexandermora.modsync.domain.ClientInventoryView
-import de.alexandermora.modsync.domain.Manifest
 import de.alexandermora.modsync.domain.CoverageStatus
+import de.alexandermora.modsync.domain.Manifest
 import de.alexandermora.modsync.domain.computeCoverage
 import de.alexandermora.modsync.domain.missingClientArtifacts
 import de.alexandermora.modsync.domain.uuid
@@ -44,7 +44,7 @@ class ManifestServiceSource(private val manifests: ManifestService) : LatestMani
 @Service
 class CoverageService(
     private val persistence: ClientInventoryPersistence,
-    private val manifests: LatestManifestSource,
+    private val manifests: LatestManifestSource
 ) {
     /**
      * Builds the compatibility matrix for one server using exactly two database reads for all instances.
@@ -61,20 +61,29 @@ class CoverageService(
         val id = uuid(serverId)
         val manifest = manifests.latest(id)
         val mods = persistence.modsForServer(id)
-        val rows = persistence.instancesForServer(id).map { instance ->
-            val installed = mods[instance.instanceId].orEmpty()
-            val view = ClientInventoryView(
-                minecraftVersion = instance.minecraftVersion, loader = instance.loader,
-                installedHashes = installed.map { it.sha512 }.toSet(), verifiedAtEpochSeconds = instance.verifiedAt.epochSecond,
-                online = Duration.between(instance.verifiedAt, now) <= ONLINE_WINDOW, activity = instance.activity,
-                installedProjects = installed.mapNotNull { it.projectId }.toSet()
-            )
-            val status: CoverageStatus = computeCoverage(manifest, view, now.epochSecond, MAX_INVENTORY_AGE.seconds)
-            CoverageRow(
-                instance.instanceId, instance.name, status, instance.appliedRevision, instance.verifiedAt.toString(),
-                missingClientArtifacts(manifest, view).size
-            )
-        }
+        val rows =
+            persistence.instancesForServer(id).map { instance ->
+                val installed = mods[instance.instanceId].orEmpty()
+                val view =
+                    ClientInventoryView(
+                        minecraftVersion = instance.minecraftVersion,
+                        loader = instance.loader,
+                        installedHashes = installed.map { it.sha512 }.toSet(),
+                        verifiedAtEpochSeconds = instance.verifiedAt.epochSecond,
+                        online = Duration.between(instance.verifiedAt, now) <= ONLINE_WINDOW,
+                        activity = instance.activity,
+                        installedProjects = installed.mapNotNull { it.projectId }.toSet()
+                    )
+                val status: CoverageStatus = computeCoverage(manifest, view, now.epochSecond, MAX_INVENTORY_AGE.seconds)
+                CoverageRow(
+                    instance.instanceId,
+                    instance.name,
+                    status,
+                    instance.appliedRevision,
+                    instance.verifiedAt.toString(),
+                    missingClientArtifacts(manifest, view).size
+                )
+            }
         return ServerCoverage(id, manifest.revision, rows)
     }
 }

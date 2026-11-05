@@ -16,5 +16,8 @@ class CoverageController(private val coverage: CoverageService) {
      * @param id Server UUID.
      * @return Per-instance coverage against the latest published manifest.
      */
-    @GetMapping("/servers/{id}/coverage") fun coverage(@PathVariable id: String): ServerCoverage = coverage.forServer(id)
+    @GetMapping("/servers/{id}/coverage")
+    fun coverage(
+        @PathVariable id: String
+    ): ServerCoverage = coverage.forServer(id)
 }

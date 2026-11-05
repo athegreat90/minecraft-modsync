@@ -17,8 +17,10 @@ class PublicationPersistence(private val db: JdbcTemplate) {
      * @return The policy, or null when the server does not exist.
      */
     fun policy(serverId: String): PublicationPolicy? =
-        db.queryForList("SELECT publication_policy FROM minecraft_servers WHERE id = ?", String::class.java, serverId)
-            .firstOrNull()?.let(PublicationPolicy::valueOf)
+        db
+            .queryForList("SELECT publication_policy FROM minecraft_servers WHERE id = ?", String::class.java, serverId)
+            .firstOrNull()
+            ?.let(PublicationPolicy::valueOf)
 
     /**
      * Reads the publication policy of every server in one query.
@@ -52,7 +54,14 @@ class PublicationPersistence(private val db: JdbcTemplate) {
     fun record(serverId: String, scanId: String, policy: PublicationPolicy, outcome: String, revision: Long?, detail: String, actor: String) {
         db.update(
             "INSERT INTO publication_history (server_id, scan_id, policy, outcome, revision, detail, actor, created_at) VALUES (?,?,?,?,?,?,?,?)",
-            serverId, scanId, policy.name, outcome, revision, detail.take(1000), actor, Timestamp.from(Instant.now())
+            serverId,
+            scanId,
+            policy.name,
+            outcome,
+            revision,
+            detail.take(1000),
+            actor,
+            Timestamp.from(Instant.now())
         )
     }
 
@@ -63,14 +72,22 @@ class PublicationPersistence(private val db: JdbcTemplate) {
      * @param limit Maximum number of records.
      * @return Records in descending order.
      */
-    fun history(serverId: String, limit: Int): List<PublicationRecord> = db.query(
-        "SELECT id, scan_id, policy, outcome, revision, detail, actor, created_at FROM publication_history WHERE server_id = ? ORDER BY id DESC LIMIT ?",
-        { rs, _ ->
-            PublicationRecord(
-                rs.getLong(1), rs.getString(2), PublicationPolicy.valueOf(rs.getString(3)), rs.getString(4),
-                rs.getObject(5) as Long?, rs.getString(6), rs.getString(7), rs.getTimestamp(8).toInstant().toString()
-            )
-        },
-        serverId, limit
-    )
+    fun history(serverId: String, limit: Int): List<PublicationRecord> =
+        db.query(
+            "SELECT id, scan_id, policy, outcome, revision, detail, actor, created_at FROM publication_history WHERE server_id = ? ORDER BY id DESC LIMIT ?",
+            { rs, _ ->
+                PublicationRecord(
+                    rs.getLong(1),
+                    rs.getString(2),
+                    PublicationPolicy.valueOf(rs.getString(3)),
+                    rs.getString(4),
+                    rs.getObject(5) as Long?,
+                    rs.getString(6),
+                    rs.getString(7),
+                    rs.getTimestamp(8).toInstant().toString()
+                )
+            },
+            serverId,
+            limit
+        )
 }

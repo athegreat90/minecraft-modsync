@@ -59,7 +59,7 @@ fun decidePublication(
     entries: List<ModEntry>,
     approved: Map<String, Classification>,
     trustedProjects: Map<String, Classification>,
-    resolve: (String) -> Artifact?,
+    resolve: (String) -> Artifact?
 ): PublicationDecision {
     if (policy == PublicationPolicy.MANUAL) return PublicationDecision.ReviewRequired(entries.map { it.fileName })
     val artifacts = mutableListOf<Artifact>()
@@ -90,6 +90,8 @@ fun decidePublication(
  * @return A deterministic set of requirement descriptors.
  */
 fun effectiveClientRequirements(manifest: Manifest): Set<String> =
-    manifest.artifacts.filter { it.classification in CLIENT_RELEVANT }
-        .map { "${it.projectId}:${it.versionId}:${it.sha512}:${it.classification}" }.toSet() +
+    manifest.artifacts
+        .filter { it.classification in CLIENT_RELEVANT }
+        .map { "${it.projectId}:${it.versionId}:${it.sha512}:${it.classification}" }
+        .toSet() +
         "platform:${manifest.minecraftVersion}:${manifest.loader}:${manifest.loaderVersion}"

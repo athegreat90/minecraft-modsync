@@ -33,14 +33,16 @@ class DashboardController(
     private val persistence: PublicationPersistence,
     private val autoPublication: AutoPublicationService,
     private val audit: AuditService,
-    @Value($$"${modsync.maintenance}") private val maintenance: Boolean,
+    @Value($$"${modsync.maintenance}") private val maintenance: Boolean
 ) {
     /**
      * Renders the login form.
      *
      * @return View name.
      */
-    @GetMapping("/login") fun login(): String = "login"
+    @Suppress("FunctionOnlyReturningConstant") // Spring MVC handler: the view name is the response
+    @GetMapping("/login")
+    fun login(): String = "login"
 
     /**
      * Renders the server overview.
@@ -48,7 +50,8 @@ class DashboardController(
      * @param model View model.
      * @return View name.
      */
-    @GetMapping("/ui") fun overview(model: Model): String {
+    @GetMapping("/ui")
+    fun overview(model: Model): String {
         model.addAttribute("servers", dashboard.overview())
         return "overview"
     }
@@ -60,7 +63,11 @@ class DashboardController(
      * @param model View model.
      * @return View name.
      */
-    @GetMapping("/ui/servers/{id}") fun server(@PathVariable id: String, model: Model): String {
+    @GetMapping("/ui/servers/{id}")
+    fun server(
+        @PathVariable id: String,
+        model: Model
+    ): String {
         model.addAttribute("page", dashboard.server(id))
         model.addAttribute("policies", PublicationPolicy.entries)
         model.addAttribute("classifications", Classification.entries.filter { it != Classification.UNKNOWN })
@@ -74,7 +81,11 @@ class DashboardController(
      * @param policy Requested policy.
      * @return Redirect to the server page.
      */
-    @PostMapping("/ui/servers/{id}/publication-policy") fun setPolicy(@PathVariable id: String, @RequestParam policy: PublicationPolicy): String {
+    @PostMapping("/ui/servers/{id}/publication-policy")
+    fun setPolicy(
+        @PathVariable id: String,
+        @RequestParam policy: PublicationPolicy
+    ): String {
         mutable()
         val server = uuid(id)
         found(persistence.setPolicy(server, policy))
@@ -91,8 +102,12 @@ class DashboardController(
      * @param reason Reason stored as approval provenance.
      * @return Redirect to the server page.
      */
-    @PostMapping("/ui/servers/{id}/classify") fun classify(
-        @PathVariable id: String, @RequestParam sha512: String, @RequestParam classification: Classification, @RequestParam reason: String,
+    @PostMapping("/ui/servers/{id}/classify")
+    fun classify(
+        @PathVariable id: String,
+        @RequestParam sha512: String,
+        @RequestParam classification: Classification,
+        @RequestParam reason: String
     ): String {
         mutable()
         val server = uuid(id)
@@ -106,7 +121,10 @@ class DashboardController(
      * @param id Server UUID.
      * @return Redirect to the server page.
      */
-    @PostMapping("/ui/servers/{id}/reevaluate") fun reevaluate(@PathVariable id: String): String {
+    @PostMapping("/ui/servers/{id}/reevaluate")
+    fun reevaluate(
+        @PathVariable id: String
+    ): String {
         mutable()
         val server = uuid(id)
         autoPublication.onSnapshotCommitted(inventory.acceptedSnapshot(server))

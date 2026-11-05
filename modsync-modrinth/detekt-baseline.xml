@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MaxLineLength:Modrinth.kt:Modrinth$call("project/${component(project)}/version").jsonArray.map { it.jsonObject }.filter { v -&gt; v.getValue("game_versions").jsonArray.any { it.jsonPrimitive.content == minecraft } &amp;&amp; v.getValue("loaders").jsonArray.any { it.jsonPrimitive.content == loader } }</ID>
+    <ID>MaxLineLength:Modrinth.kt:Modrinth$call("version_files", buildJsonObject { put("algorithm", "sha512"); put("hashes", JsonArray(batch.map(::JsonPrimitive))) }.toString()).jsonObject.entries.map { it.key to it.value.jsonObject }</ID>
+    <ID>MaxLineLength:Modrinth.kt:Modrinth$projectId?.let { Dependency(it, versionId, when(d["dependency_type"]?.jsonPrimitive?.content) { "required" -&gt; DependencyKind.REQUIRED; "incompatible" -&gt; DependencyKind.INCOMPATIBLE; "embedded" -&gt; DependencyKind.EMBEDDED; else -&gt; DependencyKind.OPTIONAL }) }</ID>
+    <ID>UndocumentedPublicClass:Modrinth.kt:Modrinth</ID>
+    <ID>UndocumentedPublicFunction:Modrinth.kt:Modrinth$fun artifact: Artifact</ID>
+    <ID>UndocumentedPublicFunction:Modrinth.kt:Modrinth$fun compatibleVersions: List&lt;JsonObject&gt;</ID>
+    <ID>UndocumentedPublicFunction:Modrinth.kt:Modrinth$fun identify: Map&lt;String, JsonObject&gt;</ID>
+    <ID>UndocumentedPublicFunction:Modrinth.kt:Modrinth$fun project: JsonObject</ID>
+    <ID>UndocumentedPublicFunction:Modrinth.kt:Modrinth$fun version: JsonObject</ID>
+  </CurrentIssues>
+</SmellBaseline>

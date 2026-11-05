@@ -27,7 +27,11 @@ class PublicationController(private val persistence: PublicationPersistence, pri
      * @param request Requested policy.
      * @return True when applied.
      */
-    @PutMapping("/servers/{id}/publication-policy") fun setPolicy(@PathVariable id: String, @RequestBody request: PublicationPolicyRequest): Boolean =
+    @PutMapping("/servers/{id}/publication-policy")
+    fun setPolicy(
+        @PathVariable id: String,
+        @RequestBody request: PublicationPolicyRequest
+    ): Boolean =
         acknowledged {
             val server = uuid(id)
             found(persistence.setPolicy(server, request.policy))
@@ -40,6 +44,9 @@ class PublicationController(private val persistence: PublicationPersistence, pri
      * @param id Server UUID.
      * @return Newest-first history.
      */
-    @GetMapping("/servers/{id}/publications") fun history(@PathVariable id: String): List<PublicationRecord> =
+    @GetMapping("/servers/{id}/publications")
+    fun history(
+        @PathVariable id: String
+    ): List<PublicationRecord> =
         persistence.history(uuid(id), HISTORY_LIMIT)
 }

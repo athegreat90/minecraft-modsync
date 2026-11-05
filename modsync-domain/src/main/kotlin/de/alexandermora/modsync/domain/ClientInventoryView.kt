@@ -45,13 +45,29 @@ fun computeCoverage(
 ): CoverageStatus {
     val verifiedAt = client?.verifiedAtEpochSeconds
     return when {
-        client == null || verifiedAt == null -> CoverageStatus.UNKNOWN
-        client.minecraftVersion != manifest.minecraftVersion || !client.loader.equals(manifest.loader, ignoreCase = true) ->
+        client == null || verifiedAt == null -> {
+            CoverageStatus.UNKNOWN
+        }
+
+        client.minecraftVersion != manifest.minecraftVersion || !client.loader.equals(manifest.loader, ignoreCase = true) -> {
             CoverageStatus.INCOMPATIBLE
-        client.activity != ClientActivity.IDLE -> activityStatus(client.activity)
-        nowEpochSeconds - verifiedAt > maxInventoryAgeSeconds -> CoverageStatus.INVENTORY_STALE
-        !client.online -> CoverageStatus.OFFLINE
-        else -> installedCoverage(manifest, client)
+        }
+
+        client.activity != ClientActivity.IDLE -> {
+            activityStatus(client.activity)
+        }
+
+        nowEpochSeconds - verifiedAt > maxInventoryAgeSeconds -> {
+            CoverageStatus.INVENTORY_STALE
+        }
+
+        !client.online -> {
+            CoverageStatus.OFFLINE
+        }
+
+        else -> {
+            installedCoverage(manifest, client)
+        }
     }
 }
 
@@ -61,13 +77,14 @@ fun computeCoverage(
  * @param activity A non-idle activity.
  * @return Matching [CoverageStatus].
  */
-private fun activityStatus(activity: ClientActivity): CoverageStatus = when (activity) {
-    ClientActivity.IDLE -> CoverageStatus.UNKNOWN
-    ClientActivity.SYNC_PENDING -> CoverageStatus.SYNC_PENDING
-    ClientActivity.SYNCING -> CoverageStatus.SYNCING
-    ClientActivity.PENDING_GAME_EXIT -> CoverageStatus.PENDING_GAME_EXIT
-    ClientActivity.SYNC_FAILED -> CoverageStatus.SYNC_FAILED
-}
+private fun activityStatus(activity: ClientActivity): CoverageStatus =
+    when (activity) {
+        ClientActivity.IDLE -> CoverageStatus.UNKNOWN
+        ClientActivity.SYNC_PENDING -> CoverageStatus.SYNC_PENDING
+        ClientActivity.SYNCING -> CoverageStatus.SYNCING
+        ClientActivity.PENDING_GAME_EXIT -> CoverageStatus.PENDING_GAME_EXIT
+        ClientActivity.SYNC_FAILED -> CoverageStatus.SYNC_FAILED
+    }
 
 /**
  * Lists client-required artifacts whose exact hash is not installed.

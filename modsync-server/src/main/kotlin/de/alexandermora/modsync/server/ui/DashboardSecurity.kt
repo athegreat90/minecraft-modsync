@@ -37,6 +37,7 @@ fun isDashboardRequest(request: HttpServletRequest): Boolean {
     val path = if (request.dispatcherType == DispatcherType.ERROR) request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI) as? String ?: "" else request.requestURI
     return path == "/login" || path == "/logout" || path == "/ui" || path.startsWith("/ui/")
 }
+
 /** Loads accounts for the dashboard login; the authentication name is the user id, matching API audit actors. */
 class DashboardUserDetailsService(private val users: UserRepository) : UserDetailsService {
     /**
@@ -48,7 +49,11 @@ class DashboardUserDetailsService(private val users: UserRepository) : UserDetai
      */
     override fun loadUserByUsername(username: String): UserDetails {
         val user = users.findByUsername(username) ?: throw UsernameNotFoundException("Unknown user")
-        return User.withUsername(user.id).password(user.passwordHash).roles(user.role).build()
+        return User
+            .withUsername(user.id)
+            .password(user.passwordHash)
+            .roles(user.role)
+            .build()
     }
 }
 
@@ -94,21 +99,32 @@ class DashboardSecurityConfiguration {
      * @param users Account repository.
      * @return The dashboard chain, ordered before the API chain.
      */
-    @Bean @Order(1) fun dashboardChain(http: HttpSecurity, users: UserRepository): SecurityFilterChain {
-        http.securityMatcher(RequestMatcher(::isDashboardRequest))
+    @Bean
+    @Order(1)
+    fun dashboardChain(http: HttpSecurity, users: UserRepository): SecurityFilterChain {
+        http
+            .securityMatcher(RequestMatcher(::isDashboardRequest))
             .userDetailsService(DashboardUserDetailsService(users))
             .authorizeHttpRequests {
-                it.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                    .requestMatchers("/login", "/ui/assets/**").permitAll().anyRequest().hasRole("ADMIN")
-            }
-            .formLogin { it.loginPage("/login").loginProcessingUrl("/login").defaultSuccessUrl("/ui", true).permitAll() }
-            .logout { it.logoutUrl("/logout").logoutSuccessUrl("/login?logout") }
+                it
+                    .dispatcherTypeMatchers(DispatcherType.ERROR)
+                    .permitAll()
+                    .requestMatchers("/login", "/ui/assets/**")
+                    .permitAll()
+                    .anyRequest()
+                    .hasRole("ADMIN")
+            }.formLogin {
+                it
+                    .loginPage("/login")
+                    .loginProcessingUrl("/login")
+                    .defaultSuccessUrl("/ui", true)
+                    .permitAll()
+            }.logout { it.logoutUrl("/logout").logoutSuccessUrl("/login?logout") }
             .sessionManagement { it.sessionFixation { fixation -> fixation.migrateSession() } }
             .headers { headers ->
                 headers.contentSecurityPolicy { it.policyDirectives(CONTENT_SECURITY_POLICY) }
                 headers.frameOptions { it.deny() }
-            }
-            .addFilterBefore(LoginThrottleFilter(), UsernamePasswordAuthenticationFilter::class.java)
+            }.addFilterBefore(LoginThrottleFilter(), UsernamePasswordAuthenticationFilter::class.java)
         return http.build()
     }
 }

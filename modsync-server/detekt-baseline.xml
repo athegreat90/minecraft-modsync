@@ -1,0 +1,184 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:Security.kt:Guard$req.requestURI.startsWith("/api/v1/") &amp;&amp; req.requestURI != "/api/v1/info" &amp;&amp; (req.getHeader("X-ModSync-Protocol") != PROTOCOL.toString() || !versionAtLeast(req.getHeader("X-ModSync-Version") ?: "", COMPONENT_VERSION))</ID>
+    <ID>CyclomaticComplexMethod:Security.kt:Guard$private fun process</ID>
+    <ID>MaxLineLength:InventoryPersistence.kt:MinecraftServerRepository$@Query(value = "UPDATE minecraft_servers s JOIN inventory_snapshots i ON s.snapshot_id=i.id SET s.inventory_at=CURRENT_TIMESTAMP(6) WHERE s.id=:server AND s.agent_id=:agent AND s.generation=:generation AND i.digest=:digest", nativeQuery = true)</ID>
+    <ID>MaxLineLength:InventoryService.kt:InventoryService$requireState(entries.size == begin.count &amp;&amp; entries.map { it.fileName.lowercase() }.distinct().size == entries.size &amp;&amp; inventoryDigest(entries) == begin.digest, "Incomplete or invalid inventory")</ID>
+    <ID>MaxLineLength:Security.kt:Guard$if (req.requestURI.startsWith("/api/v1/") &amp;&amp; req.requestURI != "/api/v1/info" &amp;&amp; (req.getHeader("X-ModSync-Protocol") != PROTOCOL.toString() || !versionAtLeast(req.getHeader("X-ModSync-Version") ?: "", COMPONENT_VERSION))) { res.sendError(426); return }</ID>
+    <ID>SerialVersionUIDInSerializableClass:InventoryPersistence.kt:ClassificationOverrideId : Serializable</ID>
+    <ID>SerialVersionUIDInSerializableClass:InventoryPersistence.kt:InventoryEntryId : Serializable</ID>
+    <ID>SerialVersionUIDInSerializableClass:ManifestPersistence.kt:ManifestRevisionId : Serializable</ID>
+    <ID>SerialVersionUIDInSerializableClass:ProfilePersistence.kt:ProfileModId : Serializable</ID>
+    <ID>TooGenericExceptionCaught:ProfileService.kt:ProfileService$error: Exception</ID>
+    <ID>UndocumentedPublicClass:AgentController.kt:AgentController</ID>
+    <ID>UndocumentedPublicClass:AgentController.kt:AgentView</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:AgentEnrollment</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:AgentEnrollmentRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:AgentHeartbeat</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:AgentHeartbeatRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:MinecraftHost</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:MinecraftHostRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:ScannerAgent</ID>
+    <ID>UndocumentedPublicClass:AgentPersistence.kt:ScannerAgentRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:AgentService.kt:AgentService</ID>
+    <ID>UndocumentedPublicClass:ApplicationConfiguration.kt:ApplicationConfiguration</ID>
+    <ID>UndocumentedPublicClass:Audit.kt:AuditEvent</ID>
+    <ID>UndocumentedPublicClass:Audit.kt:AuditEventRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:Audit.kt:AuditService</ID>
+    <ID>UndocumentedPublicClass:AuthController.kt:AuthController</ID>
+    <ID>UndocumentedPublicClass:AuthPersistence.kt:ClientDevice</ID>
+    <ID>UndocumentedPublicClass:AuthPersistence.kt:ClientDeviceRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:AuthPersistence.kt:CredentialEntity</ID>
+    <ID>UndocumentedPublicClass:AuthPersistence.kt:CredentialRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:AuthPersistence.kt:UserAccount</ID>
+    <ID>UndocumentedPublicClass:AuthPersistence.kt:UserRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:AuthService.kt:AuthService</ID>
+    <ID>UndocumentedPublicClass:CatalogController.kt:CatalogController</ID>
+    <ID>UndocumentedPublicClass:CatalogService.kt:CatalogService</ID>
+    <ID>UndocumentedPublicClass:CredentialService.kt:CredentialService</ID>
+    <ID>UndocumentedPublicClass:InventoryController.kt:InventoryController</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:ClassificationOverride</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:ClassificationOverrideId : Serializable</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:ClassificationOverrideRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:InventoryEntry</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:InventoryEntryId : Serializable</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:InventoryEntryRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:InventorySnapshot</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:InventorySnapshotRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:MinecraftServer</ID>
+    <ID>UndocumentedPublicClass:InventoryPersistence.kt:MinecraftServerRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:InventoryService.kt:InventoryService</ID>
+    <ID>UndocumentedPublicClass:ManifestController.kt:ManifestController</ID>
+    <ID>UndocumentedPublicClass:ManifestPersistence.kt:ManifestRevision</ID>
+    <ID>UndocumentedPublicClass:ManifestPersistence.kt:ManifestRevisionId : Serializable</ID>
+    <ID>UndocumentedPublicClass:ManifestPersistence.kt:ManifestRevisionRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:ManifestPersistence.kt:ServerManifest</ID>
+    <ID>UndocumentedPublicClass:ManifestPersistence.kt:ServerManifestRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:ManifestPersistence.kt:SynchronizationHistory</ID>
+    <ID>UndocumentedPublicClass:ManifestPersistence.kt:SynchronizationHistoryRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:ManifestService.kt:ManifestService</ID>
+    <ID>UndocumentedPublicClass:Observability.kt:Observability</ID>
+    <ID>UndocumentedPublicClass:ProfileController.kt:ProfileController</ID>
+    <ID>UndocumentedPublicClass:ProfilePersistence.kt:PersonalProfileEntity</ID>
+    <ID>UndocumentedPublicClass:ProfilePersistence.kt:PersonalProfileMod</ID>
+    <ID>UndocumentedPublicClass:ProfilePersistence.kt:PersonalProfileModRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:ProfilePersistence.kt:PersonalProfileRepository : JpaRepository</ID>
+    <ID>UndocumentedPublicClass:ProfilePersistence.kt:ProfileModId : Serializable</ID>
+    <ID>UndocumentedPublicClass:ProfileService.kt:ProfileService</ID>
+    <ID>UndocumentedPublicClass:Security.kt:Guard : OncePerRequestFilter</ID>
+    <ID>UndocumentedPublicClass:Security.kt:SecurityConfiguration</ID>
+    <ID>UndocumentedPublicClass:ServerApplication.kt:ServerApplication</ID>
+    <ID>UndocumentedPublicClass:Support.kt:Errors</ID>
+    <ID>UndocumentedPublicClass:SystemController.kt:SystemController</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@GetMapping("/admin/agents") fun activeAgents: List&lt;AgentView&gt;</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@GetMapping("/agent/assignments") fun assignments: List&lt;Assignment&gt;</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@PostMapping("/admin/agents/{id}/revoke") fun revoke: Boolean</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@PostMapping("/admin/enrollments") fun createEnrollment: EnrollmentToken</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@PostMapping("/admin/enrollments/revoke") fun revokeEnrollments: Boolean</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@PostMapping("/agent/credentials/rotate") fun rotate: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@PostMapping("/agent/heartbeat") fun heartbeat: Boolean</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@PostMapping("/enroll") fun enroll: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AgentController.kt:AgentController$@PutMapping("/admin/servers/{id}/assignment") fun transfer: Assignment</ID>
+    <ID>UndocumentedPublicFunction:AgentPersistence.kt:AgentEnrollmentRepository$@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select e from AgentEnrollment e where e.tokenHash = :hash and e.expiresAt &gt; :now and e.revoked = false") fun lockUsable: AgentEnrollment?</ID>
+    <ID>UndocumentedPublicFunction:AgentPersistence.kt:AgentEnrollmentRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("update AgentEnrollment e set e.revoked = true where e.usedBy is null") fun revokePending: Int</ID>
+    <ID>UndocumentedPublicFunction:AgentPersistence.kt:AgentHeartbeatRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query(value = "INSERT INTO agent_heartbeats(agent_id,seen_at) VALUES (:agent,CURRENT_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE seen_at=VALUES(seen_at)", nativeQuery = true) fun touch: Int</ID>
+    <ID>UndocumentedPublicFunction:AgentPersistence.kt:ScannerAgentRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("update ScannerAgent a set a.revoked = true where a.id = :id") fun revoke: Int</ID>
+    <ID>UndocumentedPublicFunction:AgentPersistence.kt:ScannerAgentRepository$fun existsByIdAndRevokedFalse: Boolean</ID>
+    <ID>UndocumentedPublicFunction:AgentPersistence.kt:ScannerAgentRepository$fun findByRevokedFalse: List&lt;ScannerAgent&gt;</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$@Transactional fun createEnrollment: EnrollmentToken</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$@Transactional fun enroll: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$@Transactional fun heartbeat</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$@Transactional fun revoke</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$@Transactional fun revokePendingEnrollments</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$@Transactional fun rotateCredentials: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$@Transactional fun transfer: Assignment</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$fun activeAgents: List&lt;AgentView&gt;</ID>
+    <ID>UndocumentedPublicFunction:AgentService.kt:AgentService$fun assignments: List&lt;Assignment&gt;</ID>
+    <ID>UndocumentedPublicFunction:ApplicationConfiguration.kt:ApplicationConfiguration$@Bean fun modrinth</ID>
+    <ID>UndocumentedPublicFunction:ApplicationConfiguration.kt:ApplicationConfiguration$@Bean fun passwords</ID>
+    <ID>UndocumentedPublicFunction:Audit.kt:AuditService$fun record</ID>
+    <ID>UndocumentedPublicFunction:AuthController.kt:AuthController$@GetMapping("/devices") fun devices: List&lt;String&gt;</ID>
+    <ID>UndocumentedPublicFunction:AuthController.kt:AuthController$@PostMapping("/admin/users") fun createUser: JsonPrimitive</ID>
+    <ID>UndocumentedPublicFunction:AuthController.kt:AuthController$@PostMapping("/auth/login") fun login: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AuthController.kt:AuthController$@PostMapping("/auth/refresh") fun refresh: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AuthController.kt:AuthController$@PostMapping("/devices/{id}/revoke") fun revokeDevice: Boolean</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:ClientDeviceRepository$@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select d from ClientDevice d where d.id = :id") fun lockById: ClientDevice?</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:ClientDeviceRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("update ClientDevice d set d.revoked = true where d.id = :id and d.userId = :user") fun revoke: Int</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:ClientDeviceRepository$fun existsByIdAndRevokedFalse: Boolean</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:ClientDeviceRepository$fun findByUserIdAndRevokedFalse: List&lt;ClientDevice&gt;</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:CredentialRepository$@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select c from CredentialEntity c where c.tokenHash = :hash and c.kind = 'refresh' and c.expiresAt &gt; :now") fun lockRefresh: CredentialEntity?</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:CredentialRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("delete from CredentialEntity c where c.deviceId = :device and c.subjectId = :subject") fun deleteByDeviceAndSubject: Int</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:CredentialRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("delete from CredentialEntity c where c.deviceId = :device") fun deleteByDevice: Int</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:CredentialRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("delete from CredentialEntity c where c.subjectId = :subject") fun deleteBySubject: Int</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:CredentialRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("update CredentialEntity c set c.expiresAt = least(c.expiresAt, :limit) where c.subjectId = :subject") fun shorten: Int</ID>
+    <ID>UndocumentedPublicFunction:AuthPersistence.kt:UserRepository$fun findByUsername: UserAccount?</ID>
+    <ID>UndocumentedPublicFunction:AuthService.kt:AuthService$@Transactional fun createUser: String</ID>
+    <ID>UndocumentedPublicFunction:AuthService.kt:AuthService$@Transactional fun login: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AuthService.kt:AuthService$@Transactional fun refresh: Credentials</ID>
+    <ID>UndocumentedPublicFunction:AuthService.kt:AuthService$@Transactional fun revokeDevice</ID>
+    <ID>UndocumentedPublicFunction:AuthService.kt:AuthService$fun activeDevices: List&lt;String&gt;</ID>
+    <ID>UndocumentedPublicFunction:CatalogController.kt:CatalogController$@GetMapping("/admin/servers/{id}/identified") fun identified: Map&lt;String, JsonObject&gt;</ID>
+    <ID>UndocumentedPublicFunction:CatalogController.kt:CatalogController$@GetMapping("/mods/{project}/updates") fun updates: List&lt;JsonObject&gt;</ID>
+    <ID>UndocumentedPublicFunction:CatalogService.kt:CatalogService$fun compatibleVersions: List&lt;JsonObject&gt;</ID>
+    <ID>UndocumentedPublicFunction:CatalogService.kt:CatalogService$fun identified: Map&lt;String, JsonObject&gt;</ID>
+    <ID>UndocumentedPublicFunction:CredentialService.kt:CredentialService$fun issue: Credentials</ID>
+    <ID>UndocumentedPublicFunction:CredentialService.kt:CredentialService$fun newSecret: String</ID>
+    <ID>UndocumentedPublicFunction:InventoryController.kt:InventoryController$@GetMapping("/admin/servers/{id}/inventory") fun inventory: SnapshotView</ID>
+    <ID>UndocumentedPublicFunction:InventoryController.kt:InventoryController$@GetMapping("/servers") fun servers: List&lt;ServerInfo&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryController.kt:InventoryController$@PostMapping("/admin/servers") fun register: JsonPrimitive</ID>
+    <ID>UndocumentedPublicFunction:InventoryController.kt:InventoryController$@PostMapping("/agent/snapshots") fun begin: SnapshotBegin</ID>
+    <ID>UndocumentedPublicFunction:InventoryController.kt:InventoryController$@PostMapping("/agent/snapshots/{id}/commit") fun commit: SnapshotAck</ID>
+    <ID>UndocumentedPublicFunction:InventoryController.kt:InventoryController$@PutMapping("/admin/servers/{id}/classification") fun classify: Boolean</ID>
+    <ID>UndocumentedPublicFunction:InventoryController.kt:InventoryController$@PutMapping("/agent/snapshots/{id}/batches") fun batch: Boolean</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:ClassificationOverrideRepository$fun findByServerId: List&lt;ClassificationOverride&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:InventoryEntryRepository$@Query(value = "SELECT COALESCE(SUM(OCTET_LENGTH(payload)),0) FROM inventory_entries WHERE snapshot_id=:snapshot", nativeQuery = true) fun payloadBytes: Number</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:InventoryEntryRepository$fun findBySnapshotIdAndBatchIndex: InventoryEntry?</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:InventoryEntryRepository$fun findBySnapshotIdOrderByBatchIndex: List&lt;InventoryEntry&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:InventorySnapshotRepository$@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select i from InventorySnapshot i where i.id = :id") fun lockById: InventorySnapshot?</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:MinecraftServerRepository$@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select s from MinecraftServer s where s.id = :id") fun lockById: MinecraftServer?</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:MinecraftServerRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query(value = "UPDATE minecraft_servers s JOIN inventory_snapshots i ON s.snapshot_id=i.id SET s.inventory_at=CURRENT_TIMESTAMP(6) WHERE s.id=:server AND s.agent_id=:agent AND s.generation=:generation AND i.digest=:digest", nativeQuery = true) fun markSeen: Int</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:MinecraftServerRepository$fun findAllByOrderByName: List&lt;MinecraftServer&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryPersistence.kt:MinecraftServerRepository$fun findByAgentId: List&lt;MinecraftServer&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$@Transactional fun batch</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$@Transactional fun begin: SnapshotBegin</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$@Transactional fun classify</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$@Transactional fun commit: SnapshotAck</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$@Transactional fun registerServer: String</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$fun committedSnapshot: InventorySnapshot</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$fun entries: List&lt;ModEntry&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$fun inventory: SnapshotView</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$fun listServers: List&lt;ServerInfo&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$fun overridesFor: Map&lt;String, ClassificationOverride&gt;</ID>
+    <ID>UndocumentedPublicFunction:InventoryService.kt:InventoryService$fun server: MinecraftServer</ID>
+    <ID>UndocumentedPublicFunction:ManifestController.kt:ManifestController$@GetMapping("/servers/{id}/manifest") fun manifest: Manifest</ID>
+    <ID>UndocumentedPublicFunction:ManifestController.kt:ManifestController$@PostMapping("/admin/servers/{id}/preview") fun preview: Manifest</ID>
+    <ID>UndocumentedPublicFunction:ManifestController.kt:ManifestController$@PostMapping("/admin/servers/{id}/publish") fun publish: Manifest</ID>
+    <ID>UndocumentedPublicFunction:ManifestController.kt:ManifestController$@PostMapping("/sync/reports") fun report: Boolean</ID>
+    <ID>UndocumentedPublicFunction:ManifestService.kt:ManifestService$@Transactional fun publish: Manifest</ID>
+    <ID>UndocumentedPublicFunction:ManifestService.kt:ManifestService$@Transactional fun report</ID>
+    <ID>UndocumentedPublicFunction:ManifestService.kt:ManifestService$fun manifest: Manifest</ID>
+    <ID>UndocumentedPublicFunction:ManifestService.kt:ManifestService$fun preview: Manifest</ID>
+    <ID>UndocumentedPublicFunction:Observability.kt:Observability$@Scheduled(fixedDelay = 60000) fun refresh</ID>
+    <ID>UndocumentedPublicFunction:ProfileController.kt:ProfileController$@GetMapping fun list: List&lt;PersonalProfile&gt;</ID>
+    <ID>UndocumentedPublicFunction:ProfileController.kt:ProfileController$@PutMapping("/{id}") fun save: PersonalProfile</ID>
+    <ID>UndocumentedPublicFunction:ProfilePersistence.kt:PersonalProfileModRepository$@Modifying(flushAutomatically = true, clearAutomatically = true) @Query("delete from PersonalProfileMod m where m.profileId = :profile") fun deleteByProfile: Int</ID>
+    <ID>UndocumentedPublicFunction:ProfilePersistence.kt:PersonalProfileRepository$@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select p from PersonalProfileEntity p where p.id = :id") fun lockById: PersonalProfileEntity?</ID>
+    <ID>UndocumentedPublicFunction:ProfilePersistence.kt:PersonalProfileRepository$fun findByUserIdOrderByName: List&lt;PersonalProfileEntity&gt;</ID>
+    <ID>UndocumentedPublicFunction:ProfileService.kt:ProfileService$@Transactional fun save: PersonalProfile</ID>
+    <ID>UndocumentedPublicFunction:ProfileService.kt:ProfileService$fun list: List&lt;PersonalProfile&gt;</ID>
+    <ID>UndocumentedPublicFunction:Security.kt:SecurityConfiguration$@Bean @Order(Ordered.LOWEST_PRECEDENCE) fun chain: SecurityFilterChain</ID>
+    <ID>UndocumentedPublicFunction:ServerApplication.kt:ServerApplication$@Bean fun initialize</ID>
+    <ID>UndocumentedPublicFunction:ServerApplication.kt:fun main</ID>
+    <ID>UndocumentedPublicFunction:Support.kt:Errors$@ExceptionHandler(IllegalArgumentException::class, HttpMessageNotReadableException::class) @ResponseStatus(HttpStatus.BAD_REQUEST) fun invalid</ID>
+    <ID>UndocumentedPublicFunction:Support.kt:fun actor: String</ID>
+    <ID>UndocumentedPublicFunction:Support.kt:fun found</ID>
+    <ID>UndocumentedPublicFunction:Support.kt:fun notFound: Nothing</ID>
+    <ID>UndocumentedPublicFunction:Support.kt:fun reject: Nothing</ID>
+    <ID>UndocumentedPublicFunction:Support.kt:fun requireState</ID>
+    <ID>UndocumentedPublicFunction:Support.kt:fun unauthorized: Nothing</ID>
+    <ID>UndocumentedPublicFunction:SystemController.kt:SystemController$@GetMapping("/info") fun info: Capabilities</ID>
+    <ID>UndocumentedPublicFunction:SystemController.kt:SystemController$@GetMapping("/openapi.json") fun openapi: JsonElement</ID>
+  </CurrentIssues>
+</SmellBaseline>

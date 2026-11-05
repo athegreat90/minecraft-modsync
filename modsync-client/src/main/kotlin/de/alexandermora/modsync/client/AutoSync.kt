@@ -64,10 +64,11 @@ class ProcessGameCheck(private val instanceDir: String) : GameRunningCheck {
      *
      * @return True when such a process exists.
      */
-    override fun isRunning(): Boolean = ProcessHandle.allProcesses().anyMatch { process ->
-        val command = process.info().commandLine().orElse("")
-        command.contains(instanceDir) && command.contains("java", ignoreCase = true)
-    }
+    override fun isRunning(): Boolean =
+        ProcessHandle.allProcesses().anyMatch { process ->
+            val command = process.info().commandLine().orElse("")
+            command.contains(instanceDir) && command.contains("java", ignoreCase = true)
+        }
 }
 
 /** Server operations needed by automatic synchronization, abstracted from HTTP for the runner. */
@@ -115,12 +116,13 @@ interface AutoSyncGateway {
  */
 fun policyAllows(plan: SyncPlan, policy: SyncPolicy): Boolean {
     if (plan.blocked) return false
-    val allowed = when (policy) {
-        SyncPolicy.MANUAL -> emptySet()
-        SyncPolicy.AUTO_APPROVED_INSTALL -> setOf(OperationKind.INSTALL)
-        SyncPolicy.AUTO_APPROVED_UPDATE -> setOf(OperationKind.INSTALL, OperationKind.UPDATE)
-        SyncPolicy.AUTO_ALL_MANAGED -> MUTATING
-    }
+    val allowed =
+        when (policy) {
+            SyncPolicy.MANUAL -> emptySet()
+            SyncPolicy.AUTO_APPROVED_INSTALL -> setOf(OperationKind.INSTALL)
+            SyncPolicy.AUTO_APPROVED_UPDATE -> setOf(OperationKind.INSTALL, OperationKind.UPDATE)
+            SyncPolicy.AUTO_ALL_MANAGED -> MUTATING
+        }
     return plan.operations.filter { it.kind in MUTATING }.all { it.kind in allowed }
 }
 
@@ -146,7 +148,7 @@ class AutoSyncRunner(
     private val gateway: AutoSyncGateway,
     private val gameRunning: GameRunningCheck,
     private val clock: Clock = Clock.systemUTC(),
-    private val apply: (SyncPlan) -> Unit = installer::apply,
+    private val apply: (SyncPlan) -> Unit = installer::apply
 ) {
     /**
      * Executes one pass.
@@ -156,11 +158,13 @@ class AutoSyncRunner(
      *
      * @return The outcome together with the updated settings to persist.
      */
+    @Suppress("TooGenericExceptionCaught") // a pass boundary must turn any failure into a reported outcome
     fun runOnce(): Pair<AutoOutcome, AutoSettings> {
         if (settings.policy == SyncPolicy.MANUAL) return AutoOutcome.Disabled to settings
         val now = clock.instant().epochSecond
-        val published = gateway.publishedRevision(settings.serverId)
-            ?: return AutoOutcome.Failed("No manifest published") to settings
+        val published =
+            gateway.publishedRevision(settings.serverId)
+                ?: return AutoOutcome.Failed("No manifest published") to settings
         if (published == settings.lastRevision && settings.lastOutcome == SUCCESS && now - settings.lastFullCheckEpoch < FULL_CHECK_INTERVAL.seconds) {
             return AutoOutcome.UpToDate(published) to settings
         }
@@ -178,11 +182,13 @@ class AutoSyncRunner(
      * @param now Current epoch seconds.
      * @return Outcome and updated settings.
      */
+    @Suppress("TooGenericExceptionCaught") // installation failures of any kind are rolled back and reported, never propagated
     private fun synchronize(manifest: Manifest, now: Long): Pair<AutoOutcome, AutoSettings> {
         installer.validateTarget(manifest)
-        val plan = installer.locked {
-            Resolver().plan(manifest, emptyList(), Scanner().scan(installer.mods), installer.state().hashes, false)
-        }
+        val plan =
+            installer.locked {
+                Resolver().plan(manifest, emptyList(), Scanner().scan(installer.mods), installer.state().hashes, false)
+            }
         val changes = plan.operations.any { it.kind in MUTATING }
         if (!changes && !plan.blocked) {
             return finish(AutoOutcome.UpToDate(manifest.revision), manifest, ClientActivity.IDLE, now, applied = manifest.revision)
@@ -213,7 +219,14 @@ class AutoSyncRunner(
      * @return True when the plan would remove a file not owned by the previous server manifest.
      */
     private fun removesNonServerFile(plan: SyncPlan): Boolean {
-        val serverFiles = installer.state().manifest?.artifacts?.map { it.fileName }.orEmpty().toSet()
+        val serverFiles =
+            installer
+                .state()
+                .manifest
+                ?.artifacts
+                ?.map { it.fileName }
+                .orEmpty()
+                .toSet()
         return plan.operations.any { it.kind == OperationKind.REMOVE_MANAGED && it.fileName !in serverFiles }
     }
 
@@ -230,12 +243,13 @@ class AutoSyncRunner(
     private fun finish(outcome: AutoOutcome, manifest: Manifest, activity: ClientActivity, now: Long, applied: Long? = null): Pair<AutoOutcome, AutoSettings> {
         val sequence = maxOf(settings.lastSequence + 1, clock.millis())
         val success = outcome is AutoOutcome.UpToDate || outcome is AutoOutcome.Applied
-        val updated = settings.copy(
-            lastSequence = sequence,
-            lastRevision = if (success) manifest.revision else settings.lastRevision,
-            lastFullCheckEpoch = if (success) now else settings.lastFullCheckEpoch,
-            lastOutcome = if (success) SUCCESS else outcome.javaClass.simpleName.uppercase()
-        )
+        val updated =
+            settings.copy(
+                lastSequence = sequence,
+                lastRevision = if (success) manifest.revision else settings.lastRevision,
+                lastFullCheckEpoch = if (success) now else settings.lastFullCheckEpoch,
+                lastOutcome = if (success) SUCCESS else outcome.javaClass.simpleName.uppercase()
+            )
         runCatching { gateway.reportInventory(inventoryReport(manifest, activity, sequence, applied ?: installer.state().manifest?.revision)) }
         return outcome to updated
     }
@@ -256,15 +270,25 @@ class AutoSyncRunner(
         val target = installer.target()
         val managed = installer.state().hashes
         val known = manifest.artifacts.associateBy { it.sha512 }
-        val mods = Scanner().scan(installer.mods)
-            .filter { validHash(it.sha512) && safeFileName(it.fileName) }
-            .distinctBy { it.sha512 }
-            .take(MAX_REPORTED_MODS)
-            .map { ClientModEntry(it.sha512, it.fileName, known[it.sha512]?.projectId, known[it.sha512]?.versionId, managed[it.fileName] == it.sha512) }
+        val mods =
+            Scanner()
+                .scan(installer.mods)
+                .filter { validHash(it.sha512) && safeFileName(it.fileName) }
+                .distinctBy { it.sha512 }
+                .take(MAX_REPORTED_MODS)
+                .map { ClientModEntry(it.sha512, it.fileName, known[it.sha512]?.projectId, known[it.sha512]?.versionId, managed[it.fileName] == it.sha512) }
         return ClientInventoryReport(
-            instanceId = settings.instanceId, instanceName = instanceName, serverId = settings.serverId,
-            minecraftVersion = target.minecraftVersion, loader = target.loader, loaderVersion = target.loaderVersion,
-            sequence = sequence, appliedRevision = applied, syncPolicy = settings.policy, activity = activity, mods = mods
+            instanceId = settings.instanceId,
+            instanceName = instanceName,
+            serverId = settings.serverId,
+            minecraftVersion = target.minecraftVersion,
+            loader = target.loader,
+            loaderVersion = target.loaderVersion,
+            sequence = sequence,
+            appliedRevision = applied,
+            syncPolicy = settings.policy,
+            activity = activity,
+            mods = mods
         )
     }
 

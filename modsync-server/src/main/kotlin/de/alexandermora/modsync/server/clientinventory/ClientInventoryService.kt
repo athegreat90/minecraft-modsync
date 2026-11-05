@@ -20,7 +20,7 @@ private const val MAX_ID_LENGTH = 128
 @Service
 class ClientInventoryService(
     private val persistence: ClientInventoryPersistence,
-    private val audit: AuditService,
+    private val audit: AuditService
 ) {
     /**
      * Stores the inventory of one client instance.
@@ -65,7 +65,12 @@ class ClientInventoryService(
         require(report.minecraftVersion.matches(PLATFORM_TOKEN) && report.loader.matches(PLATFORM_TOKEN))
         require(report.loaderVersion?.matches(PLATFORM_TOKEN) ?: true)
         require(report.sequence >= 0 && (report.appliedRevision ?: 0) >= 0)
-        require(report.mods.size <= MAX_MODS && report.mods.map { it.sha512 }.toSet().size == report.mods.size)
+        require(
+            report.mods.size <= MAX_MODS && report.mods
+                .map { it.sha512 }
+                .toSet()
+                .size == report.mods.size
+        )
         report.mods.forEach { mod ->
             require(validHash(mod.sha512) && safeFileName(mod.fileName))
             require((mod.projectId?.length ?: 0) <= MAX_ID_LENGTH && (mod.versionId?.length ?: 0) <= MAX_ID_LENGTH)

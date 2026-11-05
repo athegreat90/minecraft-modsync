@@ -10,8 +10,13 @@ import java.time.Instant
 
 /** Latest stored metadata of a client instance. */
 data class StoredInstance(
-    val instanceId: String, val name: String, val minecraftVersion: String, val loader: String,
-    val activity: ClientActivity, val appliedRevision: Long?, val verifiedAt: Instant
+    val instanceId: String,
+    val name: String,
+    val minecraftVersion: String,
+    val loader: String,
+    val activity: ClientActivity,
+    val appliedRevision: Long?,
+    val verifiedAt: Instant
 )
 
 /** Plain JDBC persistence for registered client instances and their verified mod inventories. */
@@ -54,17 +59,23 @@ class ClientInventoryPersistence(private val db: JdbcTemplate) {
      * @param serverId Server UUID.
      * @return One row per instance; mods are loaded separately by [modsForServer] to avoid per-row queries.
      */
-    fun instancesForServer(serverId: String): List<StoredInstance> = db.query(
-        "SELECT i.instance_id, c.name, i.minecraft_version, i.loader, i.activity, i.applied_revision, i.verified_at " +
-            "FROM client_instance_inventory i JOIN client_instances c ON c.id = i.instance_id WHERE i.server_id = ? ORDER BY c.name, i.instance_id",
-        { rs, _ ->
-            StoredInstance(
-                rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), ClientActivity.valueOf(rs.getString(5)),
-                rs.getObject(6) as Long?, rs.getTimestamp(7).toInstant()
-            )
-        },
-        serverId
-    )
+    fun instancesForServer(serverId: String): List<StoredInstance> =
+        db.query(
+            "SELECT i.instance_id, c.name, i.minecraft_version, i.loader, i.activity, i.applied_revision, i.verified_at " +
+                "FROM client_instance_inventory i JOIN client_instances c ON c.id = i.instance_id WHERE i.server_id = ? ORDER BY c.name, i.instance_id",
+            { rs, _ ->
+                StoredInstance(
+                    rs.getString(1),
+                    rs.getString(2),
+                    rs.getString(3),
+                    rs.getString(4),
+                    ClientActivity.valueOf(rs.getString(5)),
+                    rs.getObject(6) as Long?,
+                    rs.getTimestamp(7).toInstant()
+                )
+            },
+            serverId
+        )
 
     /**
      * Loads the installed mods of all instances that selected the given server in a single query.
@@ -73,12 +84,13 @@ class ClientInventoryPersistence(private val db: JdbcTemplate) {
      * @return Installed mods grouped by instance UUID.
      */
     fun modsForServer(serverId: String): Map<String, List<ClientModEntry>> {
-        val rows = db.query(
-            "SELECT m.instance_id, m.sha512, m.file_name, m.project_id, m.version_id, m.managed FROM client_instance_mods m " +
-                "JOIN client_instance_inventory i ON i.instance_id = m.instance_id WHERE i.server_id = ?",
-            { rs, _ -> rs.getString(1) to ClientModEntry(rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getBoolean(6)) },
-            serverId
-        )
+        val rows =
+            db.query(
+                "SELECT m.instance_id, m.sha512, m.file_name, m.project_id, m.version_id, m.managed FROM client_instance_mods m " +
+                    "JOIN client_instance_inventory i ON i.instance_id = m.instance_id WHERE i.server_id = ?",
+                { rs, _ -> rs.getString(1) to ClientModEntry(rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getBoolean(6)) },
+                serverId
+            )
         return rows.groupBy({ it.first }, { it.second })
     }
 
@@ -94,9 +106,19 @@ class ClientInventoryPersistence(private val db: JdbcTemplate) {
         db.update("DELETE FROM client_instance_mods WHERE instance_id = ?", report.instanceId)
         db.update("DELETE FROM client_instance_inventory WHERE instance_id = ?", report.instanceId)
         db.update(
-            "INSERT INTO client_instance_inventory (instance_id, server_id, minecraft_version, loader, loader_version, sync_policy, activity, applied_revision, sequence, mod_count, verified_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-            report.instanceId, report.serverId, report.minecraftVersion, report.loader, report.loaderVersion,
-            report.syncPolicy.name, report.activity.name, report.appliedRevision, report.sequence, report.mods.size, Timestamp.from(verifiedAt)
+            "INSERT INTO client_instance_inventory (instance_id, server_id, minecraft_version, loader, loader_version, " +
+                "sync_policy, activity, applied_revision, sequence, mod_count, verified_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            report.instanceId,
+            report.serverId,
+            report.minecraftVersion,
+            report.loader,
+            report.loaderVersion,
+            report.syncPolicy.name,
+            report.activity.name,
+            report.appliedRevision,
+            report.sequence,
+            report.mods.size,
+            Timestamp.from(verifiedAt)
         )
         db.batchUpdate(
             "INSERT INTO client_instance_mods (instance_id, sha512, file_name, project_id, version_id, managed) VALUES (?,?,?,?,?,?)",

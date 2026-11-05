@@ -1,8 +1,8 @@
 package de.alexandermora.modsync.server
 
 import de.alexandermora.modsync.domain.Artifact
-import de.alexandermora.modsync.domain.ClientActivity
 import de.alexandermora.modsync.domain.Classification
+import de.alexandermora.modsync.domain.ClientActivity
 import de.alexandermora.modsync.domain.CoverageStatus
 import de.alexandermora.modsync.domain.Manifest
 import de.alexandermora.modsync.protocol.ClientInventoryReport
@@ -26,7 +26,10 @@ import kotlin.test.assertEquals
 /** Verifies the server/client coverage matrix against MariaDB-backed inventories. */
 @Testcontainers
 class CoverageIntegrationTest {
-    companion object { @Container @JvmField val database = MariaDBContainer<Nothing>("mariadb:11.4.10") }
+    companion object {
+        @Container @JvmField
+        val database = MariaDBContainer<Nothing>("mariadb:11.4.10")
+    }
 
     private lateinit var db: JdbcTemplate
     private lateinit var persistence: ClientInventoryPersistence
@@ -37,7 +40,11 @@ class CoverageIntegrationTest {
     /** Migrates the schema, registers a server and a user. */
     @BeforeEach fun prepare() {
         val source = DriverManagerDataSource(database.jdbcUrl, database.username, database.password)
-        Flyway.configure().dataSource(source).load().migrate()
+        Flyway
+            .configure()
+            .dataSource(source)
+            .load()
+            .migrate()
         db = JdbcTemplate(source)
         persistence = ClientInventoryPersistence(db)
         db.update("INSERT IGNORE INTO minecraft_servers (id, name, minecraft_version, loader) VALUES (?,?,?,?)", server, "s", "1.21.1", "neoforge")
@@ -45,26 +52,41 @@ class CoverageIntegrationTest {
 
     /** Creates a device and stores one report for a fresh instance, returning the instance UUID. */
     private fun store(mods: List<ClientModEntry>, mc: String = "1.21.1", activity: ClientActivity = ClientActivity.IDLE, at: Instant = Instant.now()): String {
-        val user = UUID.randomUUID().toString(); val device = UUID.randomUUID().toString(); val instance = UUID.randomUUID().toString()
+        val user = UUID.randomUUID().toString()
+        val device = UUID.randomUUID().toString()
+        val instance = UUID.randomUUID().toString()
         db.update("INSERT INTO users (id, username, password_hash, role) VALUES (?,?,?,?)", user, "u-$user", "x", "CLIENT")
         db.update("INSERT INTO client_devices (id, user_id) VALUES (?,?)", device, user)
         persistence.registerAndLock(instance, device, "main")
         persistence.replace(
-            ClientInventoryReport(instance, "main", server, mc, "neoforge", sequence = 1, activity = activity, mods = mods), at
+            ClientInventoryReport(instance, "main", server, mc, "neoforge", sequence = 1, activity = activity, mods = mods),
+            at
         )
         return instance
     }
 
     /** Source returning a manifest that requires one client mod. */
-    private val source = LatestManifestSource {
-        Manifest(it, 3, "1.21.1", "neoforge", null,
-            listOf(Artifact("p1", "v1", "m.jar", hashA, 1, null, setOf("1.21.1"), setOf("neoforge"), Classification.CLIENT_REQUIRED)),
-            "2026-01-01T00:00:00Z", "d")
-    }
+    private val source =
+        LatestManifestSource {
+            Manifest(
+                it,
+                3,
+                "1.21.1",
+                "neoforge",
+                null,
+                listOf(Artifact("p1", "v1", "m.jar", hashA, 1, null, setOf("1.21.1"), setOf("neoforge"), Classification.CLIENT_REQUIRED)),
+                "2026-01-01T00:00:00Z",
+                "d"
+            )
+        }
 
     /** Returns the status of [instance] in the matrix. */
     private fun status(instance: String, now: Instant = Instant.now()) =
-        CoverageService(persistence, source).forServer(server, now).rows.single { it.instanceId == instance }.status
+        CoverageService(persistence, source)
+            .forServer(server, now)
+            .rows
+            .single { it.instanceId == instance }
+            .status
 
     /** Matches by hash, distinguishing up to date, wrong version, missing and incompatible clients. */
     @Test fun classifiesInstances() {

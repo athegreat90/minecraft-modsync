@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>UndocumentedPublicClass:Domain.kt:Artifact</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:Classification</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:Dependency</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:DependencyKind</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:Evidence</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:Manifest</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:ModEntry</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:OperationKind</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:PersonalProfile</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:PlanOperation</ID>
+    <ID>UndocumentedPublicClass:Domain.kt:SyncPlan</ID>
+    <ID>UndocumentedPublicFunction:Domain.kt:fun ByteArray.toHex: String</ID>
+    <ID>UndocumentedPublicFunction:Domain.kt:fun inventoryDigest: String</ID>
+    <ID>UndocumentedPublicFunction:Domain.kt:fun safeFileName: Boolean</ID>
+    <ID>UndocumentedPublicFunction:Domain.kt:fun sha512: String</ID>
+    <ID>UndocumentedPublicFunction:Domain.kt:fun uuid: String</ID>
+    <ID>UndocumentedPublicFunction:Domain.kt:fun validHash</ID>
+  </CurrentIssues>
+</SmellBaseline>

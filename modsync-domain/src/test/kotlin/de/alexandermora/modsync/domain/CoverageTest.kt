@@ -10,16 +10,26 @@ class CoverageTest {
     private val hashB = "b".repeat(128)
 
     /** Builds a manifest requiring one client mod with [hash]. */
-    private fun manifest(hash: String = hashA, classification: Classification = Classification.CLIENT_REQUIRED) = Manifest(
-        "s", 1, "1.21.1", "neoforge", null,
-        listOf(Artifact("p1", "v1", "m.jar", hash, 1, null, setOf("1.21.1"), setOf("neoforge"), classification)),
-        "2026-01-01T00:00:00Z", "d"
-    )
+    private fun manifest(hash: String = hashA, classification: Classification = Classification.CLIENT_REQUIRED) =
+        Manifest(
+            "s",
+            1,
+            "1.21.1",
+            "neoforge",
+            null,
+            listOf(Artifact("p1", "v1", "m.jar", hash, 1, null, setOf("1.21.1"), setOf("neoforge"), classification)),
+            "2026-01-01T00:00:00Z",
+            "d"
+        )
 
     /** Builds a verified, online, idle client view with the supplied overrides. */
     private fun client(
-        hashes: Set<String> = setOf(hashA), projects: Set<String> = setOf("p1"), mc: String = "1.21.1",
-        verified: Long? = now, online: Boolean = true, activity: ClientActivity = ClientActivity.IDLE
+        hashes: Set<String> = setOf(hashA),
+        projects: Set<String> = setOf("p1"),
+        mc: String = "1.21.1",
+        verified: Long? = now,
+        online: Boolean = true,
+        activity: ClientActivity = ClientActivity.IDLE
     ) = ClientInventoryView(mc, "NeoForge", hashes, verified, online, activity, projects)
 
     /** A missing report yields UNKNOWN. */
@@ -50,16 +60,20 @@ class CoverageTest {
 
     /** Sync activity states map one-to-one. */
     @Test fun activityStates() {
-        val expected = mapOf(
-            ClientActivity.SYNC_PENDING to CoverageStatus.SYNC_PENDING, ClientActivity.SYNCING to CoverageStatus.SYNCING,
-            ClientActivity.PENDING_GAME_EXIT to CoverageStatus.PENDING_GAME_EXIT, ClientActivity.SYNC_FAILED to CoverageStatus.SYNC_FAILED
-        )
+        val expected =
+            mapOf(
+                ClientActivity.SYNC_PENDING to CoverageStatus.SYNC_PENDING,
+                ClientActivity.SYNCING to CoverageStatus.SYNCING,
+                ClientActivity.PENDING_GAME_EXIT to CoverageStatus.PENDING_GAME_EXIT,
+                ClientActivity.SYNC_FAILED to CoverageStatus.SYNC_FAILED
+            )
         expected.forEach { (activity, status) -> assertEquals(status, computeCoverage(manifest(), client(activity = activity), now)) }
     }
 
     /** Non-client-required artifacts do not affect coverage. */
-    @Test fun serverOnlyIgnored() = assertEquals(
-        CoverageStatus.UP_TO_DATE,
-        computeCoverage(manifest(classification = Classification.SERVER_ONLY), client(hashes = emptySet()), now)
-    )
+    @Test fun serverOnlyIgnored() =
+        assertEquals(
+            CoverageStatus.UP_TO_DATE,
+            computeCoverage(manifest(classification = Classification.SERVER_ONLY), client(hashes = emptySet()), now)
+        )
 }

@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MaxLineLength:Agent.kt:Agent$@Command(name="doctor") fun doctor</ID>
+    <ID>MaxLineLength:Agent.kt:Agent$@Command(name="setup")</ID>
+    <ID>MaxLineLength:Agent.kt:Agent$if (progress?.generation == assignment.generation &amp;&amp; progress.digest == digest) { confirmations += ScanConfirmation(assignment.serverId, assignment.generation, digest); println("Unchanged inventory: ${assignment.serverId}"); continue }</ID>
+    <ID>MaxLineLength:Agent.kt:Agent$save(AgentConfig(endpoint.trimEnd('/'), capabilities.controlPlaneId, old?.agentId ?: UUID.randomUUID().toString(), old?.takeIf { it.controlPlaneId == capabilities.controlPlaneId }?.credentials, old?.mappings ?: emptyMap()))</ID>
+    <ID>MaxLineLength:Agent.kt:Agent$val at=Instant.parse(Files.readString(stateDir.resolve("healthy-at")))</ID>
+    <ID>MaxLineLength:Agent.kt:fun main</ID>
+    <ID>TooGenericExceptionCaught:Agent.kt:Agent$e: Exception</ID>
+    <ID>UndocumentedPublicClass:Agent.kt:Agent : Runnable</ID>
+    <ID>UndocumentedPublicClass:Agent.kt:AgentConfig</ID>
+    <ID>UndocumentedPublicClass:Agent.kt:AgentProgress</ID>
+    <ID>UndocumentedPublicClass:Agent.kt:PendingInventory</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name="doctor") fun doctor</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name="map") fun map</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name="register") fun register</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name="run") fun loop</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name="scan") fun scan</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name="setup") fun setup</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name="status") fun status</ID>
+    <ID>UndocumentedPublicFunction:Agent.kt:fun main</ID>
+  </CurrentIssues>
+</SmellBaseline>

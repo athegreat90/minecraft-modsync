@@ -2,13 +2,13 @@ package de.alexandermora.modsync.server
 
 import de.alexandermora.modsync.domain.Artifact
 import de.alexandermora.modsync.domain.Classification
+import de.alexandermora.modsync.domain.Manifest
 import de.alexandermora.modsync.domain.ModEntry
 import de.alexandermora.modsync.domain.PublicationPolicy
 import de.alexandermora.modsync.server.publication.Approval
 import de.alexandermora.modsync.server.publication.PublicationDecision
 import de.alexandermora.modsync.server.publication.decidePublication
 import de.alexandermora.modsync.server.publication.effectiveClientRequirements
-import de.alexandermora.modsync.domain.Manifest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -20,10 +20,18 @@ class PublicationDecisionTest {
     private val hashB = "b".repeat(128)
 
     /** Builds an identified, unclassified artifact for [project] with [hash]. */
-    private fun artifact(project: String, hash: String) = Artifact(
-        project, "v-$hash".take(12), "$project.jar", hash, 1, "https://cdn.modrinth.com/data/$project/x.jar",
-        setOf("1.21.1"), setOf("neoforge"), Classification.UNKNOWN
-    )
+    private fun artifact(project: String, hash: String) =
+        Artifact(
+            project,
+            "v-$hash".take(12),
+            "$project.jar",
+            hash,
+            1,
+            "https://cdn.modrinth.com/data/$project/x.jar",
+            setOf("1.21.1"),
+            setOf("neoforge"),
+            Classification.UNKNOWN
+        )
 
     /** Builds a scan entry matching [artifact]. */
     private fun entry(project: String, hash: String) = ModEntry("$project.jar", hash, 1)

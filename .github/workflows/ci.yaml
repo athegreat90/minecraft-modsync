@@ -11,11 +11,12 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '25'}
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: '9.2.1'}
-      - run: gradle --no-daemon check :modsync-server:bootJar :modsync-agent:installDist :modsync-client:installDist :modsync-client-tui:installDist
+      - run: gradle --no-daemon check dokkaGenerate :modsync-server:bootJar :modsync-agent:installDist :modsync-client:installDist :modsync-client-tui:installDist
       - run: python3 scripts/check-architecture.py
       - run: python3 scripts/openapi.py --check
       - run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
@@ -35,3 +36,20 @@ jobs:
             **/build/test-results/test/*.xml
             build/reports/problems/
             .local/integration/results.json
+
+  # Self-hosted SonarQube is only reachable from a trusted runner inside the private network. It never runs for
+  # pull requests (untrusted code must not reach privileged runners or secrets) and the token comes only from the secret.
+  sonar:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: [self-hosted, sonarqube-access]
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '25'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '9.2.1'}
+      - run: gradle --no-daemon check sonar -Dsonar.host.url=https://sonarqube.alexandermora.de -Dsonar.qualitygate.wait=true

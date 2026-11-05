@@ -19,6 +19,10 @@ class ClientInventoryController(private val inventories: ClientInventoryService)
      * @param report Revisioned inventory report.
      * @return Acknowledgement of the accepted or stale report.
      */
-    @PostMapping("/inventory") fun report(@RequestAttribute("deviceId") deviceId: String, @RequestBody report: ClientInventoryReport): ClientInventoryAck =
+    @PostMapping("/inventory")
+    fun report(
+        @RequestAttribute("deviceId") deviceId: String,
+        @RequestBody report: ClientInventoryReport
+    ): ClientInventoryAck =
         inventories.report(deviceId, report)
 }

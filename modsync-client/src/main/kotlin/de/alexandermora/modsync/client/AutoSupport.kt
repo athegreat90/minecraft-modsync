@@ -29,8 +29,14 @@ import java.nio.file.Path
  */
 @Serializable
 data class AutoSettings(
-    val instanceId: String, val serverId: String, val policy: SyncPolicy, val consentedAt: String,
-    val lastRevision: Long? = null, val lastFullCheckEpoch: Long = 0, val lastSequence: Long = 0, val lastOutcome: String = "NONE",
+    val instanceId: String,
+    val serverId: String,
+    val policy: SyncPolicy,
+    val consentedAt: String,
+    val lastRevision: Long? = null,
+    val lastFullCheckEpoch: Long = 0,
+    val lastSequence: Long = 0,
+    val lastOutcome: String = "NONE"
 )
 
 /** Persists [AutoSettings] per instance name in the client state directory. */
@@ -140,7 +146,7 @@ object SchedulerTemplates {
 
             [Install]
             WantedBy=timers.target
-        """.trimIndent()
+            """.trimIndent()
     }
 
     /**

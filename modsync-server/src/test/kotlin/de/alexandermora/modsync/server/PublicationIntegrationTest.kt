@@ -45,7 +45,10 @@ import kotlin.test.assertTrue
 /** Verifies automatic publication end to end against MariaDB with a fake manifest gateway and artifact resolver. */
 @Testcontainers
 class PublicationIntegrationTest {
-    companion object { @Container @JvmField val database = MariaDBContainer<Nothing>("mariadb:11.4.10") }
+    companion object {
+        @Container @JvmField
+        val database = MariaDBContainer<Nothing>("mariadb:11.4.10")
+    }
 
     private lateinit var db: JdbcTemplate
     private lateinit var persistence: PublicationPersistence
@@ -57,45 +60,88 @@ class PublicationIntegrationTest {
     /** Gateway recording publications and optionally failing preview. */
     private class FakeManifests(var latest: Manifest? = null, var previewFailure: ResponseStatusException? = null) : ManifestGateway {
         val published = mutableListOf<Manifest>()
+
         override fun latest(serverId: String) = latest
+
         override fun preview(serverId: String, request: PublishRequest): Manifest {
             previewFailure?.let { throw it }
             return Manifest(serverId, (latest?.revision ?: 0) + 1, "1.21.1", "neoforge", null, request.artifacts, "2026-01-01T00:00:00Z", "d")
         }
-        override fun publish(actor: String, manifest: Manifest, scanId: String): Manifest { published += manifest; latest = manifest; return manifest }
+
+        override fun publish(actor: String, manifest: Manifest, scanId: String): Manifest {
+            published += manifest
+            latest = manifest
+            return manifest
+        }
     }
 
     /** Migrates the schema and builds real persistence and inventory services. */
     @BeforeEach fun prepare() {
         val source = DriverManagerDataSource(database.jdbcUrl, database.username, database.password)
-        Flyway.configure().dataSource(source).load().migrate()
-        val emf = LocalContainerEntityManagerFactoryBean().apply {
-            dataSource = source; setPackagesToScan("de.alexandermora.modsync.server"); jpaVendorAdapter = HibernateJpaVendorAdapter()
-            setJpaPropertyMap(mapOf("hibernate.type.preferred_instant_jdbc_type" to "TIMESTAMP")); afterPropertiesSet()
-        }
+        Flyway
+            .configure()
+            .dataSource(source)
+            .load()
+            .migrate()
+        val emf =
+            LocalContainerEntityManagerFactoryBean().apply {
+                dataSource = source
+                setPackagesToScan("de.alexandermora.modsync.server")
+                jpaVendorAdapter = HibernateJpaVendorAdapter()
+                setJpaPropertyMap(mapOf("hibernate.type.preferred_instant_jdbc_type" to "TIMESTAMP"))
+                afterPropertiesSet()
+            }
         val factory = JpaRepositoryFactory(SharedEntityManagerCreator.createSharedEntityManager(emf.`object`!!))
         db = JdbcTemplate(source)
         persistence = PublicationPersistence(db)
-        inventory = InventoryService(factory.getRepository(MinecraftServerRepository::class.java), factory.getRepository(InventorySnapshotRepository::class.java),
-            factory.getRepository(InventoryEntryRepository::class.java), factory.getRepository(ClassificationOverrideRepository::class.java),
-            AuditService(factory.getRepository(AuditEventRepository::class.java)))
+        inventory =
+            InventoryService(
+                factory.getRepository(MinecraftServerRepository::class.java),
+                factory.getRepository(InventorySnapshotRepository::class.java),
+                factory.getRepository(InventoryEntryRepository::class.java),
+                factory.getRepository(ClassificationOverrideRepository::class.java),
+                AuditService(factory.getRepository(AuditEventRepository::class.java))
+            )
         known.clear()
         tx = TransactionTemplate(JpaTransactionManager(emf.`object`!!))
     }
 
     /** Builds an identified artifact. */
-    private fun artifact(project: String, hash: String, classification: Classification = Classification.UNKNOWN) = Artifact(
-        project, "v1", "$project.jar", hash, 1, "https://cdn.modrinth.com/data/$project/x.jar", setOf("1.21.1"), setOf("neoforge"), classification
-    ).also { known[hash] = it }
+    private fun artifact(project: String, hash: String, classification: Classification = Classification.UNKNOWN) =
+        Artifact(
+            project,
+            "v1",
+            "$project.jar",
+            hash,
+            1,
+            "https://cdn.modrinth.com/data/$project/x.jar",
+            setOf("1.21.1"),
+            setOf("neoforge"),
+            classification
+        ).also { known[hash] = it }
 
     /** Creates a server with a committed snapshot of [entries] and returns (serverId, scanId). */
     private fun serverWithSnapshot(policy: PublicationPolicy, vararg entries: ModEntry): Pair<String, String> {
-        val host = UUID.randomUUID().toString(); val agent = UUID.randomUUID().toString(); val server = UUID.randomUUID().toString(); val scan = UUID.randomUUID().toString()
+        val host = UUID.randomUUID().toString()
+        val agent = UUID.randomUUID().toString()
+        val server = UUID.randomUUID().toString()
+        val scan = UUID.randomUUID().toString()
         db.update("INSERT INTO minecraft_hosts (id, name) VALUES (?,?)", host, "h")
         db.update("INSERT INTO scanner_agents (id, host_id, created_at) VALUES (?,?,?)", agent, host, Timestamp.from(Instant.now()))
         db.update("INSERT INTO minecraft_servers (id, name, minecraft_version, loader, publication_policy) VALUES (?,?,?,?,?)", server, "s", "1.21.1", "neoforge", policy.name)
-        db.update("INSERT INTO inventory_snapshots (id, server_id, agent_id, generation, sequence, digest, entry_count, scanned_at, committed_at, payload) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            scan, server, agent, 0, 1, "d".repeat(128), entries.size, Timestamp.from(Instant.now()), Timestamp.from(Instant.now()), "{}")
+        db.update(
+            "INSERT INTO inventory_snapshots (id, server_id, agent_id, generation, sequence, digest, entry_count, scanned_at, committed_at, payload) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            scan,
+            server,
+            agent,
+            0,
+            1,
+            "d".repeat(128),
+            entries.size,
+            Timestamp.from(Instant.now()),
+            Timestamp.from(Instant.now()),
+            "{}"
+        )
         db.update("INSERT INTO inventory_entries (snapshot_id, batch_index, payload) VALUES (?,?,?)", scan, 0, wire.encodeToString(SnapshotBatch(0, entries.toList())))
         return server to scan
     }
@@ -135,7 +181,13 @@ class PublicationIntegrationTest {
         val manifests = FakeManifests()
         assertEquals("REVIEW_REQUIRED", evaluate(service(manifests), scan))
         assertTrue(manifests.published.isEmpty())
-        assertTrue(persistence.history(server, 10).single().detail.contains("new.jar"))
+        assertTrue(
+            persistence
+                .history(server, 10)
+                .single()
+                .detail
+                .contains("new.jar")
+        )
     }
 
     /** Re-evaluating unchanged client requirements never creates a duplicate revision. */
@@ -151,11 +203,20 @@ class PublicationIntegrationTest {
     @Test fun previewConflictNeedsReview() {
         val (server, scan) = serverWithSnapshot(PublicationPolicy.TRUSTED_AUTO, ModEntry("p.jar", hashB, 1))
         artifact("p", hashB)
-        val manifests = FakeManifests(Manifest(server, 1, "1.21.1", "neoforge", null, listOf(artifact("p", hashA, Classification.CLIENT_REQUIRED)), "t", "d"),
-            ResponseStatusException(HttpStatus.CONFLICT, "Manifest has unresolved dependencies"))
+        val manifests =
+            FakeManifests(
+                Manifest(server, 1, "1.21.1", "neoforge", null, listOf(artifact("p", hashA, Classification.CLIENT_REQUIRED)), "t", "d"),
+                ResponseStatusException(HttpStatus.CONFLICT, "Manifest has unresolved dependencies")
+            )
         assertEquals("REVIEW_REQUIRED", evaluate(service(manifests), scan))
         assertTrue(manifests.published.isEmpty())
-        assertTrue(persistence.history(server, 10).single().detail.contains("unresolved dependencies"))
+        assertTrue(
+            persistence
+                .history(server, 10)
+                .single()
+                .detail
+                .contains("unresolved dependencies")
+        )
     }
 
     /** Policy round-trips, rejects unknown servers and history is newest first. */
