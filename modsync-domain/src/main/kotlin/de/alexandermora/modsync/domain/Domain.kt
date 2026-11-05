@@ -7,6 +7,8 @@ import java.util.UUID
 @Serializable enum class Classification { SERVER_ONLY, CLIENT_REQUIRED, CLIENT_OPTIONAL, CLIENT_ONLY, BOTH_REQUIRED, UNKNOWN }
 @Serializable enum class DependencyKind { REQUIRED, OPTIONAL, INCOMPATIBLE, EMBEDDED }
 @Serializable enum class OperationKind { INSTALL, UPDATE, KEEP, DISABLE, REMOVE_MANAGED, SKIP, CONFLICT, MANUAL_ACTION_REQUIRED }
+@Serializable enum class SyncPolicy { MANUAL, AUTO_APPROVED_INSTALL, AUTO_APPROVED_UPDATE, AUTO_ALL_MANAGED }
+@Serializable enum class ClientActivity { IDLE, SYNC_PENDING, SYNCING, PENDING_GAME_EXIT, SYNC_FAILED }
 @Serializable data class Evidence(val source: String, val detail: String)
 @Serializable data class ModEntry(
     val fileName: String, val sha512: String, val size: Long, val modIds: List<String> = emptyList(),

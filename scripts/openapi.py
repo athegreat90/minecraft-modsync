@@ -103,6 +103,7 @@ def build():
         ('GET','devices',None,'List<String>','owner'),
         ('POST','devices/{id}/revoke',None,'Boolean','owner'),
         ('POST','sync/reports','SyncReport','Boolean','CLIENT or ADMIN'),
+        ('POST','client/inventory','ClientInventoryReport','ClientInventoryAck','CLIENT or ADMIN'),
         ('GET','openapi.json',None,'raw','CLIENT or ADMIN'),
     ]
     paths={}

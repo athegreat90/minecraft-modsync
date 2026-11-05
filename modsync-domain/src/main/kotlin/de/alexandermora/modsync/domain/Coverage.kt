@@ -9,10 +9,6 @@ enum class CoverageStatus {
     PENDING_GAME_EXIT, SYNC_FAILED, OFFLINE, INVENTORY_STALE, UNKNOWN
 }
 
-/** Operational state reported by a client instance, independent of its installed files. */
-@Serializable
-enum class ClientActivity { IDLE, SYNC_PENDING, SYNCING, PENDING_GAME_EXIT, SYNC_FAILED }
-
 /**
  * Last verified view of a client instance.
  *

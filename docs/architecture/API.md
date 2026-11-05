@@ -34,6 +34,7 @@ Protocol messages are defined in `modsync-protocol/.../Protocol.kt`; domain payl
 | GET `/api/v1/devices` | owner | Active device UUIDs |
 | POST `/api/v1/devices/{id}/revoke` | owner | Explicit device revocation |
 | POST `/api/v1/sync/reports` | device | Record installation outcome |
+| POST `/api/v1/client/inventory` | device | Report a client instance's verified mod inventory. Per-instance `sequence`: higher replaces, equal is an idempotent retry, lower is returned with `accepted=false`. Instances owned by another device return 404. |
 
 Snapshots allow at most 10,000 entries and 6 MiB staged encoded batches. Requests are limited to 2 MiB; the agent sends one entry per batch. Large metadata can therefore fail explicitly rather than publish incomplete state. UUID/count/hash/digest/generation/sequence checks apply transactionally. Stage cleanup/retention and general server-list pagination remain outstanding scalability work.
 
