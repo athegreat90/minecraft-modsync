@@ -17,7 +17,7 @@ subprojects {
             property("sonar.sources", "src/main/kotlin")
             property("sonar.java.binaries", "build/classes/kotlin/main")
             if (file("src/test/kotlin").isDirectory) property("sonar.tests", "src/test/kotlin")
-            property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+
         }
     }
     extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
@@ -43,6 +43,5 @@ sonar {
         property("sonar.projectKey", providers.gradleProperty("sonar.projectKey").orElse("athegreat90_minecraft-modsync").get())
         property("sonar.qualitygate.wait", "true")
         property("sonar.qualitygate.timeout", "300")
-        property("sonar.coverage.jacoco.xmlReportPaths", "**/build/reports/jacoco/test/jacocoTestReport.xml")
     }
 }
