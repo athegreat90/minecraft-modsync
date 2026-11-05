@@ -1,7 +1,19 @@
 package de.alexandermora.modsync.server
 
+import de.alexandermora.modsync.domain.CoverageStatus
+import de.alexandermora.modsync.domain.PublicationPolicy
+import de.alexandermora.modsync.protocol.ClientInventoryAck
+import de.alexandermora.modsync.protocol.ClientInventoryReport
+import de.alexandermora.modsync.protocol.ClientModEntry
+import de.alexandermora.modsync.protocol.Credentials
+import de.alexandermora.modsync.protocol.Login
+import de.alexandermora.modsync.protocol.PublicationPolicyRequest
+import de.alexandermora.modsync.protocol.ServerCoverage
 import de.alexandermora.modsync.protocol.UserRegistration
+import de.alexandermora.modsync.protocol.wire
 import de.alexandermora.modsync.server.auth.AuthService
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -114,7 +126,7 @@ class DashboardIntegrationTest {
                 .get()
                 .endsWith("/login")
         )
-        assertEquals(401, browser.get("/api/v1/servers").statusCode())
+        assertEquals(426, browser.get("/api/v1/servers").statusCode())
         assertEquals(200, browser.get("/ui/assets/ui.css").statusCode())
     }
 
@@ -184,6 +196,66 @@ class DashboardIntegrationTest {
 
     /** Inventory, manifest, coverage matrix and history render from persisted data, with review forms for unapproved mods. */
     @Test fun serverPageRendersPersistedData() {
+        val server = seedDataServer()
+        val browser = Browser()
+        browser.login("admin", adminPassword)
+        val page = browser.get("/ui/servers/$server")
+        assertEquals(200, page.statusCode())
+        listOf("unreviewed-mod.jar", "UNREVIEWED", "client-mod.jar", "player-main", "MISSING_MODS", "1 unreviewed").forEach { assertTrue(page.body().contains(it), it) }
+        assertTrue(page.body().contains("/ui/servers/$server/classify"))
+    }
+
+    /** Approving a classification and requesting re-evaluation work through CSRF-protected forms. */
+    @Test fun classifyAndReevaluateForms() {
+        val server = seedDataServer()
+        val browser = Browser()
+        browser.login("admin", adminPassword)
+        val token = browser.csrf(browser.get("/ui/servers/$server").body())
+        assertEquals(403, browser.post("/ui/servers/$server/classify", mapOf("sha512" to "c".repeat(128), "classification" to "SERVER_ONLY", "reason" to "x"), null).statusCode())
+        assertEquals(302, browser.post("/ui/servers/$server/classify", mapOf("sha512" to "c".repeat(128), "classification" to "SERVER_ONLY", "reason" to "checked metadata"), token).statusCode())
+        assertEquals("SERVER_ONLY", db.queryForObject("SELECT classification FROM classification_overrides WHERE server_id=?", String::class.java, server))
+        assertEquals(302, browser.post("/ui/servers/$server/reevaluate", emptyMap(), token).statusCode())
+        assertEquals(1L, db.queryForObject("SELECT COUNT(*) FROM audit_events WHERE action='publication-reevaluation-requested' AND target=?", Long::class.java, server))
+        assertEquals(400, browser.post("/ui/servers/$server/classify", mapOf("sha512" to "bad", "classification" to "SERVER_ONLY", "reason" to "x"), token).statusCode())
+    }
+
+    /** Bearer-token API endpoints for inventory reporting, coverage and publication policy work end to end. */
+    @Test fun apiEndpointsWork() {
+        val server = seedDataServer()
+        val http = HttpClient.newHttpClient()
+
+        fun call(method: String, path: String, body: String?, token: String?): HttpResponse<String> {
+            val builder =
+                HttpRequest
+                    .newBuilder(URI("$base/api/v1/$path"))
+                    .header("Content-Type", "application/json")
+                    .header("X-ModSync-Protocol", "1")
+                    .header("X-ModSync-Version", "0.2.0")
+                    .method(method, body?.let { HttpRequest.BodyPublishers.ofString(it) } ?: HttpRequest.BodyPublishers.noBody())
+            token?.let { builder.header("Authorization", "Bearer $it") }
+            return http.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+        }
+        val login = call("POST", "auth/login", wire.encodeToString(Login("admin", adminPassword, UUID.randomUUID().toString())), null)
+        val token = wire.decodeFromString<Credentials>(login.body()).token
+        assertEquals(200, call("PUT", "admin/servers/$server/publication-policy", wire.encodeToString(PublicationPolicyRequest(PublicationPolicy.REVIEW_UNKNOWN)), token).statusCode())
+        assertEquals("[]", call("GET", "admin/servers/$server/publications", null, token).body())
+        assertEquals(404, call("PUT", "admin/servers/${UUID.randomUUID()}/publication-policy", wire.encodeToString(PublicationPolicyRequest(PublicationPolicy.MANUAL)), token).statusCode())
+
+        val instance = UUID.randomUUID().toString()
+
+        fun report(sequence: Long) =
+            wire.encodeToString(
+                ClientInventoryReport(instance, "main", server, "1.21.1", "neoforge", sequence = sequence, mods = listOf(ClientModEntry("e".repeat(128), "client-mod.jar", "proj", "ver", true)))
+            )
+        assertTrue(wire.decodeFromString<ClientInventoryAck>(call("POST", "client/inventory", report(5), token).body()).accepted)
+        assertFalse(wire.decodeFromString<ClientInventoryAck>(call("POST", "client/inventory", report(4), token).body()).accepted)
+        assertEquals(401, call("POST", "client/inventory", report(6), null).statusCode())
+        val coverage = wire.decodeFromString<ServerCoverage>(call("GET", "admin/servers/$server/coverage", null, token).body())
+        assertTrue(coverage.rows.any { it.instanceId == instance && it.status == CoverageStatus.UP_TO_DATE })
+    }
+
+    /** Seeds a server with an unreviewed mod, a published manifest and one client instance; returns its id. */
+    private fun seedDataServer(): String {
         val server = UUID.randomUUID().toString()
         val scan = UUID.randomUUID().toString()
         val hash = "c".repeat(128)
@@ -211,12 +283,7 @@ class DashboardIntegrationTest {
         db.update("INSERT INTO client_devices (id, user_id) VALUES (?,?)", device, user)
         db.update("INSERT INTO client_instances (id, device_id, name) VALUES (?,?,?)", instance, device, "player-main")
         db.update("INSERT INTO client_instance_inventory (instance_id, server_id, minecraft_version, loader, sync_policy, activity, sequence, mod_count, verified_at) VALUES (?,?,?,?,?,?,?,?,?)", instance, server, "1.21.1", "neoforge", "MANUAL", "IDLE", 1, 0, now)
-        val browser = Browser()
-        browser.login("admin", adminPassword)
-        val page = browser.get("/ui/servers/$server")
-        assertEquals(200, page.statusCode())
-        listOf("unreviewed-mod.jar", "UNREVIEWED", "client-mod.jar", "player-main", "MISSING_MODS", "1 unreviewed").forEach { assertTrue(page.body().contains(it), it) }
-        assertTrue(page.body().contains("/ui/servers/$server/classify"))
+        return server
     }
 
     /** Non-administrator accounts cannot use the dashboard. */

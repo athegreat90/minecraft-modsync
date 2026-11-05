@@ -34,7 +34,8 @@ class SecurityConfiguration {
     @Bean @Order(Ordered.LOWEST_PRECEDENCE) fun chain(http: HttpSecurity, db: JdbcTemplate, @Value($$"${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
         http.csrf { it.disable() }.cors { it.disable() }.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/api/v1/info", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/enroll", "/actuator/health", "/actuator/health/**").permitAll()
+                it.dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll() // keep real error statuses (404, 409...) instead of re-authorizing /error
+                    .requestMatchers("/api/v1/info", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/enroll", "/actuator/health", "/actuator/health/**").permitAll()
                     .requestMatchers("/api/v1/admin/**", "/actuator/prometheus").hasRole("ADMIN")
                     .requestMatchers("/api/v1/agent/**").hasRole("AGENT")
                     .requestMatchers("/api/v1/**").hasAnyRole("CLIENT", "ADMIN").anyRequest().denyAll()

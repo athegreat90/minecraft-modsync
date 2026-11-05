@@ -11,9 +11,14 @@ import de.alexandermora.modsync.server.common.requireState
 import de.alexandermora.modsync.server.inventory.InventoryService
 import de.alexandermora.modsync.server.publication.AutoPublicationService
 import de.alexandermora.modsync.server.publication.PublicationPersistence
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.ControllerAdvice
+import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -138,4 +143,19 @@ class DashboardController(
      * @throws org.springframework.web.server.ResponseStatusException with 409 during maintenance.
      */
     private fun mutable() = requireState(!maintenance, "Maintenance mode is active")
+}
+
+/** Maps malformed dashboard input to a plain 400 instead of the API's JSON failure body. */
+@ControllerAdvice(assignableTypes = [DashboardController::class])
+@Order(Ordered.HIGHEST_PRECEDENCE)
+class DashboardErrors {
+    /**
+     * Rejects invalid form input.
+     *
+     * @param response Response used to send the 400 status.
+     */
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun invalid(response: HttpServletResponse) {
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST)
+    }
 }
