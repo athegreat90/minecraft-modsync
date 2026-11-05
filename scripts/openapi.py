@@ -104,6 +104,7 @@ def build():
         ('POST','devices/{id}/revoke',None,'Boolean','owner'),
         ('POST','sync/reports','SyncReport','Boolean','CLIENT or ADMIN'),
         ('POST','client/inventory','ClientInventoryReport','ClientInventoryAck','CLIENT or ADMIN'),
+        ('GET','admin/servers/{id}/coverage',None,'ServerCoverage','ADMIN'),
         ('GET','openapi.json',None,'raw','CLIENT or ADMIN'),
     ]
     paths={}

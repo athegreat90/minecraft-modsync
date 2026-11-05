@@ -2522,6 +2522,87 @@
         }
       }
     },
+    "/api/v1/admin/servers/{id}/coverage": {
+      "get": {
+        "operationId": "get_admin_servers_id_coverage",
+        "x-authority": "ADMIN",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerCoverage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required or invalid"
+          },
+          "403": {
+            "description": "Insufficient authority"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "409": {
+            "description": "Conflict, stale ownership, snapshot or manifest"
+          },
+          "413": {
+            "description": "Request exceeds limit"
+          },
+          "426": {
+            "description": "Protocol or minimum version incompatible"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Maintenance or dependency unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-ModSync-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1
+              ]
+            }
+          },
+          {
+            "name": "X-ModSync-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "0.2.0"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/openapi.json": {
       "get": {
         "operationId": "get_openapi_json",
@@ -2635,6 +2716,22 @@
           "SKIP",
           "CONFLICT",
           "MANUAL_ACTION_REQUIRED"
+        ]
+      },
+      "CoverageStatus": {
+        "type": "string",
+        "enum": [
+          "UP_TO_DATE",
+          "MISSING_MODS",
+          "WRONG_VERSION",
+          "INCOMPATIBLE",
+          "SYNC_PENDING",
+          "SYNCING",
+          "PENDING_GAME_EXIT",
+          "SYNC_FAILED",
+          "OFFLINE",
+          "INVENTORY_STALE",
+          "UNKNOWN"
         ]
       },
       "SyncPolicy": {
@@ -3535,6 +3632,73 @@
           "sequence",
           "accepted",
           "verifiedAt"
+        ]
+      },
+      "CoverageRow": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string"
+          },
+          "instanceName": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoverageStatus"
+          },
+          "appliedRevision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verifiedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missingCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "instanceId",
+          "instanceName",
+          "status"
+        ]
+      },
+      "ServerCoverage": {
+        "type": "object",
+        "properties": {
+          "serverId": {
+            "type": "string"
+          },
+          "manifestRevision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoverageRow"
+            }
+          }
+        },
+        "required": [
+          "serverId",
+          "manifestRevision",
+          "rows"
         ]
       },
       "SyncReport": {

@@ -42,4 +42,6 @@ fun versionAtLeast(actual: String, minimum: String): Boolean {
 @Serializable data class ClientModEntry(val sha512: String, val fileName: String, val projectId: String? = null, val versionId: String? = null, val managed: Boolean = false)
 @Serializable data class ClientInventoryReport(val instanceId: String, val instanceName: String, val serverId: String? = null, val minecraftVersion: String, val loader: String, val loaderVersion: String? = null, val sequence: Long, val appliedRevision: Long? = null, val syncPolicy: SyncPolicy = SyncPolicy.MANUAL, val activity: ClientActivity = ClientActivity.IDLE, val mods: List<ClientModEntry>)
 @Serializable data class ClientInventoryAck(val instanceId: String, val sequence: Long, val accepted: Boolean, val verifiedAt: String)
+@Serializable data class CoverageRow(val instanceId: String, val instanceName: String, val status: CoverageStatus, val appliedRevision: Long? = null, val verifiedAt: String? = null, val missingCount: Int = 0)
+@Serializable data class ServerCoverage(val serverId: String, val manifestRevision: Long, val rows: List<CoverageRow>)
 @Serializable data class SyncReport(val serverId: String, val revision: Long, val status: String)

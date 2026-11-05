@@ -2,13 +2,6 @@ package de.alexandermora.modsync.domain
 
 import kotlinx.serialization.Serializable
 
-/** Synchronization state of one client instance relative to one server manifest. */
-@Serializable
-enum class CoverageStatus {
-    UP_TO_DATE, MISSING_MODS, WRONG_VERSION, INCOMPATIBLE, SYNC_PENDING, SYNCING,
-    PENDING_GAME_EXIT, SYNC_FAILED, OFFLINE, INVENTORY_STALE, UNKNOWN
-}
-
 /**
  * Last verified view of a client instance.
  *
@@ -35,7 +28,7 @@ data class ClientInventoryView(
  * Computes the coverage status of a client against the artifacts a manifest requires from clients.
  *
  * Identity is decided by verified SHA-512 hashes, never by file names. Status precedence is:
- * unknown inventory, stale inventory, incompatible platform, in-flight/failed sync activity,
+ * unknown inventory, incompatible platform, in-flight/failed sync activity, stale inventory,
  * offline, wrong version, missing mods, up to date.
  *
  * @param manifest Published manifest the client should satisfy.
@@ -56,8 +49,8 @@ fun computeCoverage(
         client.minecraftVersion != manifest.minecraftVersion || !client.loader.equals(manifest.loader, ignoreCase = true) ->
             CoverageStatus.INCOMPATIBLE
         client.activity != ClientActivity.IDLE -> activityStatus(client.activity)
-        !client.online -> CoverageStatus.OFFLINE
         nowEpochSeconds - verifiedAt > maxInventoryAgeSeconds -> CoverageStatus.INVENTORY_STALE
+        !client.online -> CoverageStatus.OFFLINE
         else -> installedCoverage(manifest, client)
     }
 }
@@ -77,6 +70,16 @@ private fun activityStatus(activity: ClientActivity): CoverageStatus = when (act
 }
 
 /**
+ * Lists client-required artifacts whose exact hash is not installed.
+ *
+ * @param manifest Manifest whose client-relevant artifacts are required.
+ * @param client Verified client inventory.
+ * @return Required artifacts absent from the client, in manifest order.
+ */
+fun missingClientArtifacts(manifest: Manifest, client: ClientInventoryView): List<Artifact> =
+    manifest.artifacts.filter { it.classification in clientRequiredClasses && it.sha512 !in client.installedHashes }
+
+/**
  * Compares installed hashes with required artifacts.
  *
  * An artifact whose hash is absent but whose file name is present under a different hash counts
@@ -87,8 +90,7 @@ private fun activityStatus(activity: ClientActivity): CoverageStatus = when (act
  * @return [CoverageStatus.MISSING_MODS], [CoverageStatus.WRONG_VERSION] or [CoverageStatus.UP_TO_DATE].
  */
 private fun installedCoverage(manifest: Manifest, client: ClientInventoryView): CoverageStatus {
-    val required = manifest.artifacts.filter { it.classification in clientRequiredClasses }
-    val absent = required.filter { it.sha512 !in client.installedHashes }
+    val absent = missingClientArtifacts(manifest, client)
     return when {
         absent.isEmpty() -> CoverageStatus.UP_TO_DATE
         absent.any { it.projectId in client.installedProjects } -> CoverageStatus.WRONG_VERSION
