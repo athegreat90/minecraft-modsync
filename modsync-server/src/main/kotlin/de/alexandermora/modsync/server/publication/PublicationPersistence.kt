@@ -21,6 +21,14 @@ class PublicationPersistence(private val db: JdbcTemplate) {
             .firstOrNull()?.let(PublicationPolicy::valueOf)
 
     /**
+     * Reads the publication policy of every server in one query.
+     *
+     * @return Policies keyed by server UUID.
+     */
+    fun policies(): Map<String, PublicationPolicy> =
+        db.query("SELECT id, publication_policy FROM minecraft_servers") { rs, _ -> rs.getString(1) to PublicationPolicy.valueOf(rs.getString(2)) }.toMap()
+
+    /**
      * Stores a server's publication policy.
      *
      * @param serverId Server UUID.

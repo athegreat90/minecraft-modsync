@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title>ModSync sign in</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
+</head>
+<body>
+<main style="max-width: 24rem">
+  <section>
+    <h1>ModSync administration</h1>
+    <p th:if="${param.error}" class="badge bad">Invalid username or password</p>
+    <p th:if="${param.logout}" class="badge ok">Signed out</p>
+    <form th:action="@{/login}" method="post">
+      <p><label>Username<br><input name="username" autocomplete="username" required autofocus></label></p>
+      <p><label>Password<br><input name="password" type="password" autocomplete="current-password" required></label></p>
+      <button type="submit">Sign in</button>
+    </form>
+  </section>
+</main>
+</body>
+</html>

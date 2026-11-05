@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title th:text="${page.info.name} + ' - ModSync'">Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
+</head>
+<body>
+<header>
+  <a th:href="@{/ui}">&larr; All servers</a>
+  <form th:action="@{/logout}" method="post"><button type="submit">Sign out</button></form>
+</header>
+<main>
+  <section>
+    <h1 th:text="${page.info.name}">Server</h1>
+    <p class="muted">
+      Minecraft <span th:text="${page.info.minecraftVersion}"></span>,
+      <span th:text="${page.info.loader}"></span>
+      <span th:if="${page.info.loaderVersion != null}" th:text="${page.info.loaderVersion}"></span>
+      &middot; manifest
+      <span th:text="${page.manifestRevision != null} ? ${'r' + page.manifestRevision} : 'unpublished'">r1</span>
+      &middot; inventory <span th:text="${page.info.inventoryAt != null} ? ${page.info.inventoryAt} : 'none'">none</span>
+      <span th:if="${page.info.inventoryAt != null and page.info.inventoryStale}" class="badge warn">stale</span>
+    </p>
+  </section>
+
+  <section>
+    <h2>Automatic publication</h2>
+    <form class="inline" th:action="@{/ui/servers/{id}/publication-policy(id=${page.info.id})}" method="post">
+      <label>Policy
+        <select name="policy">
+          <option th:each="p : ${policies}" th:value="${p}" th:text="${p}" th:selected="${p == page.policy}">MANUAL</option>
+        </select>
+      </label>
+      <button type="submit">Save</button>
+    </form>
+    <form class="inline" th:action="@{/ui/servers/{id}/reevaluate(id=${page.info.id})}" method="post">
+      <button type="submit" th:disabled="${page.info.inventoryAt == null}">Re-evaluate now</button>
+    </form>
+    <table th:unless="${page.history.isEmpty()}">
+      <thead><tr><th>When</th><th>Outcome</th><th>Revision</th><th>Detail</th><th>Actor</th></tr></thead>
+      <tbody>
+      <tr th:each="h : ${page.history}">
+        <td th:text="${h.createdAt}">time</td>
+        <td><span class="badge" th:classappend="${h.outcome == 'PUBLISHED'} ? 'ok' : (${h.outcome == 'SKIPPED_NO_CHANGE'} ? '' : 'warn')" th:text="${h.outcome}">PUBLISHED</span></td>
+        <td th:text="${h.revision}">1</td>
+        <td th:text="${h.detail}">detail</td>
+        <td th:text="${h.actor}">actor</td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Client coverage</h2>
+    <p th:if="${page.coverage == null}" class="muted">Publish a manifest to see client coverage.</p>
+    <p th:if="${page.coverage != null and page.coverage.rows.isEmpty()}" class="muted">No client instance selected this server yet.</p>
+    <table th:if="${page.coverage != null and !page.coverage.rows.isEmpty()}">
+      <thead><tr><th>Instance</th><th>Status</th><th>Applied</th><th>Missing</th><th>Verified</th></tr></thead>
+      <tbody>
+      <tr th:each="r : ${page.coverage.rows}">
+        <td th:text="${r.instanceName}">main</td>
+        <td><span class="badge" th:classappend="${r.status.name() == 'UP_TO_DATE'} ? 'ok' : (${r.status.name() == 'SYNC_FAILED' or r.status.name() == 'INCOMPATIBLE'} ? 'bad' : 'warn')" th:text="${r.status}">UP_TO_DATE</span></td>
+        <td th:text="${r.appliedRevision != null} ? ${'r' + r.appliedRevision} : '-'">r1</td>
+        <td th:text="${r.missingCount}">0</td>
+        <td th:text="${r.verifiedAt}">time</td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Server mods <span class="badge warn" th:if="${page.unreviewed > 0}" th:text="${page.unreviewed + ' unreviewed'}"></span></h2>
+    <p th:if="${page.entries.isEmpty()}" class="muted">No accepted inventory yet.</p>
+    <table th:unless="${page.entries.isEmpty()}">
+      <thead><tr><th>File</th><th>Hash</th><th>Classification</th><th>Review</th></tr></thead>
+      <tbody>
+      <tr th:each="e : ${page.entries}">
+        <td th:text="${e.fileName}">mod.jar</td>
+        <td><code th:text="${e.shortHash}">abc</code></td>
+        <td><span th:if="${e.classification != null}" class="badge ok" th:text="${e.classification}"></span>
+            <span th:if="${e.classification == null}" class="badge warn">UNREVIEWED</span></td>
+        <td>
+          <form class="inline" th:if="${e.classification == null}" th:action="@{/ui/servers/{id}/classify(id=${page.info.id})}" method="post">
+            <input type="hidden" name="sha512" th:value="${e.sha512}">
+            <select name="classification"><option th:each="c : ${classifications}" th:value="${c}" th:text="${c}"></option></select>
+            <input name="reason" placeholder="Evidence / reason" maxlength="1000" required>
+            <button type="submit">Approve</button>
+          </form>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Latest manifest</h2>
+    <p th:if="${page.manifest.isEmpty()}" class="muted">Nothing published.</p>
+    <table th:unless="${page.manifest.isEmpty()}">
+      <thead><tr><th>File</th><th>Project</th><th>Version</th><th>Classification</th></tr></thead>
+      <tbody>
+      <tr th:each="m : ${page.manifest}">
+        <td th:text="${m.fileName}">mod.jar</td>
+        <td th:text="${m.projectId}">project</td>
+        <td th:text="${m.versionId}">version</td>
+        <td th:text="${m.classification}">CLIENT_REQUIRED</td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+</body>
+</html>

@@ -473,3 +473,8 @@ Notes:
 - On Linux the server container reads secrets as UID 10001: run phase 1 as root or `chown -R 10001:10001` the secrets directory. On Windows/Docker Desktop, check file sharing if the container cannot read them.
 - `MODSYNC_CLIENT` overrides the client launcher used by phase 2.
 - The scripts were syntax-checked (zsh `-n`, PowerShell parser) and their `--help`/argument validation exercised, but a live end-to-end deployment has not been run.
+
+## Administration dashboard
+
+Host B serves a server-rendered dashboard at `https://<host-b>/ui` (sign in with an `ADMIN` account such as the bootstrap admin). It shows servers, inventory freshness, scanned mods and their approval state, the latest manifest, the client coverage matrix and publication history. Administrators can change a server's publication policy, approve a mod's classification with a reason, and request re-evaluation of automatic publication. Manifest preview and publish remain API operations. The dashboard runs no commands and needs no JavaScript.
+

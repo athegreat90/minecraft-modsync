@@ -17,3 +17,12 @@ Artifact downloads are limited to HTTPS `cdn.modrinth.com/data/`, have time/size
 Filesystem defenses reject unsafe cross-platform names, mod symlinks, observable scan races and unmanaged collisions. Locks serialize local operations. Journals/backups protect against interrupted processes and refuse to overwrite later local edits. A hostile local user with write access to the instance/state can defeat local trust; protect these directories. POSIX config files are created mode 0600; Windows ACL hardening and complete power-loss durability remain release gates.
 
 Audit records exclude token/password values and local paths. Structured server logs are enabled; request correlation headers are returned. Operational audit retention, exhaustive failure-event coverage and security penetration testing remain outstanding. Report security issues privately once a repository contact is configured; no public reporting address has been invented.
+
+## Administration dashboard
+
+- Separate, session-based filter chain for `/ui`, `/login` and `/logout`; the bearer-token API chain is unchanged and stays stateless.
+- Only `ADMIN` accounts are admitted. Passwords use the same Argon2 hashes; login posts are limited to 10 per minute per address.
+- CSRF protection is enabled for every state-changing request; session cookies are HTTP-only and the session id is rotated at login.
+- Content-Security-Policy forbids scripts and foreign resources; frames are denied. All dynamic text is HTML-escaped by Thymeleaf.
+- State changes are audited and rejected in maintenance mode. Terminate TLS in front of the server so the session cookie is only sent over HTTPS.
+

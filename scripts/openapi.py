@@ -10,6 +10,7 @@ def controller_routes():
     routes=set()
     for file in CONTROLLERS.rglob('*Controller.kt'):
         text=file.read_text()
+        if '@RestController' not in text: continue  # server-rendered dashboard pages are not part of the API contract
         prefix=re.search(r'@RequestMapping\("([^"]*)"\)',text).group(1)
         for method,route in re.findall(r'@(Get|Post|Put)Mapping(?:\("([^"]*)"\))?',text):
             routes.add((method.lower(),prefix+route))
