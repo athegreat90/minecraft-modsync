@@ -38,9 +38,17 @@ class Installer(instance: Path) {
         require(target.minecraftVersion.isNotBlank() && target.loader.isNotBlank())
         secureWrite(stateDir.resolve("instance.json"),wire.encodeToString(target))
     }
-    fun validateTarget(manifest: Manifest) {
+    /**
+     * Reads the explicitly configured game/loader target of the instance.
+     *
+     * @return The configured target.
+     */
+    fun target(): InstanceTarget {
         val p=stateDir.resolve("instance.json"); require(!Files.isSymbolicLink(p))
-        val target=wire.decodeFromString<InstanceTarget>(Files.readString(p))
+        return wire.decodeFromString<InstanceTarget>(Files.readString(p))
+    }
+    fun validateTarget(manifest: Manifest) {
+        val target=target()
         require(target.minecraftVersion == manifest.minecraftVersion && target.loader == manifest.loader && (manifest.loaderVersion == null || target.loaderVersion == manifest.loaderVersion)) { "Configured instance game/loader versions do not match manifest" }
     }
     fun state(): ManagedState { val p=stateDir.resolve("managed.json"); require(!Files.isSymbolicLink(p)); return if (Files.exists(p)) wire.decodeFromString(Files.readString(p)) else ManagedState() }

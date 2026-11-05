@@ -296,6 +296,23 @@ modsync sync verify --instance survival
 Plan operations: `INSTALL`, `UPDATE`, `KEEP`, `DISABLE`, `REMOVE_MANAGED`, `SKIP` (unmanaged files are never touched), `CONFLICT`, `MANUAL_ACTION_REQUIRED`.
 A plan containing `CONFLICT` or `MANUAL_ACTION_REQUIRED` is blocked; fix it before applying. `apply` re-checks that the published manifest has not changed.
 
+### 5.3a Automatic synchronization (opt-in, per instance)
+
+Automatic mode needs explicit consent for each instance and never runs while Minecraft is using it.
+
+```
+modsync auto enable --instance main --server <server-uuid> --policy AUTO_APPROVED_INSTALL --yes
+modsync auto status
+modsync auto run --once          # one pass; use from a scheduler, exits non-zero on failure
+modsync auto run                 # foreground loop: 15 min interval, jitter and exponential backoff
+modsync auto disable --instance main
+modsync auto schedule --platform systemd --executable /opt/modsync/bin/modsync   # or --platform windows
+```
+
+Policies: `AUTO_APPROVED_INSTALL` (new required mods only), `AUTO_APPROVED_UPDATE` (+ version updates), `AUTO_ALL_MANAGED` (+ removal of mods the server previously required). Conflicts, unknown classifications, unmanaged files and personal-profile mods are never changed automatically; such plans stay pending and are reported as `SYNC_PENDING`. If the game runs, the pass is deferred (`PENDING_GAME_EXIT`). The client checks the published revision first and skips scanning/downloading when it is unchanged and was verified within 24 hours. After each pass it uploads an inventory (file names and hashes, no paths) to `POST /api/v1/client/inventory`.
+
+Game detection looks for a Java process whose command line contains the instance directory; launchers that do not pass it cannot be detected, so close the game before scheduled runs when in doubt.
+
 ### 5.4 Roll back and offline use
 
 ```bash

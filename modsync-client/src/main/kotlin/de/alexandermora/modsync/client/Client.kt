@@ -136,8 +136,108 @@ class Client: Runnable {
         println(Files.readString(root.stateDir.resolve("manifest-$server.json")))
     }
 }
+/**
+ * Computes the wait before the next automatic pass using exponential backoff and bounded jitter.
+ *
+ * @param baseMinutes Regular interval in minutes.
+ * @param failures Number of consecutive failed passes.
+ * @param jitter Random fraction in [0, 1) selecting up to 20% additional delay.
+ * @return Delay in seconds, never above 60 minutes plus 20% jitter.
+ */
+fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
+    require(baseMinutes in 1..1440 && failures >= 0 && jitter >= 0.0 && jitter < 1.0)
+    val backoff = (baseMinutes.toLong() shl minOf(failures, 6)).coerceAtMost(maxOf(60L, baseMinutes.toLong()))
+    return (backoff * 60 * (1.0 + 0.2 * jitter)).toLong()
+}
+@Command(name="auto", mixinStandardHelpOptions=true, description=["Per-instance automatic synchronization (explicit consent required)"]) class AutoCommands(private val root: Client) {
+    private val store get() = AutoStore(root.stateDir)
+    /**
+     * Enables automatic synchronization for one registered instance after explicit consent.
+     *
+     * Consent is given with `--yes` or by typing the instance name at a console prompt.
+     *
+     * @param instance Registered instance name.
+     * @param server Server UUID to synchronize with.
+     * @param policy Automatic policy; MANUAL is not a valid automatic policy.
+     * @param yes Confirms consent non-interactively.
+     */
+    @Command(name="enable") fun enable(@Option(names=["--instance"], required=true) instance: String, @Option(names=["--server"], required=true) server: String,
+        @Option(names=["--policy"], defaultValue="AUTO_APPROVED_INSTALL") policy: SyncPolicy, @Option(names=["--yes"]) yes: Boolean) {
+        require(policy != SyncPolicy.MANUAL) { "Use auto disable to return to manual synchronization" }
+        Installer(root.instance(instance)).target()
+        if (!yes) {
+            val console=System.console() ?: error("Use --yes to confirm consent without a console")
+            require(console.readLine("Allow $policy for instance $instance? Type the instance name to consent: ") == instance) { "Consent not given" }
+        }
+        val existing=store.load()[instance]
+        store.save(instance, AutoSettings(existing?.instanceId ?: UUID.randomUUID().toString(), uuid(server), policy, Instant.now().toString()))
+        println("Automatic synchronization enabled for $instance with $policy")
+    }
+    /**
+     * Disables automatic synchronization and forgets its consent for one instance.
+     *
+     * @param instance Registered instance name.
+     */
+    @Command(name="disable") fun disable(@Option(names=["--instance"], required=true) instance: String) {
+        println(if (store.remove(instance)) "Automatic synchronization disabled for $instance" else "Automatic synchronization was not enabled for $instance")
+    }
+    /** Prints the automatic synchronization state of every enabled instance. */
+    @Command(name="status") fun status() {
+        val all=store.load(); if (all.isEmpty()) println("No instance has automatic synchronization enabled")
+        all.forEach { (name, s) -> println("$name server=${s.serverId} policy=${s.policy} lastRevision=${s.lastRevision ?: "none"} lastOutcome=${s.lastOutcome}") }
+    }
+    /**
+     * Runs automatic synchronization once or periodically.
+     *
+     * @param instance Restrict the run to one instance; all enabled instances otherwise.
+     * @param once Run a single pass and exit non-zero when a pass failed; intended for OS schedulers.
+     * @param intervalMinutes Regular interval of the foreground loop.
+     */
+    @Command(name="run") fun run(@Option(names=["--instance"]) instance: String?, @Option(names=["--once"]) once: Boolean,
+        @Option(names=["--interval-minutes"], defaultValue="15") intervalMinutes: Int) {
+        var failures=0
+        while (true) {
+            val failed=runPass(instance)
+            if (once) { check(!failed) { "Automatic synchronization failed" }; return }
+            failures=if (failed) failures+1 else 0
+            Thread.sleep(nextDelaySeconds(intervalMinutes, failures, java.util.concurrent.ThreadLocalRandom.current().nextDouble()) * 1000)
+        }
+    }
+    /**
+     * Executes one pass over the selected instances.
+     *
+     * @param only Instance to restrict to, or null for all.
+     * @return True when any pass failed.
+     */
+    private fun runPass(only: String?): Boolean {
+        val targets=store.load().filterKeys { only == null || it == only }
+        require(only == null || targets.isNotEmpty()) { "Automatic synchronization is not enabled for $only" }
+        var failed=false
+        targets.forEach { (name, settings) ->
+            val outcome=try {
+                val dir=root.instance(name)
+                val (result, updated)=AutoSyncRunner(Installer(dir), name, settings, ApiGateway(root.api()), ProcessGameCheck(dir.toRealPath().toString())).runOnce()
+                store.save(name, updated); result
+            } catch (error: Exception) { AutoOutcome.Failed(error.javaClass.simpleName) }
+            if (outcome is AutoOutcome.Failed) failed=true
+            println("$name: $outcome")
+        }
+        return failed
+    }
+    /**
+     * Prints a scheduler definition that runs one pass periodically without a permanent service.
+     *
+     * @param platform `systemd` or `windows`.
+     * @param executable Absolute path of the modsync executable.
+     * @param intervalMinutes Check interval.
+     */
+    @Command(name="schedule") fun schedule(@Option(names=["--platform"], required=true) platform: String, @Option(names=["--executable"], required=true) executable: String,
+        @Option(names=["--interval-minutes"], defaultValue="30") intervalMinutes: Int) {
+        println(when (platform) { "systemd" -> SchedulerTemplates.systemd(executable, intervalMinutes); "windows" -> SchedulerTemplates.windows(executable, intervalMinutes); else -> error("Unsupported platform") })
+    }
+}
 fun clientCommandLine(root: Client = Client()): CommandLine = CommandLine(root).apply {
-    addSubcommand("config", ConfigCommands(root)); addSubcommand("connection", ConnectionCommands(root)); addSubcommand("servers", ServerCommands(root)); addSubcommand("instances", InstanceCommands(root)); addSubcommand("mods", ModCommands(root)); addSubcommand("personal", PersonalCommands(root)); addSubcommand("sync", SyncCommands(root))
+    addSubcommand("config", ConfigCommands(root)); addSubcommand("connection", ConnectionCommands(root)); addSubcommand("servers", ServerCommands(root)); addSubcommand("instances", InstanceCommands(root)); addSubcommand("mods", ModCommands(root)); addSubcommand("personal", PersonalCommands(root)); addSubcommand("sync", SyncCommands(root)); addSubcommand("auto", AutoCommands(root))
     setExecutionExceptionHandler { ex, _, _ -> System.err.println("Command failed: ${ex.javaClass.simpleName}; check arguments, connectivity and local state"); 1 }
 }
 fun main(args: Array<String>) { exitProcess(clientCommandLine().execute(*args)) }
