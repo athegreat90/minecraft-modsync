@@ -78,7 +78,7 @@ class Installer(instance: Path) {
             if (entry.before != null) { Files.copy(path(entry.fileName), backups.resolve(entry.fileName)); require(fileHash(backups.resolve(entry.fileName)) == entry.before) }
         }
         secureWrite(journalPath, wire.encodeToString(journal))
-        try {
+        runCatching {
             changes.forEach { operation ->
                 val p=path(operation.fileName)
                 val oldHash=journal.entries.first { it.fileName == operation.fileName }.before
@@ -92,7 +92,7 @@ class Installer(instance: Path) {
             val hashes=verified.filter { it.kind != OperationKind.KEEP || old.hashes[it.fileName] == expected.getValue(it.fileName) }.associate { it.fileName to expected.getValue(it.fileName) }
             secureWrite(stateDir.resolve("managed.json"), wire.encodeToString(ManagedState(hashes, plan.manifest, expected)))
             secureWrite(journalPath, wire.encodeToString(journal.copy(complete=true)))
-        } catch (e: Exception) { rollbackLocked(); throw e }
+        }.onFailure { rollbackLocked() }.getOrThrow()
     }
     fun rollback() = locked { rollbackLocked() }
     private fun rollbackLocked() {

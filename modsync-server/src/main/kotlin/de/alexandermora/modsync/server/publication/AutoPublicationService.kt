@@ -131,14 +131,10 @@ class AutoPublicationService(
      *
      * @param scanId Committed snapshot id.
      */
-    @Suppress("TooGenericExceptionCaught") // the background worker must survive any single evaluation failure
     fun onSnapshotCommitted(scanId: String) {
         executor.execute {
-            try {
-                evaluate(scanId)
-            } catch (error: Exception) {
-                logger.warn("automatic publication failed unexpectedly", error)
-            }
+            runCatching { evaluate(scanId) }
+                .onFailure { logger.warn("automatic publication failed unexpectedly", it) }
         }
     }
 

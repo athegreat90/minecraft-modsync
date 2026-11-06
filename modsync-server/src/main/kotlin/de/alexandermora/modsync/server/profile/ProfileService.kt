@@ -1,8 +1,5 @@
 package de.alexandermora.modsync.server.profile
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import de.alexandermora.modsync.domain.Classification
 import de.alexandermora.modsync.domain.Evidence
 import de.alexandermora.modsync.domain.PersonalProfile
@@ -11,6 +8,9 @@ import de.alexandermora.modsync.modrinth.Modrinth
 import de.alexandermora.modsync.protocol.wire
 import de.alexandermora.modsync.server.common.AuditService
 import de.alexandermora.modsync.server.common.requireState
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,7 +22,7 @@ class ProfileService(
     private val profiles: PersonalProfileRepository,
     private val mods: PersonalProfileModRepository,
     private val modrinth: Modrinth,
-    private val audit: AuditService,
+    private val audit: AuditService
 ) {
     private val logger = LoggerFactory.getLogger(ProfileService::class.java)
 
@@ -44,15 +44,14 @@ class ProfileService(
         return profile
     }
 
-    private fun clientOnlyArtifacts(profile: PersonalProfile) = try {
-        profile.artifacts.map { requested ->
-            val serverSide = modrinth.project(requested.projectId)["server_side"]?.jsonPrimitive?.contentOrNull
-            requireState(serverSide == "unsupported", "Personal profile requires confirmed client-only Modrinth projects")
-            modrinth.artifact(requested.sha512, Classification.CLIENT_ONLY, listOf(Evidence("modrinth", "Server environment unsupported")))
-                .also { requireState(it.projectId == requested.projectId, "Project/hash mismatch") }
-        }
-    } catch (error: Exception) {
-        logger.warn("profile metadata validation failed", error)
-        throw error
-    }
+    private fun clientOnlyArtifacts(profile: PersonalProfile) =
+        runCatching {
+            profile.artifacts.map { requested ->
+                val serverSide = modrinth.project(requested.projectId)["server_side"]?.jsonPrimitive?.contentOrNull
+                requireState(serverSide == "unsupported", "Personal profile requires confirmed client-only Modrinth projects")
+                modrinth
+                    .artifact(requested.sha512, Classification.CLIENT_ONLY, listOf(Evidence("modrinth", "Server environment unsupported")))
+                    .also { requireState(it.projectId == requested.projectId, "Project/hash mismatch") }
+            }
+        }.onFailure { logger.warn("profile metadata validation failed", it) }.getOrThrow()
 }

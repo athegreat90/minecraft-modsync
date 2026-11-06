@@ -121,8 +121,8 @@ class Client: Runnable {
         require(personal.all { a -> profiles.any { a in it.artifacts } }) { "Personal artifacts are no longer authorized" }
         if (dry) { plan.operations.forEach(::println); return }
         Installer(root.instance(instance)).apply(plan)
-        try { api.request("/api/v1/sync/reports", "POST", wire.encodeToString(SyncReport(current.serverId,current.revision,"SUCCESS"))) }
-        catch (_: Exception) { System.err.println("Local installation succeeded; online history acknowledgement failed") }
+        runCatching { api.request("/api/v1/sync/reports", "POST", wire.encodeToString(SyncReport(current.serverId,current.revision,"SUCCESS"))) }
+            .onFailure { System.err.println("Local installation succeeded; online history acknowledgement failed") }
         println("Installation verified")
     }
     @Command(name="verify") fun verify(@Option(names=["--instance"], required=true) instance: String) {
@@ -215,11 +215,11 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
         require(only == null || targets.isNotEmpty()) { "Automatic synchronization is not enabled for $only" }
         var failed=false
         targets.forEach { (name, settings) ->
-            val outcome=try {
+            val outcome=runCatching {
                 val dir=root.instance(name)
                 val (result, updated)=AutoSyncRunner(Installer(dir), name, settings, ApiGateway(root.api()), ProcessGameCheck(dir.toRealPath().toString())).runOnce()
                 store.save(name, updated); result
-            } catch (error: Exception) { AutoOutcome.Failed(error.javaClass.simpleName) }
+            }.getOrElse { AutoOutcome.Failed(it.javaClass.simpleName) }
             if (outcome is AutoOutcome.Failed) failed=true
             println("$name: $outcome")
         }
