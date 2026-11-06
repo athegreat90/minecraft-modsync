@@ -4,7 +4,7 @@ import de.alexandermora.modsync.domain.*
 import de.alexandermora.modsync.protocol.*
 import de.alexandermora.modsync.resolver.*
 import de.alexandermora.modsync.scanner.*
-
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 
@@ -16,6 +16,10 @@ import java.nio.file.Files
 import java.time.Instant
 import java.util.UUID
 import kotlin.system.exitProcess
+private val logger = run {
+    System.setProperty("kotlin-logging.logStartupMessage", "false") // keep CLI stderr free of the library banner
+    KotlinLogging.logger {}
+}
 
 @Serializable data class ClientConfig(val endpoint: String, val controlPlaneId: String, val deviceId: String, val credentials: Credentials? = null, val instances: Map<String, String> = emptyMap())
 @Command(name="modsync", mixinStandardHelpOptions=true, description=["Minecraft ModSync lightweight client"])
@@ -122,7 +126,7 @@ class Client: Runnable {
         if (dry) { plan.operations.forEach(::println); return }
         Installer(root.instance(instance)).apply(plan)
         runCatching { api.request("/api/v1/sync/reports", "POST", wire.encodeToString(SyncReport(current.serverId,current.revision,"SUCCESS"))) }
-            .onFailure { System.err.println("Local installation succeeded; online history acknowledgement failed") }
+            .onFailure { logger.warn { "Local installation succeeded; online history acknowledgement failed" } }
         println("Installation verified")
     }
     @Command(name="verify") fun verify(@Option(names=["--instance"], required=true) instance: String) {
@@ -239,6 +243,6 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
 }
 fun clientCommandLine(root: Client = Client()): CommandLine = CommandLine(root).apply {
     addSubcommand("config", ConfigCommands(root)); addSubcommand("connection", ConnectionCommands(root)); addSubcommand("servers", ServerCommands(root)); addSubcommand("instances", InstanceCommands(root)); addSubcommand("mods", ModCommands(root)); addSubcommand("personal", PersonalCommands(root)); addSubcommand("sync", SyncCommands(root)); addSubcommand("auto", AutoCommands(root))
-    setExecutionExceptionHandler { ex, _, _ -> System.err.println("Command failed: ${ex.javaClass.simpleName}; check arguments, connectivity and local state"); 1 }
+    setExecutionExceptionHandler { ex, _, _ -> logger.error { "Command failed: ${ex.javaClass.simpleName}; check arguments, connectivity and local state" }; 1 }
 }
 fun main(args: Array<String>) { exitProcess(clientCommandLine().execute(*args)) }

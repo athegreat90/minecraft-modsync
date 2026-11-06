@@ -9,8 +9,8 @@ import de.alexandermora.modsync.protocol.OverrideRequest
 import de.alexandermora.modsync.protocol.PublishRequest
 import de.alexandermora.modsync.server.inventory.InventoryService
 import de.alexandermora.modsync.server.manifest.ManifestService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
-import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
@@ -123,7 +123,7 @@ class AutoPublicationService(
     private val resolver: ArtifactResolver,
     private val persistence: PublicationPersistence
 ) {
-    private val logger = LoggerFactory.getLogger(AutoPublicationService::class.java)
+    private val logger = KotlinLogging.logger {}
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, "auto-publication").apply { isDaemon = true } }
 
     /**
@@ -134,7 +134,7 @@ class AutoPublicationService(
     fun onSnapshotCommitted(scanId: String) {
         executor.execute {
             runCatching { evaluate(scanId) }
-                .onFailure { logger.warn("automatic publication failed unexpectedly", it) }
+                .onFailure { logger.warn(it) { "automatic publication failed unexpectedly" } }
         }
     }
 

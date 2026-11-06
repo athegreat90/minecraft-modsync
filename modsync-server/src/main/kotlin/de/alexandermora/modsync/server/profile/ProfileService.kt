@@ -8,10 +8,10 @@ import de.alexandermora.modsync.modrinth.Modrinth
 import de.alexandermora.modsync.protocol.wire
 import de.alexandermora.modsync.server.common.AuditService
 import de.alexandermora.modsync.server.common.requireState
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -24,7 +24,7 @@ class ProfileService(
     private val modrinth: Modrinth,
     private val audit: AuditService
 ) {
-    private val logger = LoggerFactory.getLogger(ProfileService::class.java)
+    private val logger = KotlinLogging.logger {}
 
     fun list(user: String): List<PersonalProfile> =
         profiles.findByUserIdOrderByName(user).map { wire.decodeFromString<PersonalProfile>(it.payload) }
@@ -53,5 +53,5 @@ class ProfileService(
                     .artifact(requested.sha512, Classification.CLIENT_ONLY, listOf(Evidence("modrinth", "Server environment unsupported")))
                     .also { requireState(it.projectId == requested.projectId, "Project/hash mismatch") }
             }
-        }.onFailure { logger.warn("profile metadata validation failed", it) }.getOrThrow()
+        }.onFailure { logger.warn(it) { "profile metadata validation failed" } }.getOrThrow()
 }

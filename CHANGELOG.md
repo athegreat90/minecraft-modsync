@@ -11,6 +11,7 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 ### Changed
 - Release version, tag prefix (`v0.3.1-dev.`), Docker defaults, User-Agent and OpenAPI `info.version` bumped to 0.3.1. Wire protocol 1 and minimum component compatibility are unchanged.
 - Line endings are enforced as LF (`.gitattributes` `* text=auto eol=lf`, `.editorconfig` `end_of_line = lf`).
+- Diagnostics in the agent and client CLI (failure messages, agent scan-cycle status) and the server's loggers now use Kotlin Logging (`io.github.oshai:kotlin-logging-jvm` 8.0.6; `slf4j-simple` writes to stderr for the CLIs). Command results printed to stdout are unchanged.
 - Catch-all `try/catch` blocks in the client (`AutoSync`, `Client`, `Installer`) and server (`ProfileService`, `AutoPublicationService`) now use `runCatching`; behavior is unchanged except that `runCatching` also catches `Error`s. `try/finally` blocks and selective catches are kept.
 
 ### Fixed
