@@ -1,5 +1,6 @@
 package de.alexandermora.modsync.client
 
+import de.alexandermora.modsync.domain.Artifact
 import de.alexandermora.modsync.domain.ClientActivity
 import de.alexandermora.modsync.domain.Manifest
 import de.alexandermora.modsync.domain.OperationKind
@@ -102,6 +103,14 @@ interface AutoSyncGateway {
      * @param report Outcome report.
      */
     fun reportSync(report: SyncReport)
+
+    /**
+     * Loads the client-only artifacts of one of the user's personal profiles.
+     *
+     * @param profileId Personal profile UUID.
+     * @return The profile's artifacts, as currently authorized by the server.
+     */
+    fun personalArtifacts(profileId: String): List<Artifact>
 }
 
 /**
@@ -185,9 +194,10 @@ class AutoSyncRunner(
     @Suppress("TooGenericExceptionCaught") // installation failures of any kind are rolled back and reported, never propagated
     private fun synchronize(manifest: Manifest, now: Long): Pair<AutoOutcome, AutoSettings> {
         installer.validateTarget(manifest)
+        val personal = settings.profileId?.let(gateway::personalArtifacts).orEmpty()
         val plan =
             installer.locked {
-                Resolver().plan(manifest, emptyList(), Scanner().scan(installer.mods), installer.state().hashes, false)
+                Resolver().plan(manifest, personal, Scanner().scan(installer.mods), installer.state().hashes, false)
             }
         val changes = plan.operations.any { it.kind in MUTATING }
         if (!changes && !plan.blocked) {
@@ -287,6 +297,7 @@ class AutoSyncRunner(
             sequence = sequence,
             appliedRevision = applied,
             syncPolicy = settings.policy,
+            profileId = settings.profileId,
             activity = activity,
             mods = mods
         )

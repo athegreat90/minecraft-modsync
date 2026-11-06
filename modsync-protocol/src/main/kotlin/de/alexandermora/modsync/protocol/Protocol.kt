@@ -42,7 +42,7 @@ fun versionAtLeast(actual: String, minimum: String): Boolean {
 /** One installed mod in a client inventory report: hash, file name only, recognized ids and managed ownership. */
 @Serializable data class ClientModEntry(val sha512: String, val fileName: String, val projectId: String? = null, val versionId: String? = null, val managed: Boolean = false)
 /** Revisioned inventory of one client instance; a higher sequence replaces the stored inventory. */
-@Serializable data class ClientInventoryReport(val instanceId: String, val instanceName: String, val serverId: String? = null, val minecraftVersion: String, val loader: String, val loaderVersion: String? = null, val sequence: Long, val appliedRevision: Long? = null, val syncPolicy: SyncPolicy = SyncPolicy.MANUAL, val activity: ClientActivity = ClientActivity.IDLE, val mods: List<ClientModEntry>)
+@Serializable data class ClientInventoryReport(val instanceId: String, val instanceName: String, val serverId: String? = null, val minecraftVersion: String, val loader: String, val loaderVersion: String? = null, val sequence: Long, val appliedRevision: Long? = null, val syncPolicy: SyncPolicy = SyncPolicy.MANUAL, val activity: ClientActivity = ClientActivity.IDLE, val profileId: String? = null, val mods: List<ClientModEntry>)
 /** Server acknowledgement of a client inventory report; accepted is false for stale sequences. */
 @Serializable data class ClientInventoryAck(val instanceId: String, val sequence: Long, val accepted: Boolean, val verifiedAt: String)
 /** Coverage of one client instance against the latest manifest of a server. */

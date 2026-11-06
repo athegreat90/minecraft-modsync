@@ -90,6 +90,16 @@ class ClientInventoryIntegrationTest {
             .TransactionTemplate(transactions)
             .execute { block() }!!
 
+    /** The selected personal profile is persisted, and non-UUID profile ids are rejected. */
+    @Test fun profileIdIsPersisted() {
+        val device = device()
+        val instance = UUID.randomUUID().toString()
+        val profile = UUID.randomUUID().toString()
+        inTx { service.report(device, report(instance, 1, ClientModEntry(hashA, "a.jar")).copy(profileId = profile)) }
+        assertEquals(profile, db.queryForObject("SELECT profile_id FROM client_instance_inventory WHERE instance_id = ?", String::class.java, instance))
+        assertFailsWith<IllegalArgumentException> { inTx { service.report(device, report(instance, 2, ClientModEntry(hashA, "a.jar")).copy(profileId = "nope")) } }
+    }
+
     /** A first report is stored with its mods and acknowledged. */
     @Test fun storesInventory() {
         val device = device()

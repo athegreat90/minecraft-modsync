@@ -1,4 +1,4 @@
-FROM gradle:9.2.1-jdk25-ubi AS build
+FROM gradle:9.8.2-jdk25-ubi AS build
 ARG RELEASE_VERSION=0.2.1-SNAPSHOT
 WORKDIR /workspace
 COPY . .

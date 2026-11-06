@@ -159,10 +159,11 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
      * @param instance Registered instance name.
      * @param server Server UUID to synchronize with.
      * @param policy Automatic policy; MANUAL is not a valid automatic policy.
+     * @param profile Optional personal profile UUID to keep and install alongside the server mods.
      * @param yes Confirms consent non-interactively.
      */
     @Command(name="enable") fun enable(@Option(names=["--instance"], required=true) instance: String, @Option(names=["--server"], required=true) server: String,
-        @Option(names=["--policy"], defaultValue="AUTO_APPROVED_INSTALL") policy: SyncPolicy, @Option(names=["--yes"]) yes: Boolean) {
+        @Option(names=["--policy"], defaultValue="AUTO_APPROVED_INSTALL") policy: SyncPolicy, @Option(names=["--profile"]) profile: String?, @Option(names=["--yes"]) yes: Boolean) {
         require(policy != SyncPolicy.MANUAL) { "Use auto disable to return to manual synchronization" }
         Installer(root.instance(instance)).target()
         if (!yes) {
@@ -170,7 +171,7 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
             require(console.readLine("Allow $policy for instance $instance? Type the instance name to consent: ") == instance) { "Consent not given" }
         }
         val existing=store.load()[instance]
-        store.save(instance, AutoSettings(existing?.instanceId ?: UUID.randomUUID().toString(), uuid(server), policy, Instant.now().toString()))
+        store.save(instance, AutoSettings(existing?.instanceId ?: UUID.randomUUID().toString(), uuid(server), policy, Instant.now().toString(), profileId = profile?.let { uuid(it) }))
         println("Automatic synchronization enabled for $instance with $policy")
     }
     /**

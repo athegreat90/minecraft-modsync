@@ -19,3 +19,7 @@ See [deployment release operations](docs/deployment/README.md#automatic-developm
 After merging the main-branch migration PR, run `python3 scripts/repository/apply_main_policy.py` from a network-capable checkout authenticated with `gh` and repository administration permission. This makes main default, adds baseline protection if none exists, verifies it, then retires master only when it has no unique commits and differences are limited to the reviewed migration files. The baseline requires a PR, one approving review, the up-to-date `validate` check and resolved conversations; it applies to admins and prohibits force pushes/deletion. Existing protection policies are retained rather than overwritten. If no second reviewer is available, an administrator must deliberately choose an appropriate review policy; this script does not silently relax it.
 
 Repository settings have not been changed by the current sandbox: the connector lacks administration/delete-ref actions and terminal GitHub access is unavailable. The helper has unit coverage but no successful live administration execution.
+
+## Quality gates in validation
+
+Both the per-commit validation and the release validation run `check` (tests, Detekt, Spotless) and `dokkaGenerate`. Spotless checks only changed files; the release job passes `-Pspotless.ratchetFrom=HEAD` because its checkout has no `origin/main` ref. The SonarQube job (`ci.yaml`) needs a self-hosted runner with access to `sonarqube.alexandermora.de` and never runs for pull requests.

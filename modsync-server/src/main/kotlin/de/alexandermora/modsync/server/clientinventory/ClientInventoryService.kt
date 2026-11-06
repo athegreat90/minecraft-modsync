@@ -61,6 +61,7 @@ class ClientInventoryService(
     private fun validate(report: ClientInventoryReport) {
         uuid(report.instanceId)
         report.serverId?.let { uuid(it) }
+        report.profileId?.let { uuid(it) }
         require(report.instanceName.matches(INSTANCE_NAME))
         require(report.minecraftVersion.matches(PLATFORM_TOKEN) && report.loader.matches(PLATFORM_TOKEN))
         require(report.loaderVersion?.matches(PLATFORM_TOKEN) ?: true)

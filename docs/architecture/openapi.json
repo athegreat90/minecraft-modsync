@@ -3777,6 +3777,16 @@
           "activity": {
             "$ref": "#/components/schemas/ClientActivity"
           },
+          "profileId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "mods": {
             "type": "array",
             "items": {

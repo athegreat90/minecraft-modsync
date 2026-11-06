@@ -107,7 +107,7 @@ class ClientInventoryPersistence(private val db: JdbcTemplate) {
         db.update("DELETE FROM client_instance_inventory WHERE instance_id = ?", report.instanceId)
         db.update(
             "INSERT INTO client_instance_inventory (instance_id, server_id, minecraft_version, loader, loader_version, " +
-                "sync_policy, activity, applied_revision, sequence, mod_count, verified_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "sync_policy, activity, applied_revision, sequence, mod_count, verified_at, profile_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             report.instanceId,
             report.serverId,
             report.minecraftVersion,
@@ -118,7 +118,8 @@ class ClientInventoryPersistence(private val db: JdbcTemplate) {
             report.appliedRevision,
             report.sequence,
             report.mods.size,
-            Timestamp.from(verifiedAt)
+            Timestamp.from(verifiedAt),
+            report.profileId
         )
         db.batchUpdate(
             "INSERT INTO client_instance_mods (instance_id, sha512, file_name, project_id, version_id, managed) VALUES (?,?,?,?,?,?)",

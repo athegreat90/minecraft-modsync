@@ -1,6 +1,8 @@
 package de.alexandermora.modsync.client
 
+import de.alexandermora.modsync.domain.Artifact
 import de.alexandermora.modsync.domain.Manifest
+import de.alexandermora.modsync.domain.PersonalProfile
 import de.alexandermora.modsync.domain.SyncPolicy
 import de.alexandermora.modsync.domain.uuid
 import de.alexandermora.modsync.protocol.Api
@@ -26,6 +28,7 @@ import java.nio.file.Path
  * @property lastFullCheckEpoch Epoch seconds of the last full local verification.
  * @property lastSequence Last inventory sequence sent.
  * @property lastOutcome Short result name of the last pass.
+ * @property profileId Personal profile UUID whose client-only mods are kept and installed, or null for none.
  */
 @Serializable
 data class AutoSettings(
@@ -36,7 +39,8 @@ data class AutoSettings(
     val lastRevision: Long? = null,
     val lastFullCheckEpoch: Long = 0,
     val lastSequence: Long = 0,
-    val lastOutcome: String = "NONE"
+    val lastOutcome: String = "NONE",
+    val profileId: String? = null
 )
 
 /** Persists [AutoSettings] per instance name in the client state directory. */
@@ -113,6 +117,15 @@ class ApiGateway(private val api: Api) : AutoSyncGateway {
     override fun reportSync(report: SyncReport) {
         api.request("/api/v1/sync/reports", "POST", wire.encodeToString(report))
     }
+
+    /**
+     * Loads a personal profile's artifacts as currently authorized by the server.
+     *
+     * @param profileId Personal profile UUID.
+     * @return The profile's artifacts.
+     */
+    override fun personalArtifacts(profileId: String): List<Artifact> =
+        wire.decodeFromString<List<PersonalProfile>>(api.request("/api/v1/personal")).first { it.id == uuid(profileId) }.artifacts
 }
 
 /** Generates OS scheduler definitions that run `modsync auto run --once` periodically without a permanent service. */

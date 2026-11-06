@@ -35,6 +35,7 @@ class AutoSyncTest {
         val inventories = mutableListOf<ClientInventoryReport>()
         val syncs = mutableListOf<SyncReport>()
         var manifestFetches = 0
+        var personal: List<Artifact> = emptyList()
 
         override fun publishedRevision(serverId: String) = revision
 
@@ -46,6 +47,8 @@ class AutoSyncTest {
         override fun reportInventory(report: ClientInventoryReport) {
             inventories += report
         }
+
+        override fun personalArtifacts(profileId: String) = personal
 
         override fun reportSync(report: SyncReport) {
             syncs += report
@@ -135,6 +138,20 @@ class AutoSyncTest {
         assertEquals(listOf("SUCCESS"), gateway.syncs.map { it.status })
         assertEquals(2L, settings.lastRevision)
         assertEquals(ClientActivity.IDLE, gateway.inventories.single().activity)
+    }
+
+    /** Personal profile mods are planned with the server mods and the profile id is reported centrally. */
+    @Test
+    fun profileArtifactsArePlannedAndReported() {
+        val gateway = FakeGateway(manifest(2))
+        gateway.personal = listOf(artifact("mine.jar", "f".repeat(128)).copy(classification = Classification.CLIENT_ONLY))
+        val profile = UUID.randomUUID().toString()
+        var plan: SyncPlan? = null
+        val settings = AutoSettings(instanceId, server, SyncPolicy.AUTO_APPROVED_INSTALL, "t", profileId = profile)
+        val (outcome, _) = runner(gateway, settings = settings) { plan = it }.runOnce()
+        assertEquals(AutoOutcome.Applied(2), outcome)
+        assertEquals(listOf("mine.jar"), plan!!.operations.filter { it.kind == OperationKind.INSTALL }.map { it.fileName })
+        assertEquals(profile, gateway.inventories.single().profileId)
     }
 
     /** Failures are reported as SYNC_FAILED and leave the revision unrecorded. */
