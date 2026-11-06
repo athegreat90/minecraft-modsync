@@ -1,4 +1,4 @@
-plugins { kotlin("plugin.serialization"); `java-library`; kotlin("plugin.spring"); kotlin("plugin.jpa"); id("org.springframework.boot") }
+plugins { id("modsync.conventions"); kotlin("plugin.serialization"); `java-library`; kotlin("plugin.spring"); kotlin("plugin.jpa"); id("org.springframework.boot") }
 dependencies {
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
