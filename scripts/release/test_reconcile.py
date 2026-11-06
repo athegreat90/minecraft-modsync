@@ -2,7 +2,7 @@ import unittest
 from reconcile import candidates, version
 class ReleaseTests(unittest.TestCase):
     def test_version_stable_and_unique(self):
-        self.assertEqual(version("a"*40,0),"v0.2.1-dev.19700101000000."+"a"*40)
+        self.assertEqual(version("a"*40,0),"v0.3.0-dev.19700101000000."+"a"*40)
         self.assertNotEqual(version("a"*40,0),version("b"*40,0))
     def test_multicommit_and_canceled_pending_not_lost(self):
         self.assertEqual(candidates(["a","b","c"],{"a"},set(),{"b":1},30000),["c","b"])

@@ -17,7 +17,7 @@ class Modrinth(private val endpoint: URI = URI("https://api.modrinth.com/v2/")) 
         cache[key]?.takeIf { System.currentTimeMillis() - it.first < 3600000 }?.let { return it.second }
         repeat(4) { attempt ->
             val builder = HttpRequest.newBuilder(endpoint.resolve(path)).timeout(Duration.ofSeconds(30))
-                .header("User-Agent", "Minecraft-ModSync/0.2.1 (self-hosted mod inventory)")
+                .header("User-Agent", "Minecraft-ModSync/0.3.0 (self-hosted mod inventory)")
             if (body != null) builder.header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body))
             val response = http.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream())
             val text = response.body().use { stream -> val bytes = stream.readNBytes(8 * 1024 * 1024 + 1); require(bytes.size <= 8 * 1024 * 1024); bytes.toString(Charsets.UTF_8) }

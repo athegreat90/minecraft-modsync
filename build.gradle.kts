@@ -10,7 +10,7 @@ plugins {
     id("com.diffplug.spotless") version "8.11.0" apply false
     id("org.jetbrains.dokka") version "2.3.0"
 }
-allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.2.1-SNAPSHOT").get() }
+allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.3.0-SNAPSHOT").get() }
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "jacoco")
@@ -23,7 +23,7 @@ subprojects {
         kotlin {
             target("src/**/*.kt")
             // Pre-existing dense files stay unformatted until they are rewritten; the OpenAPI generator also parses the DTO files line by line.
-            targetExclude("**/domain/Domain.kt", "**/protocol/Protocol.kt", "**/client/Client.kt", "**/client/Installer.kt", "**/auth/Security.kt", "**/inventory/InventoryController.kt")
+            targetExclude("**/domain/Domain.kt", "**/protocol/Protocol.kt", "**/client/Client.kt", "**/client/Installer.kt", "**/auth/Security.kt", "**/inventory/InventoryController.kt", "**/modrinth/Modrinth.kt")
             ktlint()
             ratchetFrom(providers.gradleProperty("spotless.ratchetFrom").orElse("origin/main").get())
         }
