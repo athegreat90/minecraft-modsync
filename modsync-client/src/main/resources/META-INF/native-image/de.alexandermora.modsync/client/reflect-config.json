@@ -48,6 +48,17 @@
     "allDeclaredConstructors": true
   },
   {
+    "name": "de.alexandermora.modsync.client.AutoCommands",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "de.alexandermora.modsync.domain.SyncPolicy",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
     "name": "picocli.CommandLine$AutoHelpMixin",
     "allDeclaredFields": true,
     "allDeclaredMethods": true,

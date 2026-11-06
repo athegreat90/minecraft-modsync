@@ -9,6 +9,8 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
 import org.springframework.context.annotation.Configuration
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -29,10 +31,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Configuration
 class SecurityConfiguration {
-    @Bean fun chain(http: HttpSecurity, db: JdbcTemplate, @Value($$"${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
+    @Bean @Order(Ordered.LOWEST_PRECEDENCE) fun chain(http: HttpSecurity, db: JdbcTemplate, @Value($$"${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
         http.csrf { it.disable() }.cors { it.disable() }.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/api/v1/info", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/enroll", "/actuator/health", "/actuator/health/**").permitAll()
+                it.dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll() // keep real error statuses (404, 409...) instead of re-authorizing /error
+                    .requestMatchers("/api/v1/info", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/enroll", "/actuator/health", "/actuator/health/**").permitAll()
                     .requestMatchers("/api/v1/admin/**", "/actuator/prometheus").hasRole("ADMIN")
                     .requestMatchers("/api/v1/agent/**").hasRole("AGENT")
                     .requestMatchers("/api/v1/**").hasAnyRole("CLIENT", "ADMIN").anyRequest().denyAll()

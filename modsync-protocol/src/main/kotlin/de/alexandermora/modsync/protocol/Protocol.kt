@@ -39,4 +39,18 @@ fun versionAtLeast(actual: String, minimum: String): Boolean {
 @Serializable data class Failure(val code: String, val message: String, val correlationId: String)
 
 @Serializable data class UserRegistration(val username: String, val password: String)
+/** One installed mod in a client inventory report: hash, file name only, recognized ids and managed ownership. */
+@Serializable data class ClientModEntry(val sha512: String, val fileName: String, val projectId: String? = null, val versionId: String? = null, val managed: Boolean = false)
+/** Revisioned inventory of one client instance; a higher sequence replaces the stored inventory. */
+@Serializable data class ClientInventoryReport(val instanceId: String, val instanceName: String, val serverId: String? = null, val minecraftVersion: String, val loader: String, val loaderVersion: String? = null, val sequence: Long, val appliedRevision: Long? = null, val syncPolicy: SyncPolicy = SyncPolicy.MANUAL, val activity: ClientActivity = ClientActivity.IDLE, val profileId: String? = null, val mods: List<ClientModEntry>)
+/** Server acknowledgement of a client inventory report; accepted is false for stale sequences. */
+@Serializable data class ClientInventoryAck(val instanceId: String, val sequence: Long, val accepted: Boolean, val verifiedAt: String)
+/** Coverage of one client instance against the latest manifest of a server. */
+@Serializable data class CoverageRow(val instanceId: String, val instanceName: String, val status: CoverageStatus, val appliedRevision: Long? = null, val verifiedAt: String? = null, val missingCount: Int = 0)
+/** Coverage matrix of all client instances that selected a server. */
+@Serializable data class ServerCoverage(val serverId: String, val manifestRevision: Long, val rows: List<CoverageRow>)
+/** Request to change the automatic publication policy of a server. */
+@Serializable data class PublicationPolicyRequest(val policy: PublicationPolicy)
+/** One automatic publication evaluation with outcome, revision and actor. */
+@Serializable data class PublicationRecord(val id: Long, val scanId: String, val policy: PublicationPolicy, val outcome: String, val revision: Long? = null, val detail: String, val actor: String, val createdAt: String)
 @Serializable data class SyncReport(val serverId: String, val revision: Long, val status: String)

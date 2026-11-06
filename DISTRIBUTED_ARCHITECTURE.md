@@ -20,3 +20,7 @@ A lost enrollment acknowledgement can be retried using the same still-valid toke
 Client devices belong to users. Profiles belong to users, not devices. New clients register separate UUIDs and retrieve existing profiles. Endpoint updates preserve local identities; a different control-plane UUID requires explicit trust and clears old endpoint credentials.
 
 The deterministic integration harness uses separate A-B and C-B networks and separate filesystems. It provides a trusted fixture CA, synthetic Modrinth API/CDN, independent MariaDB restore target and replacement backend. The harness is implemented but has not executed in the current sandbox.
+
+## Inventory feedback loop
+
+Host A uploads server snapshots; Host B can publish a new manifest automatically under the server's policy; Host C polls the published revision, installs approved changes into the registered instance and uploads its own verified inventory (`POST /api/v1/client/inventory`); Host B computes coverage from that stored state only. A and C still never talk to each other, and neither touches MariaDB. The integration harness ends with this loop: an approved client-required mod appears on Host A, is published automatically, is installed by the Host C client into its instance and shows as `UP_TO_DATE` in the Host B coverage matrix.

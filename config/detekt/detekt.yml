@@ -1,0 +1,40 @@
+comments:
+  UndocumentedPublicClass:
+    active: true
+    excludes: ['**/test/**']
+  UndocumentedPublicFunction:
+    active: true
+    excludes: ['**/test/**']
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 200
+    excludes: ['**/test/**']
+  MagicNumber:
+    active: false
+  ReturnCount:
+    active: false
+  WildcardImport:
+    active: false
+  ThrowsCount:
+    active: false
+
+complexity:
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 10
+    allowedConstructorParameters: 14
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+  TooManyFunctions:
+    active: false
+  LongMethod:
+    allowedLines: 80
+  CyclomaticComplexMethod:
+    allowedComplexity: 20
+
+naming:
+  FunctionNaming:
+    active: true
+    excludes: ['**/test/**']

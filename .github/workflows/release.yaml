@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '25'}
       - uses: gradle/actions/setup-gradle@v4
-        with: {gradle-version: '9.2.1'}
+        with: {gradle-version: '9.8.2'}
       - id: version
         run: |
           python3 - <<'PYTHON' >> "$GITHUB_OUTPUT"
@@ -38,7 +38,7 @@ jobs:
           from reconcile import version
           print('version='+version(subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),subprocess.check_output(['git','show','-s','--format=%ct','HEAD'],text=True).strip()))
           PYTHON
-      - run: gradle --no-daemon -PreleaseVersion=${{ steps.version.outputs.version }} check :modsync-server:bootJar :modsync-agent:distZip :modsync-client:distZip :modsync-client-tui:distZip
+      - run: gradle --no-daemon -PreleaseVersion=${{ steps.version.outputs.version }} -Pspotless.ratchetFrom=HEAD check dokkaGenerate :modsync-server:bootJar :modsync-agent:distZip :modsync-client:distZip :modsync-client-tui:distZip
       - run: python3 scripts/check-architecture.py
       - run: python3 scripts/openapi.py --check
       - run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
@@ -70,7 +70,7 @@ jobs:
       - uses: graalvm/setup-graalvm@v1
         with: {java-version: '25', distribution: graalvm-community, github-token: '${{ github.token }}'}
       - uses: gradle/actions/setup-gradle@v4
-        with: {gradle-version: '9.2.1'}
+        with: {gradle-version: '9.8.2'}
       - shell: bash
         run: gradle --no-daemon "-PreleaseVersion=${{ needs.validate.outputs.version }}" :modsync-client:nativeCompile :modsync-agent:nativeCompile
       - shell: bash

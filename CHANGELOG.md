@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Development prereleases are
 published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (see `RELEASES.md`).
 
+## [Unreleased]
+
+### Fixed
+- IDE imports no longer fail dependency verification: source, javadoc and Gradle-source archives are trusted in `gradle/verification-metadata.xml`; all jars, poms and modules stay checksum-verified.
+
+## [0.3.0] - 2026-11-06
+
+### Added
+- Client inventory: `POST /api/v1/client/inventory` stores a per-instance, revisioned and idempotent inventory (hashes, file names only, recognized Modrinth ids, managed ownership, applied revision, sync policy, activity, selected personal profile) in `client_instance_inventory` / `client_instance_mods` (migrations V2 and V4).
+- Coverage matrix: `GET /api/v1/admin/servers/{id}/coverage` compares exact SHA-512 hashes and reports `UP_TO_DATE`, `MISSING_MODS`, `WRONG_VERSION`, `INCOMPATIBLE`, `SYNC_PENDING`, `SYNCING`, `PENDING_GAME_EXIT`, `SYNC_FAILED`, `OFFLINE`, `INVENTORY_STALE` and `UNKNOWN` with two queries per server.
+- Automatic manifest publication per server (`MANUAL`, `REVIEW_UNKNOWN`, `TRUSTED_AUTO`) evaluated after each snapshot commit, with publication history, no duplicate revisions when client requirements are unchanged, `PUT /api/v1/admin/servers/{id}/publication-policy` and `GET /api/v1/admin/servers/{id}/publications` (migration V3).
+- Client `modsync auto enable|disable|status|run|schedule`: opt-in per instance, install/update/managed-removal policies, deferral while Minecraft runs, personal-profile support, bounded jitter/backoff, systemd and Task Scheduler templates; reuses the existing resolver, installer, journal and rollback.
+- Thymeleaf administration dashboard at `/ui` (server overview, inventory, manifest, coverage, publication history, policy and classification forms) with a separate session, CSRF and CSP protected filter chain.
+- Quality tooling: JaCoCo, SonarScanner for Gradle, Detekt 2.0.0-alpha.6 (legacy baseline), Spotless/ktlint (changed files), Dokka with `failOnWarning`, Gradle dependency verification, and a SonarQube CI job that reaches the tailnet through the Tailscale GitHub Action.
+- Distributed fixture stage covering automatic publication, Host C installation into the right instance and Host B coverage.
+
+### Changed
+- Docker images and workflows use Gradle 9.8.2 (matches the repository bootstrap and dependency checksums); shell scripts are forced to LF through `.gitattributes`.
+- Release and commit validation also run Detekt, Spotless and Dokka.
+- Release version, tag prefix (`v0.3.0-dev.`), Docker defaults and OpenAPI `info.version` bumped to 0.3.0. Minimum component compatibility stays 0.2.0; wire protocol 1 is unchanged.
+
+### Fixed
+- The API filter chain no longer re-authorizes error dispatches, so clients receive the real 404, 409 and 426 statuses instead of 401.
+- Added `gradle/verification-metadata.xml`, resolving SonarQube finding `kotlin:S6474`.
+
+### Documentation
+- New `docs/development/` guides (code quality, SonarQube, Kotlin) and updates to README, ARCHITECTURE, DISTRIBUTED_ARCHITECTURE, DATABASE, DOCKER, SECURITY, API, USAGE, RELEASES, CLIENT_PERFORMANCE and MEMORY.
 ## [0.2.1] - 2026-11-02
 
 ### Changed

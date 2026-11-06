@@ -10,6 +10,7 @@ def controller_routes():
     routes=set()
     for file in CONTROLLERS.rglob('*Controller.kt'):
         text=file.read_text()
+        if '@RestController' not in text: continue  # server-rendered dashboard pages are not part of the API contract
         prefix=re.search(r'@RequestMapping\("([^"]*)"\)',text).group(1)
         for method,route in re.findall(r'@(Get|Post|Put)Mapping(?:\("([^"]*)"\))?',text):
             routes.add((method.lower(),prefix+route))
@@ -103,6 +104,10 @@ def build():
         ('GET','devices',None,'List<String>','owner'),
         ('POST','devices/{id}/revoke',None,'Boolean','owner'),
         ('POST','sync/reports','SyncReport','Boolean','CLIENT or ADMIN'),
+        ('POST','client/inventory','ClientInventoryReport','ClientInventoryAck','CLIENT or ADMIN'),
+        ('GET','admin/servers/{id}/coverage',None,'ServerCoverage','ADMIN'),
+        ('PUT','admin/servers/{id}/publication-policy','PublicationPolicyRequest','Boolean','ADMIN'),
+        ('GET','admin/servers/{id}/publications',None,'List<PublicationRecord>','ADMIN'),
         ('GET','openapi.json',None,'raw','CLIENT or ADMIN'),
     ]
     paths={}
@@ -120,7 +125,7 @@ def build():
         if parameters: operation['parameters']=parameters
         if request: operation['requestBody']={'required':True,'content':{'application/json':{'schema':model_schema(request)}}}
         paths.setdefault('/api/v1/'+path,{})[method.lower()]=operation
-    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.2.1','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
+    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.3.0','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
 
 def main():
     path=ROOT/'docs/architecture/openapi.json'

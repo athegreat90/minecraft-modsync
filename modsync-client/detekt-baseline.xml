@@ -1,0 +1,72 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>EmptyElseBlock:Installer.kt:Installer$if (n &lt; 0) break</ID>
+    <ID>EmptyElseBlock:Installer.kt:if (n&lt;0) break</ID>
+    <ID>MaxLineLength:Client.kt:AutoCommands$println(when (platform) { "systemd" -&gt; SchedulerTemplates.systemd(executable, intervalMinutes); "windows" -&gt; SchedulerTemplates.windows(executable, intervalMinutes); else -&gt; error("Unsupported platform") })</ID>
+    <ID>MaxLineLength:Client.kt:Client$save(ClientConfig(endpoint.trimEnd('/'), caps.controlPlaneId, old?.deviceId ?: UUID.randomUUID().toString(), old?.takeIf { it.controlPlaneId == caps.controlPlaneId }?.credentials, old?.instances ?: emptyMap()))</ID>
+    <ID>MaxLineLength:Client.kt:ConfigCommands$@Command(name="set") fun set</ID>
+    <ID>MaxLineLength:Client.kt:InstanceCommands$listOf(home.resolve(".minecraft"), home.resolve("AppData/Roaming/.minecraft"), home.resolve(".local/share/PrismLauncher/instances"), home.resolve("AppData/Roaming/PrismLauncher/instances")).filter { Files.isDirectory(it) }.forEach(::println)</ID>
+    <ID>MaxLineLength:Client.kt:SyncCommands$secureWrite(output, wire.encodeToString(plan))</ID>
+    <ID>MaxLineLength:Client.kt:SyncCommands$uuid(server)</ID>
+    <ID>MaxLineLength:Client.kt:SyncCommands$val installer=Installer(root.instance(instance))</ID>
+    <ID>MaxLineLength:Client.kt:SyncCommands$val manifest=checkNotNull(installer.state().manifest) { "No managed manifest found" }</ID>
+    <ID>MaxLineLength:Client.kt:addSubcommand("config", ConfigCommands(root))</ID>
+    <ID>MaxLineLength:Installer.kt:Installer$fun verify: Boolean</ID>
+    <ID>MaxLineLength:Installer.kt:Installer$require(target.minecraftVersion == manifest.minecraftVersion &amp;&amp; target.loader == manifest.loader &amp;&amp; (manifest.loaderVersion == null || target.loaderVersion == manifest.loaderVersion)) { "Configured instance game/loader versions do not match manifest" }</ID>
+    <ID>MaxLineLength:Installer.kt:Installer$require(uri.scheme == "https" &amp;&amp; uri.host == "cdn.modrinth.com" &amp;&amp; uri.userInfo == null &amp;&amp; uri.port in setOf(-1,443) &amp;&amp; uri.path.startsWith("/data/")) { "Download must use official HTTPS Modrinth CDN" }</ID>
+    <ID>MaxLineLength:Installer.kt:Installer$val expected=Resolver().plan(plan.manifest, plan.operations.filter { it.artifact?.classification == Classification.CLIENT_ONLY }.mapNotNull { it.artifact }, before, old.hashes, plan.includeOptional)</ID>
+    <ID>NestedBlockDepth:Installer.kt:fun validateArchive</ID>
+    <ID>TooGenericExceptionCaught:Client.kt:AutoCommands$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:Installer.kt:Installer$e: Exception</ID>
+    <ID>UndocumentedPublicClass:Client.kt:AutoCommands</ID>
+    <ID>UndocumentedPublicClass:Client.kt:Client : Runnable</ID>
+    <ID>UndocumentedPublicClass:Client.kt:ClientConfig</ID>
+    <ID>UndocumentedPublicClass:Client.kt:ConfigCommands</ID>
+    <ID>UndocumentedPublicClass:Client.kt:ConnectionCommands</ID>
+    <ID>UndocumentedPublicClass:Client.kt:InstanceCommands</ID>
+    <ID>UndocumentedPublicClass:Client.kt:ModCommands</ID>
+    <ID>UndocumentedPublicClass:Client.kt:PersonalCommands</ID>
+    <ID>UndocumentedPublicClass:Client.kt:ServerCommands</ID>
+    <ID>UndocumentedPublicClass:Client.kt:SyncCommands</ID>
+    <ID>UndocumentedPublicClass:Installer.kt:InstallJournal</ID>
+    <ID>UndocumentedPublicClass:Installer.kt:Installer</ID>
+    <ID>UndocumentedPublicClass:Installer.kt:InstanceTarget</ID>
+    <ID>UndocumentedPublicClass:Installer.kt:JournalEntry</ID>
+    <ID>UndocumentedPublicClass:Installer.kt:ManagedState</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$@Command(name="doctor") fun doctor</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$@Command(name="interactive") fun interactive</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$@Command(name="login") fun login</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$@Command(name="setup") fun setup</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$fun api: Api</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$fun config</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$fun instance</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:Client$fun save</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:ConfigCommands$@Command(name="set") fun set</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:ConfigCommands$@Command(name="show") fun show</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:ConnectionCommands$@Command(name="test") fun test</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:InstanceCommands$@Command(name="add") fun add</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:InstanceCommands$@Command(name="discover") fun discover</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:ModCommands$@Command(name="list") fun list</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:ModCommands$@Command(name="scan") fun scan</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:PersonalCommands$@Command(name="import") fun import</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:PersonalCommands$@Command(name="list") fun list</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:ServerCommands$@Command(name="list") fun list</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:SyncCommands$@Command(name="apply") fun apply</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:SyncCommands$@Command(name="cached") fun cached</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:SyncCommands$@Command(name="plan") fun plan</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:SyncCommands$@Command(name="rollback") fun rollback</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:SyncCommands$@Command(name="verify") fun verify</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:fun clientCommandLine: CommandLine</ID>
+    <ID>UndocumentedPublicFunction:Client.kt:fun main</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:Installer$fun &lt;T&gt; locked: T</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:Installer$fun apply</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:Installer$fun configureTarget</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:Installer$fun rollback</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:Installer$fun state: ManagedState</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:Installer$fun validateTarget</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:Installer$fun verify: Boolean</ID>
+    <ID>UndocumentedPublicFunction:Installer.kt:fun validateArchive</ID>
+  </CurrentIssues>
+</SmellBaseline>

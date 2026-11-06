@@ -38,9 +38,17 @@ class Installer(instance: Path) {
         require(target.minecraftVersion.isNotBlank() && target.loader.isNotBlank())
         secureWrite(stateDir.resolve("instance.json"),wire.encodeToString(target))
     }
-    fun validateTarget(manifest: Manifest) {
+    /**
+     * Reads the explicitly configured game/loader target of the instance.
+     *
+     * @return The configured target.
+     */
+    fun target(): InstanceTarget {
         val p=stateDir.resolve("instance.json"); require(!Files.isSymbolicLink(p))
-        val target=wire.decodeFromString<InstanceTarget>(Files.readString(p))
+        return wire.decodeFromString<InstanceTarget>(Files.readString(p))
+    }
+    fun validateTarget(manifest: Manifest) {
+        val target=target()
         require(target.minecraftVersion == manifest.minecraftVersion && target.loader == manifest.loader && (manifest.loaderVersion == null || target.loaderVersion == manifest.loaderVersion)) { "Configured instance game/loader versions do not match manifest" }
     }
     fun state(): ManagedState { val p=stateDir.resolve("managed.json"); require(!Files.isSymbolicLink(p)); return if (Files.exists(p)) wire.decodeFromString(Files.readString(p)) else ManagedState() }
@@ -114,7 +122,7 @@ class Installer(instance: Path) {
         require(uri.scheme == "https" && uri.host == "cdn.modrinth.com" && uri.userInfo == null && uri.port in setOf(-1,443) && uri.path.startsWith("/data/")) { "Download must use official HTTPS Modrinth CDN" }
         require(artifact.size in 1..536870912 && validHash(artifact.sha512))
         val client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).followRedirects(HttpClient.Redirect.NEVER).build()
-        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.2.1").build(), HttpResponse.BodyHandlers.ofInputStream())
+        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.3.0").build(), HttpResponse.BodyHandlers.ofInputStream())
         response.body().use { input ->
             require(response.statusCode() == 200) { "Download failed: HTTP ${response.statusCode()}" }
             Files.newOutputStream(target, CREATE_NEW, WRITE).use { output ->

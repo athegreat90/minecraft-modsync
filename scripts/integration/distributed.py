@@ -24,13 +24,13 @@ def main():
         (WORK/name).mkdir(); (WORK/name).chmod(0o777)
     mods=fixtures/'minecraft/server/mods'; mods.mkdir(parents=True)
     artifacts=[]
-    for project,kind in [('required','BOTH_REQUIRED'),('server','SERVER_ONLY'),('personal','CLIENT_ONLY')]:
+    for project,kind in [('required','BOTH_REQUIRED'),('server','SERVER_ONLY'),('personal','CLIENT_ONLY'),('extra','CLIENT_REQUIRED')]:
         path=fixtures/'artifacts'/f'{project}.jar'
         with zipfile.ZipFile(path,'w') as jar:
             entry=zipfile.ZipInfo('META-INF/neoforge.mods.toml',(2020,1,1,0,0,0))
             jar.writestr(entry,f'modLoader="javafml"\nloaderVersion="[1,)"\nlicense="MIT"\n[[mods]]\nmodId="{project}"\nversion="1"')
         artifacts.append({'projectId':project,'versionId':project+'-v1','fileName':path.name,'sha512':hashlib.sha512(path.read_bytes()).hexdigest(),'size':path.stat().st_size,'url':'https://cdn.modrinth.com/data/'+path.name,'minecraftVersions':['1.21.1'],'loaders':['neoforge'],'classification':kind,'dependencies':[],'evidence':[]})
-        if project!='personal': shutil.copy(path,mods/path.name)
+        if project not in ('personal','extra'): shutil.copy(path,mods/path.name)
     (fixtures/'artifacts.json').write_text(json.dumps(artifacts))
     for name in ['db_password','db_root_password','bootstrap_password','user_password']:
         (fixtures/'secrets'/name).write_text(secrets.token_hex(24))
@@ -145,6 +145,27 @@ def main():
         cli('agent2','scan'); cli('client','connection','test'); cli('client2','connection','test'); sync('client2')
         results['backend_migration_dns_change_and_mariadb_restore']='passed'
         cli('client2','sync','rollback','--instance','game'); results['rollback']='passed'
+        # Host A gains an approved client-required mod: it is published automatically, installed by the eligible
+        # Host C client into the registered instance, and Host B reports the resulting coverage.
+        admin(f'admin/servers/{server}/classification','PUT',{'sha512':artifacts[3]['sha512'],'classification':'CLIENT_REQUIRED','reason':'Deterministic fixture approval'})
+        admin(f'admin/servers/{server}/publication-policy','PUT',{'policy':'REVIEW_UNKNOWN'})
+        shutil.copy(fixtures/'artifacts/extra.jar',mods/'extra.jar')
+        cli('agent2','scan')
+        for _ in range(30):
+            if any(entry['outcome']=='PUBLISHED' for entry in admin(f'admin/servers/{server}/publications')): break
+            time.sleep(2)
+        else: raise AssertionError('Automatic publication did not complete')
+        latest=admin(f'servers/{server}/manifest')
+        assert latest['revision']==manifest['revision']+1 and any(a['fileName']=='extra.jar' for a in latest['artifacts'])
+        cli('client','auto','enable','--instance','game','--server',server,'--profile',profile,'--yes')
+        cli('client','auto','run','--once')
+        assert (WORK/'instance/mods/extra.jar').read_bytes()==(fixtures/'artifacts/extra.jar').read_bytes()
+        assert (WORK/'instance/mods/required.jar').exists() and (WORK/'instance/mods/personal.jar').exists()
+        assert not (WORK/'instance/mods/server.jar').exists()
+        coverage=admin(f'admin/servers/{server}/coverage')
+        assert coverage['manifestRevision']==latest['revision']
+        assert any(row['instanceName']=='game' and row['status']=='UP_TO_DATE' for row in coverage['rows']),coverage
+        results['automatic_publication_installation_and_coverage']='passed'
     except Exception:
         print(dc('logs','--no-color','--tail','120','backend','backend2'),file=sys.stderr,flush=True)
         raise

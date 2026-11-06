@@ -21,3 +21,15 @@ Retain Compose configuration, secret sources, trusted CA configuration, reverse-
 Restoration validation must check Flyway history, control-plane UUID, user login, an existing agent credential, server/assignment UUIDs, historical manifests, profiles and device access. The distributed harness exports into an isolated second MariaDB container and switches to a replacement backend with the restored database. This drill is not yet executed here.
 
 Keep major-version upgrades separate from relocation. Roll back by stopping destination writers before restoring routing to the original database/application pair. If destination writes occurred, reconcile or restore those changes first; never let two unfenced control planes accept writes independently.
+
+## Client inventory (V2)
+
+- `client_instance_inventory`: one row per registered client instance with Minecraft/loader metadata, selected server, sync policy, activity, applied manifest revision, monotonically increasing report `sequence` and verification time.
+- `client_instance_mods`: installed artifacts per instance keyed by SHA-512, with file name only (no local paths), recognized Modrinth project/version ids and managed/unmanaged ownership.
+
+
+## Publication policy (V3)
+
+- `minecraft_servers.publication_policy` (`MANUAL` default, `REVIEW_UNKNOWN`, `TRUSTED_AUTO`).
+- `publication_history`: one row per automatic evaluation with outcome, published revision, detail and actor; identical effective client requirements never create a new manifest revision.
+

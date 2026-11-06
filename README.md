@@ -33,6 +33,7 @@ Install JDK 25, Python 3, network access to Gradle/Maven repositories, and Docke
 ```sh
 ./gradlew check :modsync-server:bootJar :modsync-agent:installDist :modsync-client:installDist :modsync-client-tui:installDist
 python3 scripts/check-architecture.py
+python3 scripts/openapi.py --check
 python3 -m unittest discover -s scripts/release -p 'test_*.py'
 python3 scripts/integration/distributed.py
 ```
@@ -67,8 +68,12 @@ The CLI also supports `config show`, `config set server-url URL`, `connection te
 
 Offline scans and diagnostics do not authenticate or claim current synchronization. Online apply always re-authenticates and compares the exact published manifest. Matching pre-existing unmanaged files remain unmanaged.
 
+## Automatic synchronization, inventory and dashboard
+
+Players can opt in per instance with `modsync auto enable` (see [usage](docs/USAGE.md)); the client then installs approved changes only while Minecraft is closed, keeps personal and unmanaged mods, and reports its verified inventory to Host B. Administrators see server mods, client coverage and publication history at `/ui` on Host B and can choose an automatic publication policy per server. Quality tooling (Detekt, Spotless, Dokka, JaCoCo, SonarQube) is described in [code quality](docs/development/CODE_QUALITY.md) and [SonarQube](docs/development/SONARQUBE.md).
+
 ## Documentation
 
-[**Project guide**](docs/GUIDE.md) · [**Command runbook**](docs/USAGE.md) · [Architecture](ARCHITECTURE.md) · [Distributed topology](DISTRIBUTED_ARCHITECTURE.md) · [Networking](NETWORKING.md) · [Migration](HOST_MIGRATION.md) · [Database](DATABASE.md) · [Docker](DOCKER.md) · [Security](SECURITY.md) · [Release process](RELEASES.md) · [Performance](CLIENT_PERFORMANCE.md) · [Repository strategy](REPOSITORY_STRATEGY.md) · [API](docs/architecture/API.md)
+[**Project guide**](docs/GUIDE.md) · [**Command runbook**](docs/USAGE.md) · [Architecture](ARCHITECTURE.md) · [Distributed topology](DISTRIBUTED_ARCHITECTURE.md) · [Networking](NETWORKING.md) · [Migration](HOST_MIGRATION.md) · [Database](DATABASE.md) · [Docker](DOCKER.md) · [Security](SECURITY.md) · [Release process](RELEASES.md) · [Performance](CLIENT_PERFORMANCE.md) · [Repository strategy](REPOSITORY_STRATEGY.md) · [API](docs/architecture/API.md) · [Kotlin guidelines](docs/development/KOTLIN_GUIDELINES.md)
 
 [Implementation report](IMPLEMENTATION_REPORT.md) covers delivered source, actual checks and remaining release gates.

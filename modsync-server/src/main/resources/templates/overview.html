@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title>ModSync servers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
+</head>
+<body>
+<header>
+  <a th:href="@{/ui}">ModSync</a>
+  <form th:action="@{/logout}" method="post"><button type="submit">Sign out</button></form>
+</header>
+<main>
+  <section>
+    <h1>Minecraft servers</h1>
+    <p th:if="${servers.isEmpty()}" class="muted">No servers registered yet.</p>
+    <table th:unless="${servers.isEmpty()}">
+      <thead><tr><th>Name</th><th>Minecraft</th><th>Loader</th><th>Inventory</th><th>Manifest</th><th>Publication</th></tr></thead>
+      <tbody>
+      <tr th:each="row : ${servers}">
+        <td><a th:href="@{/ui/servers/{id}(id=${row.info.id})}" th:text="${row.info.name}">name</a></td>
+        <td th:text="${row.info.minecraftVersion}">1.21.1</td>
+        <td th:text="${row.info.loader}">neoforge</td>
+        <td>
+          <span th:if="${row.info.inventoryAt == null}" class="badge warn">none</span>
+          <span th:if="${row.info.inventoryAt != null and row.info.inventoryStale}" class="badge warn">stale</span>
+          <span th:if="${row.info.inventoryAt != null and !row.info.inventoryStale}" class="badge ok">fresh</span>
+          <span class="muted" th:text="${row.info.inventoryAt}"></span>
+        </td>
+        <td th:text="${row.info.publishedRevision != null} ? ${'r' + row.info.publishedRevision} : 'unpublished'">r1</td>
+        <td th:text="${row.policy}">MANUAL</td>
+      </tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+</body>
+</html>
