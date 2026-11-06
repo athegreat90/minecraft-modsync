@@ -208,3 +208,11 @@ Draft asset verification also avoids `gh release download <tag>`: it downloads e
 asset through the authenticated release-asset API by ID, then checks local bytes
 against `SHA256SUMS` and the compatibility manifest. This keeps draft retry checks
 working even though GitHub's release-by-tag endpoint does not resolve drafts.
+
+## Automatic mod management and quality tooling (branch feat/auto-mod-management)
+
+- Kotlin 2.4.21 / JVM 25 / Spring Boot 4.1.2 / Gradle 9.8.2 verified together; Docker images and workflows now use Gradle 9.8.2 because dependency verification metadata is Gradle-version specific.
+- Added: client inventory (V2, V4), publication policy/history (V3), coverage matrix endpoint, auto publication, `modsync auto` (policies, game-running deferral, personal profile support), Thymeleaf dashboard (session + CSRF chain), Detekt 2.0.0-alpha.6 (stable 1.23.8 fails on JDK 25) with legacy baselines, ratcheted Spotless, Dokka, SonarScanner.
+- Verified: `./gradlew spotlessApply check dokkaGenerate`; distributed fixture (`scripts/integration/distributed.py`, needs openssl/sh from Git for Windows on PATH and LF shell scripts) incl. the automatic publication -> Host C install -> coverage stage; SonarQube analysis against sonarqube.alexandermora.de with quality gate OK at the last run.
+- Not verified: CI workflows themselves (GitHub-hosted or the self-hosted Sonar runner), native-image builds, Trivy, Sonar branch/PR analysis, performance of auto passes. `scripts/backup` tests fail on this Windows host only because Git's sh cannot find `python`.
+- Known limits: Detekt baseline holds 349 legacy findings; private-function KDoc is by convention; auto mode detects a running game only via Java command lines containing the instance path.
