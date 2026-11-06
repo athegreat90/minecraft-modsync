@@ -6,8 +6,17 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-06
+
+### Changed
+- Release version, tag prefix (`v0.3.1-dev.`), Docker defaults, User-Agent and OpenAPI `info.version` bumped to 0.3.1. Wire protocol 1 and minimum component compatibility are unchanged.
+- Line endings are enforced as LF (`.gitattributes` `* text=auto eol=lf`, `.editorconfig` `end_of_line = lf`).
+
 ### Fixed
 - IDE imports no longer fail dependency verification: source, javadoc and Gradle-source archives are trusted in `gradle/verification-metadata.xml`; all jars, poms and modules stay checksum-verified.
+- Native builds no longer fail dependency verification for `graalvm-reachability-metadata-0.11.5-repository.zip`.
+- Release reconciliation only dispatches commits from `d9f75f5` onward (older commits cannot build the current release pipeline) and recognizes any `vX.Y.Z-dev.` tag as released.
+- Docker images upgrade `apt`/`libapt-pkg6.0t64` so the Trivy release scan no longer fails on CVE-2026-109518.
 
 ## [0.3.0] - 2026-11-06
 

@@ -10,7 +10,7 @@ plugins {
     id("com.diffplug.spotless") version "8.11.0" apply false
     id("org.jetbrains.dokka") version "2.3.0"
 }
-allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.3.0-SNAPSHOT").get() }
+allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.3.1-SNAPSHOT").get() }
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "jacoco")

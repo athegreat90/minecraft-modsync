@@ -125,7 +125,7 @@ def build():
         if parameters: operation['parameters']=parameters
         if request: operation['requestBody']={'required':True,'content':{'application/json':{'schema':model_schema(request)}}}
         paths.setdefault('/api/v1/'+path,{})[method.lower()]=operation
-    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.3.0','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
+    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.3.1','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
 
 def main():
     path=ROOT/'docs/architecture/openapi.json'
