@@ -11,6 +11,7 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 ### Changed
 - Release version, tag prefix (`v0.3.1-dev.`), Docker defaults, User-Agent and OpenAPI `info.version` bumped to 0.3.1. Wire protocol 1 and minimum component compatibility are unchanged.
 - Line endings are enforced as LF (`.gitattributes` `* text=auto eol=lf`, `.editorconfig` `end_of_line = lf`).
+- Catch-all `try/catch` blocks in the client (`AutoSync`, `Client`, `Installer`) and server (`ProfileService`, `AutoPublicationService`) now use `runCatching`; behavior is unchanged except that `runCatching` also catches `Error`s. `try/finally` blocks and selective catches are kept.
 
 ### Fixed
 - IDE imports no longer fail dependency verification: source, javadoc and Gradle-source archives are trusted in `gradle/verification-metadata.xml`; all jars, poms and modules stay checksum-verified.
