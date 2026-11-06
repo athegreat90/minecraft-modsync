@@ -10,7 +10,7 @@ pass. Active runs are skipped; failed and canceled runs retry after a six-hour
 cooldown measured from their last update. The reconciliation log reports failures,
 invalid releases, dispatched commits and the remaining backlog.
 
-Each immutable `v0.3.0-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
+Each immutable `v0.3.1-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
 checks, architecture and API checks, source security scanning, distributed TLS
 integration, Linux x64/ARM64 and Windows x64 native builds, native smoke tests and
 benchmarks. JVM distributions, native binaries and multi-platform images all use

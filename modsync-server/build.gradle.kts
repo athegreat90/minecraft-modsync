@@ -1,4 +1,4 @@
-plugins { kotlin("plugin.serialization"); `java-library`; kotlin("plugin.spring"); kotlin("plugin.jpa"); id("org.springframework.boot") }
+plugins { id("modsync.conventions"); kotlin("plugin.serialization"); `java-library`; kotlin("plugin.spring"); kotlin("plugin.jpa"); id("org.springframework.boot") }
 dependencies {
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":modsync-resolver"))
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("io.github.oshai:kotlin-logging-jvm:8.0.6")
     implementation("org.flywaydb:flyway-mysql")
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.6")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")

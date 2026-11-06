@@ -4,7 +4,7 @@ import de.alexandermora.modsync.domain.*
 import de.alexandermora.modsync.protocol.*
 import de.alexandermora.modsync.resolver.*
 import de.alexandermora.modsync.scanner.*
-
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 
@@ -16,6 +16,10 @@ import java.nio.file.Files
 import java.time.Instant
 import java.util.UUID
 import kotlin.system.exitProcess
+private val logger = run {
+    System.setProperty("kotlin-logging.logStartupMessage", "false") // keep CLI stderr free of the library banner
+    KotlinLogging.logger {}
+}
 
 @Serializable data class ClientConfig(val endpoint: String, val controlPlaneId: String, val deviceId: String, val credentials: Credentials? = null, val instances: Map<String, String> = emptyMap())
 @Command(name="modsync", mixinStandardHelpOptions=true, description=["Minecraft ModSync lightweight client"])
@@ -121,8 +125,8 @@ class Client: Runnable {
         require(personal.all { a -> profiles.any { a in it.artifacts } }) { "Personal artifacts are no longer authorized" }
         if (dry) { plan.operations.forEach(::println); return }
         Installer(root.instance(instance)).apply(plan)
-        try { api.request("/api/v1/sync/reports", "POST", wire.encodeToString(SyncReport(current.serverId,current.revision,"SUCCESS"))) }
-        catch (_: Exception) { System.err.println("Local installation succeeded; online history acknowledgement failed") }
+        runCatching { api.request("/api/v1/sync/reports", "POST", wire.encodeToString(SyncReport(current.serverId,current.revision,"SUCCESS"))) }
+            .onFailure { logger.warn { "Local installation succeeded; online history acknowledgement failed" } }
         println("Installation verified")
     }
     @Command(name="verify") fun verify(@Option(names=["--instance"], required=true) instance: String) {
@@ -215,11 +219,11 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
         require(only == null || targets.isNotEmpty()) { "Automatic synchronization is not enabled for $only" }
         var failed=false
         targets.forEach { (name, settings) ->
-            val outcome=try {
+            val outcome=runCatching {
                 val dir=root.instance(name)
                 val (result, updated)=AutoSyncRunner(Installer(dir), name, settings, ApiGateway(root.api()), ProcessGameCheck(dir.toRealPath().toString())).runOnce()
                 store.save(name, updated); result
-            } catch (error: Exception) { AutoOutcome.Failed(error.javaClass.simpleName) }
+            }.getOrElse { AutoOutcome.Failed(it.javaClass.simpleName) }
             if (outcome is AutoOutcome.Failed) failed=true
             println("$name: $outcome")
         }
@@ -239,6 +243,6 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
 }
 fun clientCommandLine(root: Client = Client()): CommandLine = CommandLine(root).apply {
     addSubcommand("config", ConfigCommands(root)); addSubcommand("connection", ConnectionCommands(root)); addSubcommand("servers", ServerCommands(root)); addSubcommand("instances", InstanceCommands(root)); addSubcommand("mods", ModCommands(root)); addSubcommand("personal", PersonalCommands(root)); addSubcommand("sync", SyncCommands(root)); addSubcommand("auto", AutoCommands(root))
-    setExecutionExceptionHandler { ex, _, _ -> System.err.println("Command failed: ${ex.javaClass.simpleName}; check arguments, connectivity and local state"); 1 }
+    setExecutionExceptionHandler { ex, _, _ -> logger.error { "Command failed: ${ex.javaClass.simpleName}; check arguments, connectivity and local state" }; 1 }
 }
 fun main(args: Array<String>) { exitProcess(clientCommandLine().execute(*args)) }

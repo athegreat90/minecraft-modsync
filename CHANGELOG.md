@@ -6,8 +6,20 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-06
+
+### Changed
+- Release version, tag prefix (`v0.3.1-dev.`), Docker defaults, User-Agent and OpenAPI `info.version` bumped to 0.3.1. Wire protocol 1 and minimum component compatibility are unchanged.
+- Shared Gradle configuration moved from the root `subprojects { apply(plugin = …) }` block into the `modsync.conventions` precompiled script plugin in the new `build-logic` included build; modules apply it with `id("modsync.conventions")`. This removes the deprecated `apply` plugin syntax warnings; the script uses imports and typed accessors for readability. Plugin versions now live in `build-logic/build.gradle.kts`, and dependency verification metadata and locks were refreshed.
+- Line endings are enforced as LF (`.gitattributes` `* text=auto eol=lf`, `.editorconfig` `end_of_line = lf`).
+- Diagnostics in the agent and client CLI (failure messages, agent scan-cycle status) and the server's loggers now use Kotlin Logging (`io.github.oshai:kotlin-logging-jvm` 8.0.6; `slf4j-simple` writes to stderr for the CLIs). Command results printed to stdout are unchanged.
+- Catch-all `try/catch` blocks in the client (`AutoSync`, `Client`, `Installer`) and server (`ProfileService`, `AutoPublicationService`) now use `runCatching`; behavior is unchanged except that `runCatching` also catches `Error`s. `try/finally` blocks and selective catches are kept.
+
 ### Fixed
 - IDE imports no longer fail dependency verification: source, javadoc and Gradle-source archives are trusted in `gradle/verification-metadata.xml`; all jars, poms and modules stay checksum-verified.
+- Native builds no longer fail dependency verification for `graalvm-reachability-metadata-0.11.5-repository.zip`.
+- Release reconciliation only dispatches commits from `d9f75f5` onward (older commits cannot build the current release pipeline) and recognizes any `vX.Y.Z-dev.` tag as released.
+- Docker images upgrade `apt`/`libapt-pkg6.0t64` so the Trivy release scan no longer fails on CVE-2026-109518.
 
 ## [0.3.0] - 2026-11-06
 

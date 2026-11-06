@@ -5,6 +5,7 @@ import de.alexandermora.modsync.protocol.COMPONENT_VERSION
 import de.alexandermora.modsync.protocol.PROTOCOL
 import de.alexandermora.modsync.protocol.versionAtLeast
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -29,6 +30,8 @@ import jakarta.servlet.ServletInputStream
 import jakarta.servlet.http.HttpServletRequestWrapper
 import java.util.concurrent.ConcurrentHashMap
 
+private val logger = KotlinLogging.logger {}
+
 @Configuration
 class SecurityConfiguration {
     @Bean @Order(Ordered.LOWEST_PRECEDENCE) fun chain(http: HttpSecurity, db: JdbcTemplate, @Value($$"${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
@@ -52,7 +55,7 @@ class Guard(private val db: JdbcTemplate, private val maintenance: Boolean): Onc
         org.slf4j.MDC.put("correlationId",correlation)
         try { process(req,res,chain) }
         finally {
-            org.slf4j.LoggerFactory.getLogger(Guard::class.java).info("http method={} status={} correlationId={}",req.method,res.status,correlation)
+            logger.info { "http method=${req.method} status=${res.status} correlationId=$correlation" }
             org.slf4j.MDC.remove("correlationId")
         }
     }

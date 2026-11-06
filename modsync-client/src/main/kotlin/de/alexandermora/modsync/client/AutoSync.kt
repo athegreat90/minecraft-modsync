@@ -177,11 +177,8 @@ class AutoSyncRunner(
         if (published == settings.lastRevision && settings.lastOutcome == SUCCESS && now - settings.lastFullCheckEpoch < FULL_CHECK_INTERVAL.seconds) {
             return AutoOutcome.UpToDate(published) to settings
         }
-        return try {
-            synchronize(gateway.manifest(settings.serverId), now)
-        } catch (error: Exception) {
-            AutoOutcome.Failed(error.javaClass.simpleName) to settings.copy(lastOutcome = FAILED)
-        }
+        return runCatching { synchronize(gateway.manifest(settings.serverId), now) }
+            .getOrElse { AutoOutcome.Failed(it.javaClass.simpleName) to settings.copy(lastOutcome = FAILED) }
     }
 
     /**
@@ -191,7 +188,6 @@ class AutoSyncRunner(
      * @param now Current epoch seconds.
      * @return Outcome and updated settings.
      */
-    @Suppress("TooGenericExceptionCaught") // installation failures of any kind are rolled back and reported, never propagated
     private fun synchronize(manifest: Manifest, now: Long): Pair<AutoOutcome, AutoSettings> {
         installer.validateTarget(manifest)
         val personal = settings.profileId?.let(gateway::personalArtifacts).orEmpty()
@@ -209,11 +205,11 @@ class AutoSyncRunner(
         if (gameRunning.isRunning()) {
             return finish(AutoOutcome.DeferredGameRunning, manifest, ClientActivity.PENDING_GAME_EXIT, now)
         }
-        return try {
+        return runCatching {
             apply(plan)
             runCatching { gateway.reportSync(SyncReport(manifest.serverId, manifest.revision, "SUCCESS")) }
             finish(AutoOutcome.Applied(manifest.revision), manifest, ClientActivity.IDLE, now, applied = manifest.revision)
-        } catch (error: Exception) {
+        }.getOrElse { error ->
             runCatching { gateway.reportSync(SyncReport(manifest.serverId, manifest.revision, "FAILED")) }
             finish(AutoOutcome.Failed(error.javaClass.simpleName), manifest, ClientActivity.SYNC_FAILED, now)
         }

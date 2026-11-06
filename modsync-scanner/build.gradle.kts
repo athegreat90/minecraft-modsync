@@ -1,4 +1,4 @@
-plugins { `java-library` }
+plugins { id("modsync.conventions"); `java-library` }
 dependencies {
     api(project(":modsync-domain"))
     implementation("org.tomlj:tomlj:1.1.1")
