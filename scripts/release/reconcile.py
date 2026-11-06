@@ -2,6 +2,10 @@
 """Reconcile every reachable main commit, rather than just push event head."""
 import datetime as dt, json, os, re, subprocess
 
+# First main commit whose build supports the release pipeline (Dokka, native verification).
+RELEASE_FLOOR = "d9f75f5781262e42efe6b6116dfb935ec3004bfb"
+TAG_PATTERN = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]{14}\.[0-9a-f]{40}")
+
 def run(*args):
     return subprocess.check_output(args, text=True).strip()
 
@@ -18,13 +22,13 @@ def candidates(commits, released, running, attempted, now):
 
 def main():
     repo = os.environ["GITHUB_REPOSITORY"]
-    commits = run("git","rev-list","--reverse","origin/main").splitlines()
+    commits = run("git","rev-list","--reverse",f"{RELEASE_FLOOR}^..origin/main").splitlines()
     pages = json.loads(run("gh","api","--paginate","--slurp",f"repos/{repo}/releases?per_page=100"))
     from state import verify_complete
     released, invalid = set(), {}
     for page in pages:
         for release in page:
-            if release['draft'] or not re.fullmatch(r'v0\.1\.0-dev\.[0-9]{14}\.[0-9a-f]{40}', release['tag_name']):
+            if release['draft'] or not TAG_PATTERN.fullmatch(release['tag_name']):
                 continue
             sha = release['tag_name'].rsplit('.', 1)[-1]
             try:

@@ -1,6 +1,9 @@
 import unittest
-from reconcile import candidates, version
+from reconcile import TAG_PATTERN, candidates, version
 class ReleaseTests(unittest.TestCase):
+    def test_current_and_legacy_tags_are_recognised(self):
+        self.assertTrue(TAG_PATTERN.fullmatch(version("a"*40,0)))
+        self.assertTrue(TAG_PATTERN.fullmatch("v0.1.0-dev.19700101000000."+"a"*40))
     def test_version_stable_and_unique(self):
         self.assertEqual(version("a"*40,0),"v0.3.0-dev.19700101000000."+"a"*40)
         self.assertNotEqual(version("a"*40,0),version("b"*40,0))
