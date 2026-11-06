@@ -37,19 +37,34 @@ jobs:
             build/reports/problems/
             .local/integration/results.json
 
-  # Self-hosted SonarQube is only reachable from a trusted runner inside the private network. It never runs for
-  # pull requests (untrusted code must not reach privileged runners or secrets) and the token comes only from the secret.
+  # SonarQube is only reachable inside the tailnet. The job joins it as an ephemeral, ACL-restricted tag:ci node using
+  # workload identity federation (no long-lived Tailscale secret). It never runs for pull requests (untrusted code must
+  # not obtain OIDC tokens or secrets), and the federated identity only trusts refs/heads/main of this repository.
+  # Traffic to the tailnet IP is plain HTTP but stays inside the WireGuard tunnel; TLS verification is never disabled.
   sonar:
     if: github.event_name != 'pull_request'
     needs: validate
-    runs-on: [self-hosted, sonarqube-access]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'http://100.96.151.13:9000' }}
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
+      - uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+      - name: Verify SonarQube is reachable over Tailscale
+        run: |
+          tailscale status
+          curl --fail --silent --show-error --max-time 20 "$SONAR_HOST_URL/api/system/status"
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '25'}
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: '9.8.2'}
-      - run: gradle --no-daemon check sonar -Dsonar.host.url=https://sonarqube.alexandermora.de -Dsonar.qualitygate.wait=true
+      - run: gradle --no-daemon check sonar "-Dsonar.host.url=$SONAR_HOST_URL" -Dsonar.qualitygate.wait=true

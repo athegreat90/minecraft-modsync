@@ -22,4 +22,4 @@ Repository settings have not been changed by the current sandbox: the connector 
 
 ## Quality gates in validation
 
-Both the per-commit validation and the release validation run `check` (tests, Detekt, Spotless) and `dokkaGenerate`. Spotless checks only changed files; the release job passes `-Pspotless.ratchetFrom=HEAD` because its checkout has no `origin/main` ref. The SonarQube job (`ci.yaml`) needs a self-hosted runner with access to `sonarqube.alexandermora.de` and never runs for pull requests.
+Both the per-commit validation and the release validation run `check` (tests, Detekt, Spotless) and `dokkaGenerate`. Spotless checks only changed files; the release job passes `-Pspotless.ratchetFrom=HEAD` because its checkout has no `origin/main` ref. The SonarQube job (`ci.yaml`) runs on a GitHub-hosted runner that joins the tailnet through the Tailscale GitHub Action (see `docs/development/SONARQUBE.md`) and never runs for pull requests.
