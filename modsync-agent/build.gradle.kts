@@ -17,3 +17,4 @@ graalvmNative {
         }
     }
 }
+dependencies { testImplementation(project(":modsync-test-fixtures")) }

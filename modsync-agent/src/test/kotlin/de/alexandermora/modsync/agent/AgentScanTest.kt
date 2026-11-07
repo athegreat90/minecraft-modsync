@@ -1,8 +1,8 @@
 package de.alexandermora.modsync.agent
 
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpsConfigurator
-import com.sun.net.httpserver.HttpsServer
+import de.alexandermora.modsync.fixtures.TestHttpsServer
+import de.alexandermora.modsync.fixtures.TestReply
+import de.alexandermora.modsync.fixtures.TestRequest
 import de.alexandermora.modsync.protocol.Assignment
 import de.alexandermora.modsync.protocol.Capabilities
 import de.alexandermora.modsync.protocol.Credentials
@@ -19,18 +19,12 @@ import org.junit.jupiter.api.io.TempDir
 import picocli.CommandLine
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
-import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.KeyStore
 import java.time.Instant
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -39,71 +33,28 @@ import kotlin.test.assertTrue
 class AgentScanTest {
     @TempDir
     lateinit var home: Path
-    private lateinit var server: HttpsServer
-    private lateinit var previousContext: SSLContext
+    private lateinit var server: TestHttpsServer
     private lateinit var state: Path
     private lateinit var mods: Path
     private val controlPlane = UUID.randomUUID().toString()
     private val agentId = UUID.randomUUID().toString()
     private val serverId = UUID.randomUUID().toString()
-    private val requests = mutableListOf<String>()
     private var generation = 1L
     private var mapping = "main"
     private val begins = mutableListOf<SnapshotBegin>()
-    private lateinit var endpoint: String
+    private val requests get() = server.requests
 
     /** Starts the HTTPS control plane and prepares one mods directory with a single jar. */
     @BeforeEach
     fun prepare() {
-        val keystore = home.resolve("keystore.p12")
-        val keytool = Path.of(System.getProperty("java.home"), "bin", if (System.getProperty("os.name").startsWith("Windows")) "keytool.exe" else "keytool")
-        val process =
-            ProcessBuilder(
-                keytool.toString(),
-                "-genkeypair",
-                "-alias",
-                "test",
-                "-keyalg",
-                "RSA",
-                "-keysize",
-                "2048",
-                "-dname",
-                "CN=127.0.0.1",
-                "-ext",
-                "san=ip:127.0.0.1,dns:localhost",
-                "-validity",
-                "2",
-                "-storetype",
-                "PKCS12",
-                "-keystore",
-                keystore.toString(),
-                "-storepass",
-                "changeit",
-                "-keypass",
-                "changeit"
-            ).redirectErrorStream(true).start()
-        check(process.waitFor() == 0) { process.inputStream.readAllBytes().toString(Charsets.UTF_8) }
-        val store = KeyStore.getInstance("PKCS12").apply { Files.newInputStream(keystore).use { load(it, "changeit".toCharArray()) } }
-        val keys = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply { init(store, "changeit".toCharArray()) }
-        val trust = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply { init(store) }
-        val context = SSLContext.getInstance("TLS").apply { init(keys.keyManagers, trust.trustManagers, null) }
-        previousContext = SSLContext.getDefault()
-        SSLContext.setDefault(context)
-        server = HttpsServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0)
-        server.httpsConfigurator = HttpsConfigurator(context)
-        server.createContext("/") { handle(it) }
-        server.start()
-        endpoint = "https://127.0.0.1:${server.address.port}"
+        server = TestHttpsServer(home, ::handle)
         state = home.resolve("state")
         mods = Files.createDirectories(home.resolve("mods"))
         jar(mods.resolve("alpha.jar"), "alpha")
     }
 
     @AfterEach
-    fun cleanUp() {
-        server.stop(0)
-        SSLContext.setDefault(previousContext)
-    }
+    fun cleanUp() = server.close()
 
     private fun jar(
         path: Path,
@@ -114,48 +65,37 @@ class AgentScanTest {
         zip.closeEntry()
     }
 
-    private fun reply(
-        exchange: HttpExchange,
-        body: String
-    ) {
-        val bytes = body.toByteArray()
-        exchange.sendResponseHeaders(200, bytes.size.toLong())
-        exchange.responseBody.use { it.write(bytes) }
-    }
-
-    private fun handle(exchange: HttpExchange) {
-        val path = exchange.requestURI.path
-        val body = exchange.requestBody.readAllBytes().toString(Charsets.UTF_8)
-        requests += "${exchange.requestMethod} $path"
-        when {
+    private fun handle(request: TestRequest): TestReply {
+        val (_, path, body) = request
+        return when {
             path == "/api/v1/info" -> {
-                reply(exchange, wire.encodeToString(Capabilities.serializer(), Capabilities(controlPlane, PROTOCOL)))
+                TestReply(body = wire.encodeToString(Capabilities.serializer(), Capabilities(controlPlane, PROTOCOL)))
             }
 
             path == "/api/v1/enroll" -> {
-                reply(exchange, wire.encodeToString(Credentials.serializer(), credentials()))
+                TestReply(body = wire.encodeToString(Credentials.serializer(), credentials()))
             }
 
             path == "/api/v1/agent/credentials/rotate" -> {
-                reply(exchange, wire.encodeToString(Credentials.serializer(), credentials("rotated")))
+                TestReply(body = wire.encodeToString(Credentials.serializer(), credentials("rotated")))
             }
 
             path == "/api/v1/agent/assignments" -> {
-                reply(exchange, wire.encodeToString(ListSerializer(Assignment.serializer()), listOf(Assignment(serverId, agentId, generation, mapping))))
+                TestReply(body = wire.encodeToString(ListSerializer(Assignment.serializer()), listOf(Assignment(serverId, agentId, generation, mapping))))
             }
 
             path == "/api/v1/agent/snapshots" -> {
                 begins += wire.decodeFromString(SnapshotBegin.serializer(), body)
-                reply(exchange, "{}")
+                TestReply(body = "{}")
             }
 
             path.endsWith("/commit") -> {
                 val begin = begins.last()
-                reply(exchange, wire.encodeToString(SnapshotAck.serializer(), SnapshotAck(begin.scanId, begin.sequence, begin.digest, Instant.now().toString())))
+                TestReply(body = wire.encodeToString(SnapshotAck.serializer(), SnapshotAck(begin.scanId, begin.sequence, begin.digest, Instant.now().toString())))
             }
 
             else -> {
-                reply(exchange, "{}")
+                TestReply(body = "{}")
             }
         }
     }
@@ -165,7 +105,10 @@ class AgentScanTest {
     private fun config(
         credentials: Credentials? = credentials(),
         mappings: Map<String, String> = mapOf("main" to mods.toString())
-    ) = secureWrite(state.resolve("config.json"), wire.encodeToString(AgentConfig.serializer(), AgentConfig(endpoint, controlPlane, agentId, credentials, mappings)))
+    ) = secureWrite(
+        state.resolve("config.json"),
+        wire.encodeToString(AgentConfig.serializer(), AgentConfig(server.endpoint, controlPlane, agentId, credentials, mappings))
+    )
 
     private fun cli(vararg args: String): Pair<Int, String> {
         val captured = ByteArrayOutputStream()
@@ -247,11 +190,11 @@ class AgentScanTest {
     /** Setup stores the verified identity and register stores the issued credentials. */
     @Test
     fun setupAndRegister() {
-        assertEquals(0, cli("setup", "--server-url", "$endpoint/", "--trust-server-id", controlPlane).first)
+        assertEquals(0, cli("setup", "--server-url", "${server.endpoint}/", "--trust-server-id", controlPlane).first)
         val tokenFile = Files.writeString(home.resolve("token"), "secret\n")
         assertEquals(0, cli("register", "--enrollment-token-file", tokenFile.toString()).first)
         assertTrue(Files.readString(state.resolve("config.json")).contains("\"token\""))
-        assertEquals(0, cli("setup", "--server-url", endpoint, "--trust-server-id", controlPlane).first)
-        assertEquals(1, cli("setup", "--server-url", endpoint, "--trust-server-id", UUID.randomUUID().toString()).first)
+        assertEquals(0, cli("setup", "--server-url", server.endpoint, "--trust-server-id", controlPlane).first)
+        assertEquals(1, cli("setup", "--server-url", server.endpoint, "--trust-server-id", UUID.randomUUID().toString()).first)
     }
 }
