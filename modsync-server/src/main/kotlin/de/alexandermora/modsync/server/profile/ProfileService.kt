@@ -17,6 +17,14 @@ import org.springframework.transaction.annotation.Transactional
 
 private const val MAX_PROFILE_ARTIFACTS = 200
 
+/**
+ * Stores and validates users' personal client-only profiles.
+ *
+ * @property profiles Profile repository.
+ * @property mods Profile artifact repository.
+ * @property modrinth Modrinth client used to confirm client-only projects.
+ * @property audit Audit log writer.
+ */
 @Service
 class ProfileService(
     private val profiles: PersonalProfileRepository,
@@ -26,9 +34,27 @@ class ProfileService(
 ) {
     private val logger = KotlinLogging.logger {}
 
+    /**
+     * Lists the user's personal profiles.
+     *
+     * @param user Owner UUID.
+     * @return Profiles sorted by name.
+     */
     fun list(user: String): List<PersonalProfile> =
         profiles.findByUserIdOrderByName(user).map { wire.decodeFromString<PersonalProfile>(it.payload) }
 
+    /**
+     * Creates or replaces one of the user's profiles.
+     *
+     * Every artifact must be a Modrinth project confirmed client-only and match its hash, so profiles can never
+     * smuggle server-side mods. The profile row is locked and owned by one user; its artifact rows are rewritten
+     * within the same transaction.
+     *
+     * @param user Owner UUID.
+     * @param id Profile UUID, which must match the id in [requested].
+     * @param requested Profile as submitted, with at most 200 artifacts.
+     * @return The profile as stored, with artifacts resolved from Modrinth.
+     */
     @Transactional fun save(user: String, id: String, requested: PersonalProfile): PersonalProfile {
         require(requested.id == uuid(id) && requested.name.length in 1..200 && requested.artifacts.size <= MAX_PROFILE_ARTIFACTS)
         val existing = profiles.lockById(id)
@@ -44,6 +70,12 @@ class ProfileService(
         return profile
     }
 
+    /**
+     * Resolves every requested artifact against Modrinth and enforces the client-only rule.
+     *
+     * @param profile Profile whose artifacts are verified.
+     * @return Artifacts rebuilt from Modrinth metadata; aborts with 409 on non-client-only projects or hash mismatches.
+     */
     private fun clientOnlyArtifacts(profile: PersonalProfile) =
         runCatching {
             profile.artifacts.map { requested ->

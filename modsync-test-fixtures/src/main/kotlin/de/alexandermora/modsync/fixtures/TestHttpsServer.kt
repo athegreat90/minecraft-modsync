@@ -12,10 +12,21 @@ import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 
-/** Request received by a [TestHttpsServer]. */
+/**
+ * Request received by a [TestHttpsServer].
+ *
+ * @property method HTTP method.
+ * @property path Request path without query.
+ * @property body Request body as UTF-8 text.
+ */
 data class TestRequest(val method: String, val path: String, val body: String)
 
-/** Response of a [TestHttpsServer] handler. */
+/**
+ * Response of a [TestHttpsServer] handler.
+ *
+ * @property status HTTP status code.
+ * @property body Response body; empty sends no content.
+ */
 data class TestReply(val status: Int = 200, val body: String = "")
 
 /**
@@ -23,11 +34,21 @@ data class TestReply(val status: Int = 200, val body: String = "")
  *
  * It installs its trust material as the JVM default [SSLContext] so unmodified HTTP clients connect to it,
  * and restores the previous default on [close]. Requests are recorded as `METHOD path` for assertions.
+ *
+ * @param workDir Directory that receives the generated keystore.
+ * @property handler Produces the reply for each received request.
  */
 class TestHttpsServer(workDir: Path, private val handler: (TestRequest) -> TestReply) : AutoCloseable {
+    /** Default [SSLContext] to restore on close. */
     private val previous: SSLContext = SSLContext.getDefault()
+
+    /** Underlying JDK HTTPS server. */
     private val server: HttpsServer
+
+    /** Recorded requests as `METHOD path`, in arrival order. */
     val requests = mutableListOf<String>()
+
+    /** Base URL of the running server, such as `https://127.0.0.1:port`. */
     val endpoint: String
 
     init {
@@ -71,6 +92,11 @@ class TestHttpsServer(workDir: Path, private val handler: (TestRequest) -> TestR
         endpoint = "https://127.0.0.1:${server.address.port}"
     }
 
+    /**
+     * Records one request and answers it with the handler's reply.
+     *
+     * @param exchange The incoming exchange.
+     */
     private fun serve(exchange: HttpExchange) {
         val body = exchange.requestBody.readAllBytes().toString(Charsets.UTF_8)
         val path = exchange.requestURI.path
@@ -81,6 +107,7 @@ class TestHttpsServer(workDir: Path, private val handler: (TestRequest) -> TestR
         if (bytes.isNotEmpty()) exchange.responseBody.use { it.write(bytes) } else exchange.close()
     }
 
+    /** Stops the server and restores the previous default [SSLContext]. */
     override fun close() {
         server.stop(0)
         SSLContext.setDefault(previous)

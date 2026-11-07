@@ -32,8 +32,26 @@ import java.util.concurrent.ConcurrentHashMap
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Wires the stateless API security chain.
+ *
+ * Role rules: everything below `/api/v1/admin` and the Prometheus endpoint need ADMIN, everything below `/api/v1/agent` needs AGENT, other
+ * `/api/v1` routes need CLIENT or ADMIN, and everything unmatched is denied.
+ */
 @Configuration
 class SecurityConfiguration {
+    /**
+     * Builds the API filter chain.
+     *
+     * Only health, info, login, refresh and enrollment are public. CSRF, CORS and sessions are disabled because
+     * authentication is bearer-token based; [Guard] runs first to resolve the credential and enforce limits.
+     * Ordered last so the dashboard chain gets the first chance to match.
+     *
+     * @param http Security builder.
+     * @param db JDBC access used by [Guard] to look up credentials.
+     * @param maintenance Whether the server rejects all non-read requests with 503.
+     * @return The API chain.
+     */
     @Bean @Order(Ordered.LOWEST_PRECEDENCE) fun chain(http: HttpSecurity, db: JdbcTemplate, @Value($$"${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
         http.csrf { it.disable() }.cors { it.disable() }.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
@@ -47,8 +65,25 @@ class SecurityConfiguration {
         return http.build()
     }
 }
+/**
+ * Front filter of the API chain: correlation id, maintenance mode, rate limiting, protocol checks, bearer authentication and body limits.
+ *
+ * Credentials are looked up by SHA-512 hash and must belong to an unrevoked agent or device. Request bodies
+ * above 2 MiB are rejected with 413 before reaching controllers.
+ *
+ * @property db JDBC access for credential, agent and device lookups.
+ * @property maintenance Whether non-GET/HEAD requests are rejected with 503.
+ */
 class Guard(private val db: JdbcTemplate, private val maintenance: Boolean): OncePerRequestFilter() {
     private val rate = ConcurrentHashMap<String, Pair<Long, Int>>()
+
+    /**
+     * Assigns a correlation id to the request and logs its outcome.
+     *
+     * @param req Incoming request.
+     * @param res Response, which receives the `X-Correlation-ID` header.
+     * @param chain Remaining filter chain.
+     */
     override fun doFilterInternal(req: HttpServletRequest, res: HttpServletResponse, chain: FilterChain) {
         val correlation=UUID.randomUUID().toString()
         res.setHeader("X-Correlation-ID",correlation); req.setAttribute("correlationId",correlation)
@@ -59,6 +94,17 @@ class Guard(private val db: JdbcTemplate, private val maintenance: Boolean): Onc
             org.slf4j.MDC.remove("correlationId")
         }
     }
+    /**
+     * Applies the request checks in order and continues the chain.
+     *
+     * Order: maintenance (503), per-address limit on login/refresh/enroll (429, max 20 per minute), protocol and
+     * version headers (426), bearer authentication, then the 2 MiB body limit (413). The body is buffered so
+     * controllers can still read it.
+     *
+     * @param req Incoming request.
+     * @param res Response used for rejections.
+     * @param chain Remaining filter chain.
+     */
     private fun process(req: HttpServletRequest, res: HttpServletResponse, chain: FilterChain) {
         if (maintenance && req.method !in setOf("GET", "HEAD")) { res.sendError(503); return }
         if (req.requestURI in setOf("/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/enroll")) {

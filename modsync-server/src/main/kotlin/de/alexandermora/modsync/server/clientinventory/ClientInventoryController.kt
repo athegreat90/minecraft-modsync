@@ -8,12 +8,20 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
-/** Receives client inventory reports from authenticated devices. */
+/**
+ * Receives client inventory reports from authenticated devices.
+ *
+ * Requires the CLIENT or ADMIN role.
+ *
+ * @property inventories Service that stores the reports.
+ */
 @RestController
 @RequestMapping("/api/v1/client")
 class ClientInventoryController(private val inventories: ClientInventoryService) {
     /**
      * Stores the reporting instance's verified mod inventory.
+     *
+     * Requires the CLIENT or ADMIN role.
      *
      * @param deviceId Device UUID resolved from the bearer credential.
      * @param report Revisioned inventory report.

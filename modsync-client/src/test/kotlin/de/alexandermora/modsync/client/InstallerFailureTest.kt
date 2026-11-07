@@ -81,6 +81,35 @@ class InstallerFailureTest {
         assertTrue(Files.list(installer.mods).use { it.toList().isEmpty() })
     }
 
+    /** An allowed CDN download is requested with the component User-Agent, verified and installed, using a fake HTTP client. */
+    @Test
+    fun cdnDownloadsAreRequestedVerifiedAndInstalled() {
+        val source = Fixtures.jar(root.resolve("source.jar"), "m")
+        val artifact = download("https://cdn.modrinth.com/data/p/new.jar", Files.size(source)).copy(sha512 = fileHash(source))
+        val http = FakeHttpClient(200, Files.readAllBytes(source))
+        val withFake = Installer(root) { http }
+        withFake.apply(Resolver().plan(manifest(listOf(artifact)), emptyList(), Scanner().scan(withFake.mods), withFake.state().hashes))
+        assertEquals(
+            "Minecraft-ModSync/0.3.2",
+            http.requests
+                .single()
+                .headers()
+                .firstValue("User-Agent")
+                .get()
+        )
+        assertEquals(artifact.sha512, fileHash(withFake.mods.resolve("new.jar")))
+    }
+
+    /** A non-200 CDN answer fails the download and leaves the mods directory untouched. */
+    @Test
+    fun failedCdnDownloadsInstallNothing() {
+        val withFake = Installer(root) { FakeHttpClient(404, ByteArray(0)) }
+        assertFailsWith<IllegalArgumentException> {
+            withFake.apply(Resolver().plan(manifest(listOf(download("https://cdn.modrinth.com/data/p/new.jar"))), emptyList(), Scanner().scan(withFake.mods), withFake.state().hashes))
+        }
+        assertTrue(Files.list(withFake.mods).use { it.toList().isEmpty() })
+    }
+
     /** An interrupted installation must be rolled back before anything else is applied. */
     @Test
     fun incompleteJournalBlocksApply() {

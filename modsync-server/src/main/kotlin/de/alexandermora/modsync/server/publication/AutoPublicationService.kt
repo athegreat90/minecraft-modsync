@@ -31,7 +31,11 @@ fun interface ArtifactResolver {
     fun resolve(sha512: String): Artifact?
 }
 
-/** [ArtifactResolver] backed by Modrinth hash identification. */
+/**
+ * [ArtifactResolver] backed by Modrinth hash identification.
+ *
+ * @property modrinth Modrinth API client.
+ */
 @Component
 class ModrinthArtifactResolver(private val modrinth: Modrinth) : ArtifactResolver {
     /**
@@ -74,7 +78,11 @@ interface ManifestGateway {
     fun publish(actor: String, manifest: Manifest, scanId: String): Manifest
 }
 
-/** [ManifestGateway] delegating to [ManifestService]. */
+/**
+ * [ManifestGateway] delegating to [ManifestService].
+ *
+ * @property manifests Manifest service.
+ */
 @Component
 class ManifestServiceGateway(private val manifests: ManifestService) : ManifestGateway {
     /**
@@ -115,6 +123,11 @@ class ManifestServiceGateway(private val manifests: ManifestService) : ManifestG
  *
  * Publications run on one background thread so that they never block the agent and never race each other.
  * Failures are recorded in the publication history and never propagate to the agent.
+ *
+ * @property inventory Inventory service providing snapshots and approvals.
+ * @property manifests Manifest operations.
+ * @property resolver Hash-based artifact identification.
+ * @property persistence Publication policy and history storage.
  */
 @Service
 class AutoPublicationService(
@@ -138,7 +151,9 @@ class AutoPublicationService(
         }
     }
 
-    /** Stops the background worker on shutdown. */
+    /**
+     * Stops the background worker on shutdown; queued evaluations that have not started are still run to completion.
+     */
     @PreDestroy fun shutdown() {
         executor.shutdown()
     }
@@ -157,6 +172,14 @@ class AutoPublicationService(
         val policy = persistence.policy(serverId) ?: return null
         if (policy == PublicationPolicy.MANUAL) return null
 
+        /**
+         * Records a publication outcome in the history.
+         *
+         * @param name Outcome name.
+         * @param detail Explanation stored with the record.
+         * @param revision Published or unchanged revision, if any.
+         * @return [name], so callers can return it directly.
+         */
         fun outcome(name: String, detail: String, revision: Long? = null): String {
             persistence.record(serverId, scanId, policy, name, revision, detail, SYSTEM_ACTOR)
             return name

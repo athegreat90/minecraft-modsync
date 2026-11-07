@@ -115,4 +115,5 @@ private fun installedCoverage(manifest: Manifest, client: ClientInventoryView): 
     }
 }
 
+/** Classifications whose artifacts every client must install. */
 private val clientRequiredClasses = setOf(Classification.CLIENT_REQUIRED, Classification.BOTH_REQUIRED)

@@ -1,14 +1,9 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='UTF-8'?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:Scanner.kt:Scanner$fun scan: List&lt;ModEntry&gt;</ID>
-    <ID>EmptyElseBlock:Scanner.kt:Scanner$if (n &lt; 0) break</ID>
-    <ID>EmptyElseBlock:Scanner.kt:if (n &lt; 0) break</ID>
-    <ID>ExplicitItLambdaParameter:Scanner.kt:Scanner${ it -&gt; it.filter { p -&gt; p.fileName.toString().endsWith(".jar", true) }.map { it.fileName.toString() }.toList().toSet() }</ID>
-    <ID>MaxLineLength:Scanner.kt:Scanner$require(paths.map { it.fileName.toString() }.toSet() == Files.list(root).use { it -&gt; it.filter { p -&gt; p.fileName.toString().endsWith(".jar", true) }.map { it.fileName.toString() }.toList().toSet() }) { "Directory changed during scan" }</ID>
-    <ID>UndocumentedPublicClass:Scanner.kt:Scanner</ID>
-    <ID>UndocumentedPublicFunction:Scanner.kt:Scanner$fun scan: List&lt;ModEntry&gt;</ID>
-    <ID>UndocumentedPublicFunction:Scanner.kt:fun fileHash: String</ID>
+    <ID>CyclomaticComplexMethod:Scanner.kt:Scanner$fun scan: List&lt;ModEntry></ID>
+    <ID>ExplicitItLambdaParameter:Scanner.kt:Scanner${ it -> it .filter { p -> p.fileName.toString().endsWith(".jar", true) } .map { it.fileName.toString() } .toList() .toSet() }</ID>
+    <ID>LongMethod:Scanner.kt:Scanner$fun scan: List&lt;ModEntry></ID>
   </CurrentIssues>
 </SmellBaseline>
