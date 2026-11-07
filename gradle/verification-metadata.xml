@@ -7,6 +7,7 @@
          <trust file=".*-javadoc[.]jar" regex="true"/>
          <trust file=".*-sources[.]jar" regex="true"/>
          <trust file=".*-src[.]zip" regex="true"/>
+         <trust group="org.apache.groovy" version="4.0.33"/>
       </trusted-artifacts>
    </configuration>
    <components>
