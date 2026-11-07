@@ -197,4 +197,20 @@ class AgentScanTest {
         assertEquals(0, cli("setup", "--server-url", server.endpoint, "--trust-server-id", controlPlane).first)
         assertEquals(1, cli("setup", "--server-url", server.endpoint, "--trust-server-id", UUID.randomUUID().toString()).first)
     }
+
+    /** The long-running loop survives failed passes, backs off and ends with the interrupt that stops it. */
+    @Test
+    fun loopRetriesAndStopsOnInterrupt() {
+        config()
+        server.close()
+        val agent = Agent().also { it.stateDir = state }
+        var failure: Throwable? = null
+        val worker = Thread { runCatching { agent.loop(30) }.onFailure { failure = it } }
+        worker.start()
+        Thread.sleep(1500)
+        worker.interrupt()
+        worker.join(10_000)
+        assertFalse(worker.isAlive)
+        assertTrue(failure is InterruptedException)
+    }
 }

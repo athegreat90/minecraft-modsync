@@ -62,7 +62,7 @@ class TestHttpsServer(workDir: Path, private val handler: (TestRequest) -> TestR
         val store = KeyStore.getInstance("PKCS12").apply { Files.newInputStream(keystore).use { load(it, "changeit".toCharArray()) } }
         val keys = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply { init(store, "changeit".toCharArray()) }
         val trust = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply { init(store) }
-        val context = SSLContext.getInstance("TLS").apply { init(keys.keyManagers, trust.trustManagers, null) }
+        val context = SSLContext.getInstance("TLSv1.3").apply { init(keys.keyManagers, trust.trustManagers, null) }
         SSLContext.setDefault(context)
         server = HttpsServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0)
         server.httpsConfigurator = HttpsConfigurator(context)
