@@ -4,17 +4,5 @@
   <CurrentIssues>
     <ID>MaxLineLength:Agent.kt:Agent$save(AgentConfig(endpoint.trimEnd('/'), capabilities.controlPlaneId, old?.agentId ?: UUID.randomUUID().toString(), old?.takeIf { it.controlPlaneId == capabilities.controlPlaneId }?.credentials, old?.mappings ?: emptyMap()))</ID>
     <ID>TooGenericExceptionCaught:Agent.kt:Agent$e: Exception</ID>
-    <ID>UndocumentedPublicClass:Agent.kt:Agent : Runnable</ID>
-    <ID>UndocumentedPublicClass:Agent.kt:AgentConfig</ID>
-    <ID>UndocumentedPublicClass:Agent.kt:AgentProgress</ID>
-    <ID>UndocumentedPublicClass:Agent.kt:PendingInventory</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name = "doctor") fun doctor</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name = "map") fun map</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name = "register") fun register</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name = "run") fun loop</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name = "scan") fun scan</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name = "setup") fun setup</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:Agent$@Command(name = "status") fun status</ID>
-    <ID>UndocumentedPublicFunction:Agent.kt:fun main</ID>
   </CurrentIssues>
 </SmellBaseline>

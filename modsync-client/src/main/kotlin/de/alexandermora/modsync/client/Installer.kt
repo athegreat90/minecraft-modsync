@@ -20,20 +20,80 @@ import java.util.UUID
 import java.util.zip.ZipFile
 import java.util.zip.CRC32
 
+/**
+ * Explicit game/loader target of an instance, stored in `.modsync/instance.json`.
+ *
+ * @property minecraftVersion Minecraft version.
+ * @property loader Mod loader name.
+ * @property loaderVersion Optional pinned loader version.
+ */
 @Serializable data class InstanceTarget(val minecraftVersion: String, val loader: String, val loaderVersion: String? = null)
+/**
+ * Ownership record of the files this tool installed, kept separate from verified hashes.
+ *
+ * @property hashes SHA-512 hashes of files the tool owns, keyed by file name.
+ * @property manifest Last applied manifest, or null before the first synchronization.
+ * @property verifiedHashes SHA-512 hashes expected on disk after the last apply, keyed by file name.
+ */
 @Serializable data class ManagedState(val hashes: Map<String, String> = emptyMap(), val manifest: Manifest? = null, val verifiedHashes: Map<String, String> = hashes)
+/**
+ * One file change recorded in the install journal.
+ *
+ * @property fileName Mod file name inside `mods`.
+ * @property before SHA-512 before the change, or null when the file did not exist.
+ * @property after SHA-512 after the change, or null when the file is removed.
+ */
 @Serializable data class JournalEntry(val fileName: String, val before: String?, val after: String?)
+/**
+ * Journal that lets an interrupted or failed apply be rolled back from its backups.
+ *
+ * @property id Session UUID naming the backup directory.
+ * @property entries Planned file changes.
+ * @property previous Managed state to restore on rollback.
+ * @property complete True once the apply finished and was verified.
+ */
 @Serializable data class InstallJournal(val id: String, val entries: List<JournalEntry>, val previous: ManagedState, val complete: Boolean = false)
-class Installer(instance: Path) {
+/**
+ * Applies sync plans to one instance directory atomically, with backups, a journal and rollback.
+ *
+ * All operations stay inside the real instance path, symlinks are refused, JARs are never executed
+ * or extracted, and unmanaged player files are never deleted.
+ *
+ * @param instance Game directory of the instance; resolved to its real path.
+ * @param newHttp Creates the HTTP client used for each download; it must not follow redirects. Replaceable so tests need no network.
+ */
+class Installer(
+    instance: Path,
+    private val newHttp: () -> HttpClient = { HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).followRedirects(HttpClient.Redirect.NEVER).build() }
+) {
     private val root = instance.toRealPath().also { require(Files.isDirectory(it) && !Files.isSymbolicLink(instance)) }
+    /** Managed `mods` directory of the instance. */
     val mods: Path = root.resolve("mods")
     private val stateDir = root.resolve(".modsync")
     private val journalPath = stateDir.resolve("journal.json")
     init { directory(mods); directory(stateDir) }
+    /**
+     * Creates a directory that must not be a symlink and must stay inside the instance.
+     *
+     * @param path Directory to create.
+     */
     private fun directory(path: Path) {
         require(!Files.isSymbolicLink(path)); Files.createDirectories(path); require(path.toRealPath().startsWith(root))
     }
+    /**
+     * Resolves a mod file name inside `mods`, refusing unsafe names and symlinks.
+     *
+     * @param name File name to resolve.
+     * @return Path of the file inside `mods`.
+     */
     private fun path(name: String): Path { require(safeFileName(name)); return mods.resolve(name).also { require(!Files.isSymbolicLink(it)) } }
+/**
+ * Records the game/loader target of the instance under the instance lock, written atomically.
+ *
+ * The target is never inferred; later planning stops when it differs from the manifest.
+ *
+ * @param target Explicit Minecraft version, loader and optional loader version.
+ */
     fun configureTarget(target: InstanceTarget) = locked {
         require(target.minecraftVersion.isNotBlank() && target.loader.isNotBlank())
         secureWrite(stateDir.resolve("instance.json"),wire.encodeToString(target))
@@ -47,11 +107,32 @@ class Installer(instance: Path) {
         val p=stateDir.resolve("instance.json"); require(!Files.isSymbolicLink(p))
         return wire.decodeFromString<InstanceTarget>(Files.readString(p))
     }
+/**
+ * Requires the configured instance target to equal the manifest game/loader (and loader version when the manifest pins one).
+ *
+ * @param manifest Manifest whose game/loader the instance must match.
+ * @throws IllegalArgumentException when the versions do not match.
+ */
     fun validateTarget(manifest: Manifest) {
         val target=target()
         require(target.minecraftVersion == manifest.minecraftVersion && target.loader == manifest.loader && (manifest.loaderVersion == null || target.loaderVersion == manifest.loaderVersion)) { "Configured instance game/loader versions do not match manifest" }
     }
+/**
+ * Reads the managed ownership state (hashes of files this tool installed and the last applied manifest).
+ *
+ * Refuses a symlinked state file. Ownership is kept separate from verified hashes.
+ *
+ * @return The recorded state, or an empty state when nothing was synchronized yet.
+ */
     fun state(): ManagedState { val p=stateDir.resolve("managed.json"); require(!Files.isSymbolicLink(p)); return if (Files.exists(p)) wire.decodeFromString(Files.readString(p)) else ManagedState() }
+/**
+ * Runs an action while holding the exclusive, non-blocking instance lock.
+ *
+ * Refuses a symlinked lock file and fails fast when another process holds the lock.
+ *
+ * @param action Action to run while the lock is held.
+ * @return The result of the action.
+ */
     fun <T> locked(action: () -> T): T {
         val p=stateDir.resolve("instance.lock"); require(!Files.isSymbolicLink(p))
         return FileChannel.open(p, CREATE, WRITE, NOFOLLOW_LINKS).use { channel ->
@@ -59,6 +140,16 @@ class Installer(instance: Path) {
             lock.use { action() }
         }
     }
+/**
+ * Applies a previously generated plan to the instance atomically, rolling back on any failure.
+ *
+ * Under the instance lock this re-scans the local inventory, re-derives the plan and requires it to match,
+ * downloads and validates every artifact into a session directory (JARs are only hashed and inspected as archives, never executed),
+ * backs up replaced files with hash checks, writes the journal, then moves files into place atomically
+ * and verifies final hashes before marking the journal complete. Blocked plans and interrupted installations are refused.
+ *
+ * @param plan Plan produced by the resolver for the current manifest and local inventory.
+ */
     fun apply(plan: SyncPlan) = locked {
         require(!plan.blocked) { "Plan contains conflicts or manual actions" }
         validateTarget(plan.manifest)
@@ -94,7 +185,18 @@ class Installer(instance: Path) {
             secureWrite(journalPath, wire.encodeToString(journal.copy(complete=true)))
         }.onFailure { rollbackLocked() }.getOrThrow()
     }
+/**
+ * Restores the pre-apply state from the journal and its verified backups under the instance lock.
+ *
+ * Refuses to overwrite files modified after the interrupted apply.
+ */
     fun rollback() = locked { rollbackLocked() }
+    /**
+     * Restores the pre-apply state from the journal; the caller must hold the instance lock.
+     *
+     * Validates every target and backup hash before changing any file, never overwrites a later local
+     * edit, and restores files with atomic moves.
+     */
     private fun rollbackLocked() {
         require(!Files.isSymbolicLink(journalPath)); val journal=wire.decodeFromString<InstallJournal>(Files.readString(journalPath)); uuid(journal.id)
         val backup=stateDir.resolve(journal.id).resolve("backup"); require(!Files.isSymbolicLink(backup) && !Files.isSymbolicLink(backup.parent))
@@ -116,13 +218,27 @@ class Installer(instance: Path) {
         }
         secureWrite(stateDir.resolve("managed.json"), wire.encodeToString(journal.previous)); Files.delete(journalPath)
     }
+/**
+ * Checks that every recorded managed file still exists with its verified hash and that the target still matches the recorded manifest.
+ *
+ * @return True when all files match; offline, so it does not prove the manifest is current.
+ */
     fun verify(): Boolean = locked { val state=state(); require(state.manifest != null) { "No recorded synchronization" }; validateTarget(state.manifest); state.verifiedHashes.all { (name, hash) -> Files.exists(path(name), NOFOLLOW_LINKS) && fileHash(path(name)) == hash } }
+    /**
+     * Downloads an artifact from the official Modrinth CDN into a new file and validates it.
+     *
+     * Accepts only HTTPS without redirects, enforces the declared size, and checks the SHA-512 and
+     * archive integrity; the downloaded JAR is never executed.
+     *
+     * @param artifact Artifact with its URL, size and expected SHA-512.
+     * @param target File to create; it must not exist.
+     */
     private fun download(artifact: Artifact, target: Path) {
         val uri=URI(artifact.url ?: error("Manual artifact required"))
         require(uri.scheme == "https" && uri.host == "cdn.modrinth.com" && uri.userInfo == null && uri.port in setOf(-1,443) && uri.path.startsWith("/data/")) { "Download must use official HTTPS Modrinth CDN" }
         require(artifact.size in 1..536870912 && validHash(artifact.sha512))
-        val client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).followRedirects(HttpClient.Redirect.NEVER).build()
-        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.3.1").build(), HttpResponse.BodyHandlers.ofInputStream())
+        val client=newHttp()
+        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.3.2").build(), HttpResponse.BodyHandlers.ofInputStream())
         response.body().use { input ->
             require(response.statusCode() == 200) { "Download failed: HTTP ${response.statusCode()}" }
             Files.newOutputStream(target, CREATE_NEW, WRITE).use { output ->
@@ -135,6 +251,14 @@ class Installer(instance: Path) {
         validateArchive(target)
     }
 }
+/**
+ * Checks that a downloaded file is an intact ZIP/JAR without extracting or executing it.
+ *
+ * Bounds the entry count and expanded size, and compares each entry size and CRC-32 against its header.
+ *
+ * @param path ZIP/JAR file to check.
+ * @throws IllegalArgumentException when a limit is exceeded or integrity fails.
+ */
 fun validateArchive(path: Path) {
     ZipFile(path.toFile()).use { zip ->
         require(zip.size() <= 100000); var expanded=0L

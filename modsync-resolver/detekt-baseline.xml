@@ -1,19 +1,15 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='UTF-8'?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:Resolver.kt:Resolver$fun plan: SyncPlan</ID>
-    <ID>MaxLineLength:Resolver.kt:Resolver$else -&gt; operations += PlanOperation(if (existing == null) OperationKind.INSTALL else OperationKind.UPDATE, artifact.fileName, "Required by selected manifest or personal profile", artifact)</ID>
-    <ID>MaxLineLength:Resolver.kt:Resolver$existing != null &amp;&amp; (managed[existing.fileName] != existing.sha512 || existing.fileName != artifact.fileName) -&gt; operations += PlanOperation(OperationKind.CONFLICT, artifact.fileName, "Unmanaged, modified, or case-colliding file would be overwritten")</ID>
-    <ID>MaxLineLength:Resolver.kt:Resolver$if</ID>
+    <ID>MaxLineLength:Resolver.kt:Resolver$else -> operations += PlanOperation(if (existing == null) OperationKind.INSTALL else OperationKind.UPDATE, artifact.fileName, "Required by selected manifest or personal profile", artifact)</ID>
+    <ID>MaxLineLength:Resolver.kt:Resolver$existing != null &amp;&amp; (managed[existing.fileName] != existing.sha512 || existing.fileName != artifact.fileName) -> operations += PlanOperation(OperationKind.CONFLICT, artifact.fileName, "Unmanaged, modified, or case-colliding file would be overwritten")</ID>
     <ID>MaxLineLength:Resolver.kt:Resolver$if (!safeFileName(artifact.fileName) || !validHash(artifact.sha512) || artifact.size &lt; 0) operations += PlanOperation(OperationKind.CONFLICT, artifact.fileName, "Invalid artifact metadata")</ID>
     <ID>MaxLineLength:Resolver.kt:Resolver$if (dependency.kind == DependencyKind.REQUIRED &amp;&amp; !matches) operations += PlanOperation(OperationKind.CONFLICT, artifact.fileName, "Missing required dependency ${dependency.projectId}; resolve before download")</ID>
     <ID>MaxLineLength:Resolver.kt:Resolver$if (manifest.minecraftVersion !in artifact.minecraftVersions || manifest.loader !in artifact.loaders) operations += PlanOperation(OperationKind.CONFLICT, artifact.fileName, "Minecraft or loader incompatibility")</ID>
     <ID>MaxLineLength:Resolver.kt:Resolver$personal.filter { it.classification != Classification.CLIENT_ONLY }.forEach { operations += PlanOperation(OperationKind.CONFLICT, it.fileName, "Personal artifacts require approved client-only classification") }</ID>
-    <ID>MaxLineLength:Resolver.kt:Resolver$selected.groupBy { it.fileName.lowercase() }.values.filter { it.size &gt; 1 }.forEach { operations += PlanOperation(OperationKind.CONFLICT, it.first().fileName, "Multiple artifacts target the same filename") }</ID>
     <ID>MaxLineLength:Resolver.kt:Resolver$val matches = (found != null &amp;&amp; (dependency.versionId == null || dependency.versionId == found.versionId)) || embedded[dependency.projectId].orEmpty().any { dependency.versionId == null || dependency.versionId == it.versionId }</ID>
     <ID>MaxLineLength:Resolver.kt:Resolver$val server = manifest.artifacts.filter { it.classification in setOf(Classification.CLIENT_REQUIRED, Classification.BOTH_REQUIRED) || (includeOptional &amp;&amp; it.classification == Classification.CLIENT_OPTIONAL) }</ID>
-    <ID>UndocumentedPublicClass:Resolver.kt:Resolver</ID>
-    <ID>UndocumentedPublicFunction:Resolver.kt:Resolver$fun plan: SyncPlan</ID>
   </CurrentIssues>
 </SmellBaseline>

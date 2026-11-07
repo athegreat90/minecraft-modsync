@@ -16,16 +16,25 @@ import org.springframework.web.bind.annotation.RestController
 
 private const val HISTORY_LIMIT = 100
 
-/** Administrator endpoints for publication policy and history. */
+/**
+ * Administrator endpoints for publication policy and history.
+ *
+ * Requires the ADMIN role.
+ *
+ * @property persistence Policy and history storage.
+ * @property audit Audit log writer.
+ */
 @RestController
 @RequestMapping("/api/v1/admin")
 class PublicationController(private val persistence: PublicationPersistence, private val audit: AuditService) {
     /**
      * Sets the publication policy of a server.
      *
-     * @param id Server UUID.
+     * Requires the ADMIN role; the change is audited.
+     *
+     * @param id Server UUID (path).
      * @param request Requested policy.
-     * @return True when applied.
+     * @return True when applied; 404 when the server does not exist.
      */
     @PutMapping("/servers/{id}/publication-policy")
     fun setPolicy(
@@ -41,7 +50,9 @@ class PublicationController(private val persistence: PublicationPersistence, pri
     /**
      * Lists recent publication attempts of a server.
      *
-     * @param id Server UUID.
+     * Requires the ADMIN role.
+     *
+     * @param id Server UUID (path).
      * @return Newest-first history.
      */
     @GetMapping("/servers/{id}/publications")

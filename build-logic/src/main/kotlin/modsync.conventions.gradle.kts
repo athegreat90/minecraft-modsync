@@ -35,6 +35,8 @@ sonar {
         property("sonar.sources", "src/main/kotlin")
         property("sonar.java.binaries", "build/classes/kotlin/main")
         if (file("src/test/kotlin").isDirectory) property("sonar.tests", "src/test/kotlin")
+        // Test support code is exercised by other modules' tests and has no tests of its own.
+        if (project.name == "modsync-test-fixtures") property("sonar.coverage.exclusions", "**/*")
     }
 }
 kotlin {

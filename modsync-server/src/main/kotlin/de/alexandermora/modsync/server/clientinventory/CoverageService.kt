@@ -28,7 +28,11 @@ fun interface LatestManifestSource {
     fun latest(serverId: String): Manifest
 }
 
-/** [LatestManifestSource] backed by the manifest service. */
+/**
+ * [LatestManifestSource] backed by the manifest service.
+ *
+ * @property manifests Manifest service.
+ */
 @Component
 class ManifestServiceSource(private val manifests: ManifestService) : LatestManifestSource {
     /**
@@ -40,7 +44,12 @@ class ManifestServiceSource(private val manifests: ManifestService) : LatestMani
     override fun latest(serverId: String): Manifest = manifests.manifest(serverId, null)
 }
 
-/** Computes which client instances satisfy the latest published manifest of a server. */
+/**
+ * Computes which client instances satisfy the latest published manifest of a server.
+ *
+ * @property persistence Inventory persistence.
+ * @property manifests Source of the latest manifest.
+ */
 @Service
 class CoverageService(
     private val persistence: ClientInventoryPersistence,

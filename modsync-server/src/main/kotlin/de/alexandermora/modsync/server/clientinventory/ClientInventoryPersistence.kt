@@ -8,7 +8,17 @@ import org.springframework.stereotype.Repository
 import java.sql.Timestamp
 import java.time.Instant
 
-/** Latest stored metadata of a client instance. */
+/**
+ * Latest stored metadata of a client instance.
+ *
+ * @property instanceId Instance UUID.
+ * @property name Instance display name.
+ * @property minecraftVersion Reported Minecraft version.
+ * @property loader Reported loader name.
+ * @property activity Reported client activity.
+ * @property appliedRevision Manifest revision applied by the instance, or null.
+ * @property verifiedAt Server time at which the inventory was accepted.
+ */
 data class StoredInstance(
     val instanceId: String,
     val name: String,
@@ -19,7 +29,11 @@ data class StoredInstance(
     val verifiedAt: Instant
 )
 
-/** Plain JDBC persistence for registered client instances and their verified mod inventories. */
+/**
+ * Plain JDBC persistence for registered client instances and their verified mod inventories.
+ *
+ * @property db JDBC access.
+ */
 @Repository
 class ClientInventoryPersistence(private val db: JdbcTemplate) {
     /**

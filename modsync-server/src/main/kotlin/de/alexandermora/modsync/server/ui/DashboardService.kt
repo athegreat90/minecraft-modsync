@@ -17,16 +17,46 @@ import org.springframework.stereotype.Service
 private const val HISTORY_LIMIT = 20
 private const val SHORT_HASH = 12
 
-/** One row of the server overview. */
+/**
+ * One row of the server overview.
+ *
+ * @property info Server summary.
+ * @property policy Publication policy in force.
+ */
 data class ServerRow(val info: ServerInfo, val policy: PublicationPolicy)
 
-/** One scanned server mod with its approval state. */
+/**
+ * One scanned server mod with its approval state.
+ *
+ * @property fileName Scanned file name.
+ * @property sha512 Full artifact hash.
+ * @property shortHash Abbreviated hash for display.
+ * @property classification Approved classification name, or null when unreviewed.
+ */
 data class EntryRow(val fileName: String, val sha512: String, val shortHash: String, val classification: String?)
 
-/** One client-relevant artifact of the latest manifest. */
+/**
+ * One client-relevant artifact of the latest manifest.
+ *
+ * @property fileName Artifact file name.
+ * @property projectId Modrinth project id.
+ * @property versionId Modrinth version id.
+ * @property classification Artifact classification.
+ */
 data class ManifestRow(val fileName: String, val projectId: String, val versionId: String, val classification: Classification)
 
-/** Everything shown on a server page. */
+/**
+ * Everything shown on a server page.
+ *
+ * @property info Server summary.
+ * @property policy Publication policy in force.
+ * @property entries Scanned mods with approval state.
+ * @property unreviewed Number of entries without an approved classification.
+ * @property manifestRevision Latest published revision, or null.
+ * @property manifest Artifacts of the latest manifest.
+ * @property coverage Client coverage, or null without a manifest.
+ * @property history Recent publication attempts.
+ */
 data class ServerPage(
     val info: ServerInfo,
     val policy: PublicationPolicy,
@@ -38,7 +68,14 @@ data class ServerPage(
     val history: List<PublicationRecord>
 )
 
-/** Assembles dashboard view models from persisted data only. */
+/**
+ * Assembles dashboard view models from persisted data only.
+ *
+ * @property inventory Inventory service.
+ * @property manifests Manifest operations.
+ * @property coverage Coverage computation.
+ * @property persistence Publication policy and history storage.
+ */
 @Service
 class DashboardService(
     private val inventory: InventoryService,

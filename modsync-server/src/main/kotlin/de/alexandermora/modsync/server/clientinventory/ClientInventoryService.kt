@@ -16,7 +16,12 @@ private val PLATFORM_TOKEN = Regex("[A-Za-z0-9._+-]{1,80}")
 private const val MAX_MODS = 2000
 private const val MAX_ID_LENGTH = 128
 
-/** Accepts authenticated, revisioned and idempotent client inventory reports. */
+/**
+ * Accepts authenticated, revisioned and idempotent client inventory reports.
+ *
+ * @property persistence Inventory persistence.
+ * @property audit Audit log writer.
+ */
 @Service
 class ClientInventoryService(
     private val persistence: ClientInventoryPersistence,

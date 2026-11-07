@@ -38,7 +38,11 @@ fun isDashboardRequest(request: HttpServletRequest): Boolean {
     return path == "/login" || path == "/logout" || path == "/ui" || path.startsWith("/ui/")
 }
 
-/** Loads accounts for the dashboard login; the authentication name is the user id, matching API audit actors. */
+/**
+ * Loads accounts for the dashboard login; the authentication name is the user id, matching API audit actors.
+ *
+ * @property users Account repository.
+ */
 class DashboardUserDetailsService(private val users: UserRepository) : UserDetailsService {
     /**
      * Loads an account by username.
@@ -86,7 +90,11 @@ class LoginThrottleFilter : OncePerRequestFilter() {
     }
 }
 
-/** Session-based, CSRF-protected security for the administration dashboard; the stateless API chain is unaffected. */
+/**
+ * Session-based, CSRF-protected security for the administration dashboard.
+ *
+ * The stateless API chain is unaffected; this configuration only wires [dashboardChain].
+ */
 @Configuration
 class DashboardSecurityConfiguration {
     /**

@@ -1,8 +1,7 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='UTF-8'?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>LoopWithTooManyJumpStatements:Interactive.kt:while</ID>
-    <ID>UndocumentedPublicFunction:Interactive.kt:fun main</ID>
   </CurrentIssues>
 </SmellBaseline>

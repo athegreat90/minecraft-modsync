@@ -7,7 +7,11 @@ import org.springframework.stereotype.Repository
 import java.sql.Timestamp
 import java.time.Instant
 
-/** Plain JDBC persistence of per-server publication policy and publication history. */
+/**
+ * Plain JDBC persistence of per-server publication policy and publication history.
+ *
+ * @property db JDBC access.
+ */
 @Repository
 class PublicationPersistence(private val db: JdbcTemplate) {
     /**

@@ -6,12 +6,20 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
-/** Administrator view of server/client mod coverage. */
+/**
+ * Administrator view of server/client mod coverage.
+ *
+ * Requires the ADMIN role.
+ *
+ * @property coverage Service computing the coverage.
+ */
 @RestController
 @RequestMapping("/api/v1/admin")
 class CoverageController(private val coverage: CoverageService) {
     /**
      * Returns the coverage matrix of one server.
+     *
+     * Requires the ADMIN role.
      *
      * @param id Server UUID.
      * @return Per-instance coverage against the latest published manifest.

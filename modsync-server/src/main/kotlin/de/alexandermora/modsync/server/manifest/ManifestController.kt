@@ -14,18 +14,75 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
+/**
+ * REST endpoints for manifest retrieval, preview, publication and synchronization reports.
+ *
+ * @property manifests Manifest service.
+ */
 @RestController
 @RequestMapping("/api/v1")
 class ManifestController(private val manifests: ManifestService) {
-    @GetMapping("/servers/{id}/manifest") fun manifest(@PathVariable id: String, @RequestParam(required = false) revision: Long?): Manifest =
+    /**
+     * Returns a published manifest of a server.
+     *
+     * Requires the CLIENT or ADMIN role.
+     *
+     * @param id Server UUID (path).
+     * @param revision Revision number (query); the latest one when omitted.
+     * @return The manifest; 404 when the server or revision does not exist.
+     */
+    @GetMapping("/servers/{id}/manifest")
+    fun manifest(
+        @PathVariable id: String,
+        @RequestParam(required = false) revision: Long?
+    ): Manifest =
         manifests.manifest(id, revision)
 
-    @PostMapping("/admin/servers/{id}/preview") fun preview(@PathVariable id: String, @RequestBody request: PublishRequest): Manifest =
+    /**
+     * Builds and validates the next manifest without storing it.
+     *
+     * Requires the ADMIN role.
+     *
+     * @param id Server UUID (path).
+     * @param request Scan id and artifact selection to publish.
+     * @return The candidate manifest; 409 when approvals, pins or dependencies are invalid.
+     */
+    @PostMapping("/admin/servers/{id}/preview")
+    fun preview(
+        @PathVariable id: String,
+        @RequestBody request: PublishRequest
+    ): Manifest =
         manifests.preview(id, request)
 
-    @PostMapping("/admin/servers/{id}/publish") fun publish(@PathVariable id: String, @RequestBody request: PublishRequest): Manifest =
+    /**
+     * Publishes the next immutable manifest revision.
+     *
+     * Requires the ADMIN role. The preview is recomputed and rejected when the policy, snapshot or revision changed.
+     *
+     * @param id Server UUID (path).
+     * @param request Scan id and artifact selection to publish.
+     * @return The published manifest.
+     */
+    @PostMapping("/admin/servers/{id}/publish")
+    fun publish(
+        @PathVariable id: String,
+        @RequestBody request: PublishRequest
+    ): Manifest =
         manifests.publish(actor(), manifests.preview(id, request), request.scanId)
 
-    @PostMapping("/sync/reports") fun report(@RequestAttribute("deviceId") deviceId: String, @RequestBody report: SyncReport): Boolean =
+    /**
+     * Records the outcome of applying a manifest revision on a client.
+     *
+     * Requires the CLIENT or ADMIN role.
+     *
+     * @param deviceId Device UUID resolved from the bearer credential.
+     * @param report Server, revision and status (`SUCCESS`, `FAILED` or `ROLLED_BACK`).
+     * @return Always `true`; 404 for an unknown revision.
+     */
+    @PostMapping("/sync/reports")
+    fun report(
+        @RequestAttribute("deviceId") deviceId: String,
+        @RequestBody report: SyncReport
+    ): Boolean =
         acknowledged { manifests.report(deviceId, report) }
 }

@@ -22,32 +22,89 @@ private val logger =
         KotlinLogging.logger {}
     }
 
+/**
+ * Persistent agent configuration stored in the state directory with owner-only permissions.
+ *
+ * @property endpoint Base HTTPS URL of the server, without a trailing slash.
+ * @property controlPlaneId Control-plane UUID that was explicitly trusted during setup.
+ * @property agentId Stable agent UUID presented at enrollment.
+ * @property credentials Issued agent credentials, or null before enrollment.
+ * @property mappings Local `mods` directory real paths keyed by server-assigned alias.
+ */
 @Serializable data class AgentConfig(val endpoint: String, val controlPlaneId: String, val agentId: String, val credentials: Credentials? = null, val mappings: Map<String, String> = emptyMap())
 
+/**
+ * Snapshot persisted before delivery so a failed upload is retried with the identical inventory.
+ *
+ * @property begin Snapshot header sent when opening the upload.
+ * @property entries Scanned mod entries delivered one per batch.
+ */
 @Serializable data class PendingInventory(val begin: SnapshotBegin, val entries: List<ModEntry>)
 
+/**
+ * Last server-acknowledged snapshot of one assignment, used to skip unchanged inventories.
+ *
+ * @property generation Assignment generation the snapshot belongs to.
+ * @property sequence Acknowledged snapshot sequence number.
+ * @property digest Inventory digest the server acknowledged.
+ * @property acknowledgedAt ISO-8601 time the server committed the snapshot.
+ */
 @Serializable data class AgentProgress(val generation: Long, val sequence: Long, val digest: String, val acknowledgedAt: String)
 
+/**
+ * Picocli root command of the outbound-only agent; its subcommands are the annotated member functions.
+ *
+ * The agent only reads the local `mods` directories (never executing or extracting JARs, refusing
+ * symlinks) and only makes outbound HTTPS calls to the server.
+ */
 @Command(name = "modsync-agent", mixinStandardHelpOptions = true, description = ["Outbound-only Minecraft inventory scanner"])
 class Agent : Runnable {
+    /** Directory holding configuration, pending snapshots, progress files and the scan lock. */
     @Option(names = ["--state-dir"], defaultValue = $$"${env:MODSYNC_STATE_DIR:-.modsync-agent}")
     lateinit var stateDir: Path
+
+    /** Location of the agent configuration file inside [stateDir]. */
     private val configFile get() = stateDir.resolve("config.json")
 
+    /**
+     * Reads the persisted agent configuration.
+     *
+     * @return The decoded [AgentConfig].
+     */
     private fun config() = wire.decodeFromString<AgentConfig>(Files.readString(configFile))
 
+    /**
+     * Writes the agent configuration atomically with owner-only permissions.
+     *
+     * @param config Configuration to persist.
+     */
     private fun save(config: AgentConfig) = secureWrite(configFile, wire.encodeToString(config))
 
+    /**
+     * Builds an authenticated API client after re-verifying the pinned control-plane identity.
+     *
+     * @param config Agent configuration that must contain credentials.
+     * @return Authenticated [Api] client.
+     */
     private fun api(config: AgentConfig): Api {
         val api = Api(config.endpoint, config.credentials?.token ?: error("Agent is not registered"), "agent")
         require(Api(config.endpoint, component = "agent").capabilities().controlPlaneId == config.controlPlaneId) { "Control-plane identity changed; verify before setup" }
         return api
     }
 
+    /** Prints the usage help when no subcommand is given. */
     override fun run() {
         CommandLine(this).usage(System.out)
     }
 
+    /**
+     * Configures the endpoint after the server identity was explicitly trusted.
+     *
+     * An existing agent identity and mappings are kept; credentials are kept only when the control-plane identity is unchanged.
+     *
+     * @param endpoint Base HTTPS URL of the server.
+     * @param trust Control-plane UUID verified out of band.
+     */
     @Command(name = "setup")
     fun setup(
         @Option(names = ["--server-url"], required = true, defaultValue = $$"${env:MODSYNC_SERVER_URL}") endpoint: String,
@@ -60,6 +117,13 @@ class Agent : Runnable {
         println("Endpoint configured; identity preserved")
     }
 
+    /**
+     * Enrolls this agent once with a single-use enrollment token and stores the issued credentials.
+     *
+     * Refuses to run when credentials exist (use rotation for renewal) or the control-plane identity changed.
+     *
+     * @param tokenFile File containing the enrollment token; it is never passed on the command line.
+     */
     @Command(name = "register")
     fun register(
         @Option(names = ["--enrollment-token-file"], required = true) tokenFile: Path
@@ -72,6 +136,14 @@ class Agent : Runnable {
         println("Agent enrolled: ${c.agentId}")
     }
 
+    /**
+     * Maps a server-assigned alias to a local `mods` directory.
+     *
+     * Symbolic links are refused; the real path is stored so later scans cannot be redirected.
+     *
+     * @param alias Mapping name matching `[A-Za-z0-9_-]{1,100}`.
+     * @param mods Existing local mods directory.
+     */
     @Command(name = "map")
     fun map(
         @Parameters(index = "0") alias: String,
@@ -84,6 +156,11 @@ class Agent : Runnable {
         println("Local mapping configured")
     }
 
+    /**
+     * Performs one scan-and-upload pass under an exclusive lock.
+     *
+     * @param serverId Restrict the pass to one assigned server; all assignments otherwise.
+     */
     @Command(name = "scan")
     fun scan(
         @Option(names = ["--server"]) serverId: String?
@@ -91,6 +168,13 @@ class Agent : Runnable {
         scanOnce(serverId)
     }
 
+    /**
+     * Runs one scan pass while holding an exclusive lock file in the state directory.
+     *
+     * The lock file is opened without following symlinks, and a second concurrent scan fails immediately.
+     *
+     * @param serverId Restrict the pass to one assigned server; all assignments otherwise.
+     */
     private fun scanOnce(serverId: String?) {
         Files.createDirectories(stateDir)
         val lockPath = stateDir.resolve("agent.lock")
@@ -101,6 +185,15 @@ class Agent : Runnable {
         }
     }
 
+    /**
+     * Scans and uploads every assigned mapping; the caller must hold the scan lock.
+     *
+     * Rotates credentials that expire within a day, re-delivers a persisted pending snapshot of the same
+     * generation, skips unchanged inventories, and only reports a scan as confirmed after the server
+     * acknowledged the matching digest. Local files are only read, never executed or modified.
+     *
+     * @param serverId Restrict the pass to one assigned server; all assignments otherwise.
+     */
     private fun scanUnlocked(serverId: String?) {
         var c = config()
         var api = api(c)
@@ -161,6 +254,14 @@ class Agent : Runnable {
         secureWrite(stateDir.resolve("healthy-at"), Instant.now().toString())
     }
 
+    /**
+     * Scans repeatedly until interrupted, retrying failed passes with capped exponential backoff and jitter.
+     *
+     * Pending inventories stay persisted between attempts, so retries re-deliver the same snapshot.
+     * Gives up after eight consecutive failures so a supervisor can surface the problem.
+     *
+     * @param interval Seconds between successful passes, within 30..86400.
+     */
     @Command(name = "run")
     fun loop(
         @Option(names = ["--interval"], defaultValue = $$"${env:MODSYNC_SCAN_INTERVAL:-300}") interval: Long
@@ -185,6 +286,7 @@ class Agent : Runnable {
         }
     }
 
+    /** Fails when the last healthy scan cycle is older than the staleness window; intended for container health checks. */
     @Command(name = "status")
     fun status() {
         val at = Instant.parse(Files.readString(stateDir.resolve("healthy-at")))
@@ -192,6 +294,7 @@ class Agent : Runnable {
         println("Last healthy cycle: $at")
     }
 
+    /** Verifies identity pinning, authentication and that every configured mapping is an existing directory, without uploading anything. */
     @Command(name = "doctor")
     fun doctor() {
         val c = config()
@@ -201,6 +304,11 @@ class Agent : Runnable {
     }
 }
 
+/**
+ * Runs the agent command line; failures are logged without details and mapped to exit code 1.
+ *
+ * @param args Command-line arguments passed to the Picocli parser.
+ */
 fun main(args: Array<String>) {
     val cli = CommandLine(Agent())
     cli.setExecutionExceptionHandler { ex, _, _ ->
