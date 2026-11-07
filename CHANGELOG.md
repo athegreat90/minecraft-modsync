@@ -6,6 +6,21 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-07
+
+### Changed
+- KDoc unified on the `AutoSync.kt` style across all main sources: third-person summary, optional detail paragraph, then `@param`/`@return`/`@property` tags, including private functions. REST controllers (endpoint purpose, required role, parameters, returned DTO), Spring configuration and security classes are now documented. Comments only; no behavior change.
+- Release version, tag prefix (`v0.3.2-dev.`), Docker defaults and OpenAPI `info.version` bumped to 0.3.2. Wire protocol 1 and minimum component compatibility are unchanged.
+
+### Added
+- KDoc style convention in `docs/development/CODE_QUALITY.md`.
+- Unit tests for server services and helpers (`SupportTest`, `CredentialServiceTest`, `AuditServiceTest`, `AuthServiceTest`, `AgentServiceTest`, `InventoryServiceTest`, `ManifestServiceTest`, `ProfileServiceTest`, `CatalogServiceTest`), `ModrinthTest` and `FixturesTest`.
+
+### Fixed
+- IntelliJ Build/Rebuild no longer fails with `Dependency verification failed for org.apache.groovy:groovy:4.0.33` or `groovy-ant`/`groovy-bom` 4.0.33: IDEs resolve the Groovy bundled with Gradle 9.8.2 from the distribution `lib/` ("Gradle Libs"), and the set of modules varies, so `org.apache.groovy` at version 4.0.33 is trusted in `gradle/verification-metadata.xml` (other Groovy versions stay checksum-verified; documented in `docs/development/CODE_QUALITY.md`).
+- Sonar new-code coverage: the bumped `User-Agent` lines in `Modrinth` and `Installer.download` are now exercised by tests (`ModrinthTest` against a local HTTP server, and `InstallerFailureTest` with an injectable HTTP client: `Installer` takes an optional `newHttp` factory, default behavior unchanged).
+- Detekt baselines refreshed: entries for now-documented declarations removed; remaining findings re-keyed after reformatting.
+
 ## [0.3.1] - 2026-11-06
 
 ### Changed
