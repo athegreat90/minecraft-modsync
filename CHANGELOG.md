@@ -6,6 +6,8 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-13
+
 ### Added
 - Administrator user management at `/ui/users`: paged search and filtering, user creation (CLIENT role), disable/enable, password reset, session revocation and permanent device revocation, with flash feedback, a shared layout fragment, a skip link and focus/alert styles. Logic lives in `users.UserManagementService`; `UserManagementController` only renders and binds explicit parameters.
 - `users.enabled` column (Flyway `V5__user_status.sql`, additive, existing accounts stay enabled). Disabled accounts are refused by API login, refresh, bearer authentication and the dashboard login with the same response as a wrong password.
@@ -16,6 +18,10 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 ### Changed
 - Dashboard session cookies are now `HttpOnly`, `SameSite=Strict` and `Secure` by default with a 30 minute timeout. Plain-HTTP setups must set `MODSYNC_SESSION_COOKIE_SECURE=false`.
 - `overview.html` and `server.html` use the shared header fragment; the "All servers" back link is replaced by the main navigation.
+- Version bumped 0.3.2 -> 0.4.0 (minor: new user-facing feature, one additive migration and a session-cookie default change; wire protocol 1 and minimum component compatibility 0.2.0 are unchanged). Updated in `build.gradle.kts`, both Dockerfiles, `scripts/openapi.py` with the regenerated `docs/architecture/openapi.json`, `scripts/release/reconcile.py` and its test, the `User-Agent` strings of `Modrinth` and `Installer` with their tests, and the version examples in `RELEASES.md`, `docs/deployment/README.md` and `docs/GUIDE.md`.
+
+### Fixed
+- `UserManagementIntegrationTest.listSearchesFiltersAndPages` was nondeterministic: it disabled users whose random username suffix ended in `0`, so about 17% of runs disabled nobody and failed the disabled-filter assertion. It now disables exactly three users deterministically and asserts the exact count. The flake failed the post-merge `validate` (Sonar) job and the dev-release validation of `cd6c32d` on `main`.
 
 ## [0.3.2] - 2026-11-07
 
