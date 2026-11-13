@@ -38,7 +38,7 @@ class ModrinthTest {
         assertEquals("abc", modrinth.version("abc")["id"]?.jsonPrimitive?.content)
         assertTrue(modrinth.identify(listOf("a".repeat(128))).isEmpty())
         assertEquals(listOf("GET /version/abc", "POST /version_files"), requests.map { it.first })
-        assertTrue(requests.all { it.second == "Minecraft-ModSync/0.3.2 (self-hosted mod inventory)" })
+        assertTrue(requests.all { it.second == "Minecraft-ModSync/0.4.0 (self-hosted mod inventory)" })
         assertTrue(requests.last().third.contains("sha512"))
     }
 
