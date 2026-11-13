@@ -22,6 +22,11 @@ Restoration validation must check Flyway history, control-plane UUID, user login
 
 Keep major-version upgrades separate from relocation. Roll back by stopping destination writers before restoring routing to the original database/application pair. If destination writes occurred, reconcile or restore those changes first; never let two unfenced control planes accept writes independently.
 
+## User status (V5)
+
+- `users.enabled BOOLEAN NOT NULL DEFAULT TRUE`: disabled accounts keep their rows and every reference but cannot log in, refresh or use tokens. The migration is additive; existing accounts stay enabled.
+- Flyway Community has no undo. To go back, restore the pre-upgrade backup. Dropping the column (`ALTER TABLE users DROP COLUMN enabled`) is possible, but a server build without V5 does not enforce it: review and delete the credentials of disabled accounts first.
+
 ## Client inventory (V2)
 
 - `client_instance_inventory`: one row per registered client instance with Minecraft/loader metadata, selected server, sync policy, activity, applied manifest revision, monotonically increasing report `sequence` and verification time.

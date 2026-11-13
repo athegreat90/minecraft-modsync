@@ -478,3 +478,16 @@ Notes:
 
 Host B serves a server-rendered dashboard at `https://<host-b>/ui` (sign in with an `ADMIN` account such as the bootstrap admin). It shows servers, inventory freshness, scanned mods and their approval state, the latest manifest, the client coverage matrix and publication history. Administrators can change a server's publication policy, approve a mod's classification with a reason, and request re-evaluation of automatic publication. Manifest preview and publish remain API operations. The dashboard runs no commands and needs no JavaScript.
 
+### Managing users
+
+Open **Users** in the dashboard header (`/ui/users`).
+
+- **Find accounts:** search by username fragment and filter by role or status. The list shows 25 accounts per page.
+- **Create a user:** choose **Create user**, enter a username (letters, digits, `_`, `.`, `-`, up to 100 characters) and a password of 16 to 256 characters twice. New accounts always get the `CLIENT` role. Pass the password to the player through a secure channel.
+- **Disable or enable:** a disabled account cannot sign in, refresh or use any token, and its sessions end at once. Its devices stay registered, so enabling it again lets its clients sign in with the same device.
+- **Reset a password:** enter the new password twice. Existing sessions and tokens of the account end, so its clients sign in again.
+- **Revoke sessions:** ends tokens and sessions only; devices stay valid.
+- **Revoke devices:** permanent. A revoked device id can never sign in again, so each client must register with a new one. Tick the confirmation box to proceed.
+- **Administrator accounts** are listed but read-only here, and the page rejects changes to them. During maintenance mode the pages stay readable and every change is refused with an error.
+- Session cookies are marked `Secure`. For a test deployment without HTTPS set `MODSYNC_SESSION_COOKIE_SECURE=false`, otherwise browsers will not send the cookie and sign-in appears to fail.
+
