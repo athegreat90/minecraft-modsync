@@ -171,7 +171,7 @@ class UserManagementIntegrationTest {
         repeat(27) { newClient(prefix) }
         newClient("under_score")
         newClient("underXscore")
-        db.update("UPDATE users SET enabled = FALSE WHERE username LIKE ?", "$prefix%0")
+        assertEquals(3, db.update("UPDATE users SET enabled = FALSE WHERE username LIKE ? ORDER BY username LIMIT 3", "$prefix%"))
 
         val first = admin.get("/ui/users?q=$prefix").body()
         assertTrue(first.contains("Page 1 of 2 (27 accounts)"))
@@ -182,7 +182,7 @@ class UserManagementIntegrationTest {
         assertFalse(admin.get("/ui/users?role=CLIENT").body().contains(">admin<"))
         assertEquals(200, admin.get("/ui/users?role=ROOT&status=bogus&page=-1").statusCode())
         val disabled = admin.get("/ui/users?q=$prefix&status=disabled").body()
-        assertTrue(disabled.contains("badge bad"))
+        assertEquals(3, "badge bad".toRegex().findAll(disabled).count())
         assertFalse(disabled.contains("badge ok"))
     }
 
