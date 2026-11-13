@@ -74,6 +74,9 @@ class UserManagementIntegrationTest {
     /** Returns the base URL of a running application. */
     private fun baseUrl(app: ConfigurableApplicationContext) = "http://127.0.0.1:${requireNotNull((app as WebServerApplicationContext).webServer).port}"
 
+    /** One shared administrator session: the dashboard limits sign-ins to 10 per minute per address, so tests must not sign in repeatedly. */
+    private val admin: TestBrowser by lazy { adminBrowser() }
+
     /** Signs in as the bootstrap administrator. */
     private fun adminBrowser(root: String = base): TestBrowser = TestBrowser(root).also { assertEquals("/ui", it.signIn("admin", adminPassword).location()) }
 
@@ -116,7 +119,6 @@ class UserManagementIntegrationTest {
 
     /** Posts without a CSRF token are refused and change nothing. */
     @Test fun postsRequireCsrf() {
-        val admin = adminBrowser()
         val id = idOf(newClient())
         assertEquals(403, admin.post("/ui/users/$id/disable", emptyMap(), null).statusCode())
         assertEquals(403, admin.post("/ui/users", mapOf("username" to "nocsrf", "password" to password, "confirmation" to password), null).statusCode())
@@ -136,7 +138,6 @@ class UserManagementIntegrationTest {
 
     /** Creating accounts validates input, reports specific reasons, never echoes passwords and audits the creation. */
     @Test fun createValidatesAndAudits() {
-        val admin = adminBrowser()
         val form = admin.get("/ui/users/new")
         assertEquals(200, form.statusCode())
 
@@ -166,7 +167,6 @@ class UserManagementIntegrationTest {
 
     /** The list is searchable and filterable, treats `_` literally and pages at 25 accounts. */
     @Test fun listSearchesFiltersAndPages() {
-        val admin = adminBrowser()
         val prefix = "pg${UUID.randomUUID().toString().take(4)}"
         repeat(27) { newClient(prefix) }
         newClient("under_score")
@@ -188,7 +188,6 @@ class UserManagementIntegrationTest {
 
     /** Disabling ends API access and live dashboard sessions; enabling restores sign-in. */
     @Test fun disableAndEnableLifecycle() {
-        val admin = adminBrowser()
         val name = newClient()
         val id = idOf(name)
         val session = requireNotNull(api.login(name, password).second)
@@ -212,7 +211,6 @@ class UserManagementIntegrationTest {
 
     /** A password reset invalidates the old password, tokens and sessions and never reaches the audit log. */
     @Test fun resetPasswordRevokesEverything() {
-        val admin = adminBrowser()
         val name = newClient()
         val id = idOf(name)
         val session = requireNotNull(api.login(name, password).second)
@@ -232,7 +230,6 @@ class UserManagementIntegrationTest {
 
     /** Revoking sessions keeps the device usable; revoking devices needs confirmation and blocks the device for good. */
     @Test fun revokeSessionsAndDevices() {
-        val admin = adminBrowser()
         val name = newClient()
         val id = idOf(name)
         val device = UUID.randomUUID().toString()
@@ -253,7 +250,6 @@ class UserManagementIntegrationTest {
 
     /** Administrator accounts and unknown ids cannot be changed from the dashboard. */
     @Test fun administratorsAreReadOnly() {
-        val admin = adminBrowser()
         val adminId = idOf("admin")
         assertTrue(admin.get("/ui/users/$adminId").body().contains("read-only"))
         val csrf = admin.csrfOf("/ui/users/$adminId")
@@ -266,7 +262,6 @@ class UserManagementIntegrationTest {
 
     /** Usernames are escaped, and no page ever contains a password hash. */
     @Test fun outputIsEscapedAndHashesNeverLeak() {
-        val admin = adminBrowser()
         val hostile = "<img src=x onerror=alert(1)>"
         val id = UUID.randomUUID().toString()
         db.update("INSERT INTO users (id, username, password_hash, role) VALUES (?,?,?,'CLIENT')", id, hostile, "\$argon2id\$secret-hash")
@@ -288,7 +283,6 @@ class UserManagementIntegrationTest {
 
     /** Concurrent disable, enable and password resets of one account settle in a consistent state with credentials ended. */
     @Test fun concurrentChangesStayConsistent() {
-        val admin = adminBrowser()
         val name = newClient()
         val id = idOf(name)
         val session = requireNotNull(api.login(name, password).second)
