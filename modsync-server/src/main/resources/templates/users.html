@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title>Users - ModSync</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
+</head>
+<body>
+<header th:replace="~{fragments/layout :: header('users')}"></header>
+<main id="main">
+  <div th:replace="~{fragments/layout :: alerts}"></div>
+  <section>
+    <h1>Users</h1>
+    <form class="inline" method="get" th:action="@{/ui/users}" role="search">
+      <label>Username
+        <input type="search" name="q" maxlength="100" th:value="${filter.query}">
+      </label>
+      <label>Role
+        <select name="role">
+          <option value="">Any</option>
+          <option value="CLIENT" th:selected="${filter.role == 'CLIENT'}">CLIENT</option>
+          <option value="ADMIN" th:selected="${filter.role == 'ADMIN'}">ADMIN</option>
+        </select>
+      </label>
+      <label>Status
+        <select name="status">
+          <option value="">Any</option>
+          <option value="enabled" th:selected="${filter.status == 'enabled'}">Enabled</option>
+          <option value="disabled" th:selected="${filter.status == 'disabled'}">Disabled</option>
+        </select>
+      </label>
+      <button type="submit">Filter</button>
+      <a th:href="@{/ui/users}">Reset</a>
+    </form>
+    <p><a class="button" th:href="@{/ui/users/new}">Create user</a></p>
+    <p th:if="${result.users.isEmpty()}" class="muted">No accounts match.</p>
+    <div class="scroll" th:unless="${result.users.isEmpty()}">
+      <table>
+        <caption class="sr-only">Accounts</caption>
+        <thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Id</th></tr></thead>
+        <tbody>
+        <tr th:each="user : ${result.users}">
+          <td><a th:href="@{/ui/users/{id}(id=${user.id})}" th:text="${user.username}">name</a></td>
+          <td th:text="${user.role}">CLIENT</td>
+          <td>
+            <span th:if="${user.enabled}" class="badge ok">enabled</span>
+            <span th:unless="${user.enabled}" class="badge bad">disabled</span>
+          </td>
+          <td><code th:text="${user.id}">id</code></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <nav class="pager" aria-label="Pages" th:if="${result.totalPages > 1}">
+      <a th:if="${result.page > 0}" rel="prev"
+         th:href="@{/ui/users(q=${filter.query},role=${filter.role},status=${filter.status},page=${result.page - 1})}">Previous</a>
+      <span class="muted" th:text="${'Page ' + (result.page + 1) + ' of ' + result.totalPages + ' (' + result.total + ' accounts)'}">Page 1 of 2</span>
+      <a th:if="${result.page + 1 < result.totalPages}" rel="next"
+         th:href="@{/ui/users(q=${filter.query},role=${filter.role},status=${filter.status},page=${result.page + 1})}">Next</a>
+    </nav>
+  </section>
+</main>
+</body>
+</html>

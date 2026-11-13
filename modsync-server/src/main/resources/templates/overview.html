@@ -7,11 +7,8 @@
   <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
 </head>
 <body>
-<header>
-  <a th:href="@{/ui}">ModSync</a>
-  <form th:action="@{/logout}" method="post"><button type="submit">Sign out</button></form>
-</header>
-<main>
+<header th:replace="~{fragments/layout :: header('servers')}"></header>
+<main id="main">
   <section>
     <h1>Minecraft servers</h1>
     <p th:if="${servers.isEmpty()}" class="muted">No servers registered yet.</p>

@@ -164,7 +164,7 @@ class DashboardSecurityConfiguration {
             }.logout { it.logoutUrl("/logout").logoutSuccessUrl("/login?logout") }
             .sessionManagement {
                 it.sessionFixation { fixation -> fixation.migrateSession() }
-                it.sessionConcurrency { concurrency -> concurrency.maximumSessions(SessionLimit.UNLIMITED).sessionRegistry(sessionRegistry) }
+                it.sessionConcurrency { concurrency -> concurrency.maximumSessions(SessionLimit.UNLIMITED).sessionRegistry(sessionRegistry).expiredUrl("/login?expired") }
             }.headers { headers ->
                 headers.contentSecurityPolicy { it.policyDirectives(CONTENT_SECURITY_POLICY) }
                 headers.frameOptions { it.deny() }

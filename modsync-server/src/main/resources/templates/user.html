@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title th:text="${detail.user.username} + ' - ModSync'">User</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
+</head>
+<body>
+<header th:replace="~{fragments/layout :: header('users')}"></header>
+<main id="main">
+  <div th:replace="~{fragments/layout :: alerts}"></div>
+  <section>
+    <h1 th:text="${detail.user.username}">user</h1>
+    <dl>
+      <dt>Id</dt><dd><code th:text="${detail.user.id}">id</code></dd>
+      <dt>Role</dt><dd th:text="${detail.user.role}">CLIENT</dd>
+      <dt>Status</dt>
+      <dd>
+        <span th:if="${detail.user.enabled}" class="badge ok">enabled</span>
+        <span th:unless="${detail.user.enabled}" class="badge bad">disabled</span>
+      </dd>
+      <dt>Active devices</dt><dd th:text="${detail.activeDevices}">0</dd>
+    </dl>
+    <p><a th:href="@{/ui/users}">&larr; All users</a></p>
+  </section>
+
+  <section th:unless="${detail.user.manageable}">
+    <p class="muted">Administrator accounts are read-only here. Only CLIENT accounts can be changed from the dashboard.</p>
+  </section>
+
+  <th:block th:if="${detail.user.manageable}">
+    <section>
+      <h2>Account status</h2>
+      <p class="muted" th:if="${detail.user.enabled}">Disabling blocks every sign-in and ends all sessions and tokens. Devices stay registered, so enabling the account again restores access.</p>
+      <p class="muted" th:unless="${detail.user.enabled}">This account cannot sign in or use any token until it is enabled again.</p>
+      <form th:if="${detail.user.enabled}" method="post" th:action="@{/ui/users/{id}/disable(id=${detail.user.id})}">
+        <button type="submit">Disable account</button>
+      </form>
+      <form th:unless="${detail.user.enabled}" method="post" th:action="@{/ui/users/{id}/enable(id=${detail.user.id})}">
+        <button type="submit">Enable account</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Reset password</h2>
+      <p class="muted">Passwords need 16 to 256 characters. The account's sessions and tokens end, so its clients must sign in again.</p>
+      <form class="stack" method="post" th:action="@{/ui/users/{id}/password(id=${detail.user.id})}">
+        <label>New password
+          <input type="password" name="password" required minlength="16" maxlength="256" autocomplete="new-password">
+        </label>
+        <label>Confirm new password
+          <input type="password" name="confirmation" required minlength="16" maxlength="256" autocomplete="new-password">
+        </label>
+        <p><button type="submit">Reset password</button></p>
+      </form>
+    </section>
+
+    <section>
+      <h2>Sessions and devices</h2>
+      <form method="post" th:action="@{/ui/users/{id}/revoke-sessions(id=${detail.user.id})}">
+        <p class="muted">Ends every session and token. Devices stay valid and clients sign in again.</p>
+        <button type="submit">Revoke sessions</button>
+      </form>
+      <form class="stack" method="post" th:action="@{/ui/users/{id}/revoke-devices(id=${detail.user.id})}">
+        <p class="muted">Permanently revokes all devices. A revoked device id can never sign in again, so each client must register with a new one.</p>
+        <label class="check"><input type="checkbox" name="confirm" value="yes" required> I understand this cannot be undone</label>
+        <p><button type="submit">Revoke all devices</button></p>
+      </form>
+    </section>
+  </th:block>
+</main>
+</body>
+</html>

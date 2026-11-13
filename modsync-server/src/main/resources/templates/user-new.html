@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title>Create user - ModSync</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
+</head>
+<body>
+<header th:replace="~{fragments/layout :: header('users')}"></header>
+<main id="main">
+  <div th:replace="~{fragments/layout :: alerts}"></div>
+  <section>
+    <h1>Create user</h1>
+    <p class="muted">New accounts get the CLIENT role. Passwords need 16 to 256 characters.</p>
+    <form class="stack" method="post" th:action="@{/ui/users}">
+      <label>Username
+        <input type="text" name="username" required maxlength="100" pattern="[A-Za-z0-9_.\-]{1,100}" autocomplete="off" autofocus th:value="${username}">
+      </label>
+      <label>Password
+        <input type="password" name="password" required minlength="16" maxlength="256" autocomplete="new-password">
+      </label>
+      <label>Confirm password
+        <input type="password" name="confirmation" required minlength="16" maxlength="256" autocomplete="new-password">
+      </label>
+      <p><button type="submit">Create user</button> <a th:href="@{/ui/users}">Cancel</a></p>
+    </form>
+  </section>
+</main>
+</body>
+</html>
