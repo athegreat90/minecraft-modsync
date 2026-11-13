@@ -62,6 +62,7 @@ class DashboardIntegrationTest {
         context =
             SpringApplicationBuilder(ServerApplication::class.java).run(
                 "--server.port=0",
+                "--server.servlet.session.cookie.secure=false",
                 "--spring.datasource.url=${database.jdbcUrl}",
                 "--spring.datasource.username=${database.username}",
                 "--spring.datasource.password=${database.password}",

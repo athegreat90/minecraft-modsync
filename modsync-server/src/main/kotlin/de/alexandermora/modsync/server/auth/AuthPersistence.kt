@@ -21,6 +21,7 @@ import java.time.Instant
  * @property username Unique login name.
  * @property passwordHash Argon2 hash of the password.
  * @property role Role name (`ADMIN` or `CLIENT`).
+ * @property enabled Whether the account may authenticate; disabled accounts keep their history but cannot log in, refresh or use tokens.
  */
 @Entity
 @Table(name = "users")
@@ -28,7 +29,8 @@ class UserAccount(
     @Id @JdbcTypeCode(SqlTypes.CHAR) @Column(length = 36) var id: String = "",
     @Column(nullable = false, length = 100, unique = true) var username: String = "",
     @Column(name = "password_hash", nullable = false) var passwordHash: String = "",
-    @Column(nullable = false, length = 20) var role: String = ""
+    @Column(nullable = false, length = 20) var role: String = "",
+    @Column(nullable = false) var enabled: Boolean = true
 )
 
 /**

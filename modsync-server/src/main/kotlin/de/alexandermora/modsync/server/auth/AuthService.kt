@@ -44,7 +44,8 @@ class AuthService(
      * Authenticates a user and issues credentials bound to a device.
      *
      * A device id is claimed on first login (under a row lock) and can then only be used by the same, non-revoked user.
-     * Unknown users still pay for a password comparison and fail with the same 401 as a wrong password.
+     * Unknown users still pay for a password comparison and fail with the same 401 as a wrong password. Disabled accounts
+     * fail with that same 401, and only after the comparison, so the response does not reveal the account state.
      *
      * @param request Login with protocol version, username, password and device UUID.
      * @return Access and refresh credentials for the device.
@@ -54,7 +55,7 @@ class AuthService(
         val user = users.findByUsername(request.username)
         // Always perform the expensive comparison to reduce account enumeration timing differences.
         val encoded = user?.passwordHash ?: dummyPassword
-        if (!passwords.matches(request.password, encoded) || user == null) unauthorized()
+        if (!passwords.matches(request.password, encoded) || user == null || !user.enabled) unauthorized()
         val deviceId = uuid(request.deviceId)
         val device = devices.lockById(deviceId)
         if (device == null) {
@@ -70,7 +71,7 @@ class AuthService(
      * Exchanges a refresh token for a fresh credential pair (rotation).
      *
      * The refresh row is locked, so a token can be redeemed once; all of the device's old credentials are deleted
-     * and a revoked device gets 404.
+     * and a revoked device gets 404. A token whose owner no longer exists or has been disabled gets 401.
      *
      * @param token Clear refresh token.
      * @return A fresh credential pair for the same device.
@@ -78,6 +79,7 @@ class AuthService(
     @Transactional fun refresh(token: String): Credentials {
         require(token.length <= 128)
         val row = credentials.lockRefresh(sha512(token.toByteArray()), Instant.now()) ?: unauthorized()
+        if (users.findById(row.subjectId).map { it.enabled }.orElse(false) != true) unauthorized()
         val device = row.deviceId.toString()
         found(devices.existsByIdAndRevokedFalse(device))
         credentials.deleteByDevice(device)

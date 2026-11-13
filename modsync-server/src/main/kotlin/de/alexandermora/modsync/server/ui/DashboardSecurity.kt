@@ -9,13 +9,20 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
+import org.springframework.security.authentication.DisabledException
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.core.session.SessionRegistry
+import org.springframework.security.core.session.SessionRegistryImpl
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.authentication.session.SessionLimit
+import org.springframework.security.web.session.HttpSessionEventPublisher
 import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.filter.OncePerRequestFilter
 import java.util.concurrent.ConcurrentHashMap
@@ -48,7 +55,8 @@ class DashboardUserDetailsService(private val users: UserRepository) : UserDetai
      * Loads an account by username.
      *
      * @param username Submitted username.
-     * @return Details whose name is the user UUID and whose single authority is the stored role.
+     * @return Details whose name is the user UUID and whose single authority is the stored role; disabled accounts are
+     * returned with the disabled flag set and rejected after the password check by [rejectDisabledAccount].
      * @throws UsernameNotFoundException when the account does not exist.
      */
     override fun loadUserByUsername(username: String): UserDetails {
@@ -57,8 +65,23 @@ class DashboardUserDetailsService(private val users: UserRepository) : UserDetai
             .withUsername(user.id)
             .password(user.passwordHash)
             .roles(user.role)
+            .disabled(!user.enabled)
             .build()
     }
+}
+
+/**
+ * Rejects a disabled account once its password has been verified.
+ *
+ * Spring's default pre-authentication check would throw before the (expensive) password comparison, which makes disabled
+ * accounts answer measurably faster than wrong passwords. Running the check afterwards keeps the response time and the
+ * generic `/login?error` redirect identical for every failure.
+ *
+ * @param details Account whose password was just verified.
+ * @throws DisabledException when the account is disabled.
+ */
+fun rejectDisabledAccount(details: UserDetails) {
+    if (!details.isEnabled) throw DisabledException("Account is disabled")
 }
 
 /**
@@ -103,16 +126,27 @@ class DashboardSecurityConfiguration {
      * Only administrators may use the dashboard paths under /ui. CSRF protection stays enabled, cookies are HTTP-only, sessions are
      * rotated on login and a restrictive content security policy forbids scripts and foreign resources.
      *
+     * Every session is tracked in [sessionRegistry] (with no concurrency limit) so that disabling an account or resetting its
+     * password can expire its live sessions.
+     *
      * @param http Security builder.
      * @param users Account repository.
+     * @param passwords Password encoder used to verify submitted passwords.
+     * @param sessionRegistry Registry of live dashboard sessions.
      * @return The dashboard chain, ordered before the API chain.
      */
     @Bean
     @Order(1)
-    fun dashboardChain(http: HttpSecurity, users: UserRepository): SecurityFilterChain {
+    fun dashboardChain(http: HttpSecurity, users: UserRepository, passwords: PasswordEncoder, sessionRegistry: SessionRegistry): SecurityFilterChain {
+        val provider =
+            DaoAuthenticationProvider(DashboardUserDetailsService(users)).apply {
+                setPasswordEncoder(passwords)
+                setPreAuthenticationChecks { }
+                setPostAuthenticationChecks(::rejectDisabledAccount)
+            }
         http
             .securityMatcher(RequestMatcher(::isDashboardRequest))
-            .userDetailsService(DashboardUserDetailsService(users))
+            .authenticationProvider(provider)
             .authorizeHttpRequests {
                 it
                     .dispatcherTypeMatchers(DispatcherType.ERROR)
@@ -128,11 +162,29 @@ class DashboardSecurityConfiguration {
                     .defaultSuccessUrl("/ui", true)
                     .permitAll()
             }.logout { it.logoutUrl("/logout").logoutSuccessUrl("/login?logout") }
-            .sessionManagement { it.sessionFixation { fixation -> fixation.migrateSession() } }
-            .headers { headers ->
+            .sessionManagement {
+                it.sessionFixation { fixation -> fixation.migrateSession() }
+                it.sessionConcurrency { concurrency -> concurrency.maximumSessions(SessionLimit.UNLIMITED).sessionRegistry(sessionRegistry) }
+            }.headers { headers ->
                 headers.contentSecurityPolicy { it.policyDirectives(CONTENT_SECURITY_POLICY) }
                 headers.frameOptions { it.deny() }
             }.addFilterBefore(LoginThrottleFilter(), UsernamePasswordAuthenticationFilter::class.java)
         return http.build()
     }
+
+    /**
+     * Creates the registry that tracks live dashboard sessions per account.
+     *
+     * @return An in-memory registry; sessions are lost on restart, like the sessions themselves.
+     */
+    @Bean
+    fun sessionRegistry(): SessionRegistry = SessionRegistryImpl()
+
+    /**
+     * Publishes servlet session lifecycle events so [SessionRegistry] forgets ended sessions.
+     *
+     * @return The publisher, registered as a servlet listener by Spring Boot.
+     */
+    @Bean
+    fun httpSessionEventPublisher(): HttpSessionEventPublisher = HttpSessionEventPublisher()
 }
