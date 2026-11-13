@@ -1,10 +1,6 @@
 package de.alexandermora.modsync.server
 
-import de.alexandermora.modsync.protocol.Credentials
-import de.alexandermora.modsync.protocol.Login
-import de.alexandermora.modsync.protocol.RefreshRequest
 import de.alexandermora.modsync.protocol.UserRegistration
-import de.alexandermora.modsync.protocol.wire
 import de.alexandermora.modsync.server.auth.AuthService
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -18,12 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.testcontainers.containers.MariaDBContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.net.CookieManager
-import java.net.URI
-import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
@@ -42,7 +32,7 @@ class AccountStatusIntegrationTest {
     private lateinit var context: ConfigurableApplicationContext
     private lateinit var base: String
     private lateinit var db: JdbcTemplate
-    private val http = HttpClient.newHttpClient()
+    private lateinit var api: ApiProbe
     private val password = "player-password-1234"
 
     /** Starts the full application against MariaDB. */
@@ -60,38 +50,13 @@ class AccountStatusIntegrationTest {
             )
         base = "http://127.0.0.1:${requireNotNull((context as WebServerApplicationContext).webServer).port}"
         db = context.getBean(JdbcTemplate::class.java)
+        api = ApiProbe(base)
     }
 
     /** Stops the application. */
     @AfterAll fun stop() {
         context.close()
         state.toFile().deleteRecursively()
-    }
-
-    /** Sends an API request with the protocol headers and returns the status code. */
-    private fun api(method: String, path: String, token: String? = null, body: String? = null): Int {
-        val builder =
-            HttpRequest
-                .newBuilder(URI("$base$path"))
-                .header("X-ModSync-Protocol", "1")
-                .header("X-ModSync-Version", "0.3.1")
-                .header("Content-Type", "application/json")
-        token?.let { builder.header("Authorization", "Bearer $it") }
-        val publisher = body?.let { HttpRequest.BodyPublishers.ofString(it) } ?: HttpRequest.BodyPublishers.noBody()
-        return http.send(builder.method(method, publisher).build(), HttpResponse.BodyHandlers.ofString()).statusCode()
-    }
-
-    /** Logs in through the API and returns the issued credentials, or null when the login is refused. */
-    private fun login(user: String, pass: String): Credentials? {
-        val body = wire.encodeToString(Login.serializer(), Login(user, pass, UUID.randomUUID().toString()))
-        val builder =
-            HttpRequest
-                .newBuilder(URI("$base/api/v1/auth/login"))
-                .header("X-ModSync-Protocol", "1")
-                .header("X-ModSync-Version", "0.3.1")
-                .header("Content-Type", "application/json")
-        val response = http.send(builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString())
-        return if (response.statusCode() == 200) wire.decodeFromString(Credentials.serializer(), response.body()) else null.also { assertEquals(401, response.statusCode()) }
     }
 
     /** Creates a CLIENT account through the same service the administrator API uses. */
@@ -104,17 +69,17 @@ class AccountStatusIntegrationTest {
     /** Disabling an account blocks login, refresh and already-issued access tokens; enabling restores them. */
     @Test fun disabledClientIsRefusedEverywhere() {
         val name = newClient()
-        val session = requireNotNull(login(name, password))
-        assertEquals(200, api("GET", "/api/v1/devices", session.token))
+        val session = requireNotNull(api.login(name, password).second)
+        assertEquals(200, api.status("GET", "/api/v1/devices", session.token))
 
         db.update("UPDATE users SET enabled = FALSE WHERE username = ?", name)
-        assertEquals(401, api("GET", "/api/v1/devices", session.token))
-        assertEquals(401, api("POST", "/api/v1/auth/refresh", body = wire.encodeToString(RefreshRequest.serializer(), RefreshRequest(requireNotNull(session.refreshToken)))))
-        assertEquals(null, login(name, password))
+        assertEquals(401, api.status("GET", "/api/v1/devices", session.token))
+        assertEquals(401, api.refresh(requireNotNull(session.refreshToken)))
+        assertEquals(401, api.login(name, password).first)
 
         db.update("UPDATE users SET enabled = TRUE WHERE username = ?", name)
-        assertEquals(200, api("GET", "/api/v1/devices", session.token))
-        requireNotNull(login(name, password))
+        assertEquals(200, api.status("GET", "/api/v1/devices", session.token))
+        assertEquals(200, api.login(name, password).first)
     }
 
     /** A disabled administrator is refused at the dashboard login with the same redirect as a wrong password. */
@@ -123,33 +88,13 @@ class AccountStatusIntegrationTest {
         val encoder = context.getBean(PasswordEncoder::class.java)
         db.update("INSERT INTO users (id, username, password_hash, role, enabled) VALUES (?,?,?,'ADMIN',FALSE)", UUID.randomUUID().toString(), name, encoder.encode(password))
 
-        val wrong = signIn(name, "definitely-the-wrong-password")
-        val disabled = signIn(name, password)
+        val wrong = TestBrowser(base).signIn(name, "definitely-the-wrong-password")
+        val disabled = TestBrowser(base).signIn(name, password)
         assertEquals(302, disabled.statusCode())
-        assertEquals(wrong.headers().firstValue("Location").get(), disabled.headers().firstValue("Location").get())
-        assertEquals("/login?error", URI(disabled.headers().firstValue("Location").get()).let { it.path + "?" + it.query })
+        assertEquals(wrong.location(), disabled.location())
+        assertEquals("/login?error", disabled.location())
 
         db.update("UPDATE users SET enabled = TRUE WHERE username = ?", name)
-        assertEquals("/ui", URI(signIn(name, password).headers().firstValue("Location").get()).path)
-    }
-
-    /** Submits the dashboard login form with a fresh browser session. */
-    private fun signIn(user: String, pass: String): HttpResponse<String> {
-        val browser =
-            HttpClient
-                .newBuilder()
-                .cookieHandler(CookieManager())
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build()
-        val page = browser.send(HttpRequest.newBuilder(URI("$base/login")).build(), HttpResponse.BodyHandlers.ofString()).body()
-        val csrf = Regex("name=\"_csrf\" value=\"([^\"]+)\"").find(page)?.groupValues?.get(1) ?: error("No CSRF token in page")
-        val form = mapOf("username" to user, "password" to pass, "_csrf" to csrf).entries.joinToString("&") { "${it.key}=${URLEncoder.encode(it.value, Charsets.UTF_8)}" }
-        val request =
-            HttpRequest
-                .newBuilder(URI("$base/login"))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(form))
-                .build()
-        return browser.send(request, HttpResponse.BodyHandlers.ofString())
+        assertEquals("/ui", TestBrowser(base).signIn(name, password).location())
     }
 }
