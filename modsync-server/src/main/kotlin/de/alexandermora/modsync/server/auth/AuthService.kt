@@ -16,9 +16,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-private val USERNAME_PATTERN = Regex("[A-Za-z0-9_.-]{1,100}")
-private const val CLIENT_ROLE = "CLIENT"
-
 /**
  * Authenticates users, rotates sessions and manages devices.
  *
@@ -95,7 +92,7 @@ class AuthService(
      * @return Id of the new user.
      */
     @Transactional fun createUser(actor: String, registration: UserRegistration): String {
-        require(registration.username.matches(USERNAME_PATTERN) && registration.password.length in 16..256)
+        require(isValidUsername(registration.username) && isValidPassword(registration.password))
         val id = UUID.randomUUID().toString()
         users.saveAndFlush(UserAccount(id, registration.username, passwords.encode(registration.password)!!, CLIENT_ROLE))
         audit.record(actor, "user-created", id)
