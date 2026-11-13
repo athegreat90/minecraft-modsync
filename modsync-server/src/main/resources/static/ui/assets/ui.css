@@ -19,3 +19,23 @@ code { font-size: .85rem; }
 form.inline { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
 input, select, button { font: inherit; padding: .25rem .5rem; }
 button { cursor: pointer; }
+nav { display: flex; gap: 1rem; align-items: center; }
+nav a[aria-current="page"] { text-decoration: underline; }
+header a.brand { font-size: 1.05rem; }
+.skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .4rem .8rem; border: 1px solid var(--line); }
+.skip:focus { left: .5rem; top: .5rem; z-index: 1; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #0969da; outline-offset: 2px; }
+a.button { display: inline-block; padding: .25rem .7rem; border: 1px solid var(--line); border-radius: 4px; color: var(--fg); text-decoration: none; background: var(--bg); }
+.alert { padding: .6rem 1rem; border-radius: 6px; border: 1px solid var(--line); background: #fff; margin: 0 0 1.2rem; }
+.alert.ok { color: var(--ok); border-color: var(--ok); }
+.alert.bad { color: var(--bad); border-color: var(--bad); }
+form.stack label { display: block; margin-bottom: .8rem; }
+form.stack input[type="text"], form.stack input[type="password"] { display: block; width: 100%; max-width: 28rem; }
+form.stack label.check { display: flex; gap: .5rem; align-items: center; }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1.2rem; margin: 0 0 1rem; }
+dt { color: var(--muted); font-weight: 600; font-size: .85rem; }
+dd { margin: 0; }
+.scroll { overflow-x: auto; }
+.pager { display: flex; gap: 1rem; align-items: center; margin-top: .8rem; }
+@media (max-width: 40rem) { header { flex-wrap: wrap; gap: .5rem; } main { margin: 1rem auto; } }

@@ -68,7 +68,7 @@ class SecurityConfiguration {
 /**
  * Front filter of the API chain: correlation id, maintenance mode, rate limiting, protocol checks, bearer authentication and body limits.
  *
- * Credentials are looked up by SHA-512 hash and must belong to an unrevoked agent or device. Request bodies
+ * Credentials are looked up by SHA-512 hash and must belong to an unrevoked agent, or to an unrevoked device of an enabled user. Request bodies
  * above 2 MiB are rejected with 413 before reaching controllers.
  *
  * @property db JDBC access for credential, agent and device lookups.
@@ -120,7 +120,9 @@ class Guard(private val db: JdbcTemplate, private val maintenance: Boolean): Onc
             rows.singleOrNull()?.let { row ->
                 val subject = row["subject_id"].toString(); val role = row["role"].toString(); val device = row["device_id"]?.toString()
                 val active = if (role == "AGENT") db.queryForObject("SELECT COUNT(*) FROM scanner_agents WHERE id=? AND revoked=FALSE", Long::class.java, subject) == 1L
-                    else device != null && db.queryForObject("SELECT COUNT(*) FROM client_devices WHERE id=? AND revoked=FALSE", Long::class.java, device) == 1L
+                    else device != null && db.queryForObject(
+                        "SELECT COUNT(*) FROM client_devices d JOIN users u ON u.id=d.user_id " +
+                            "WHERE d.id=? AND d.revoked=FALSE AND u.enabled=TRUE", Long::class.java, device) == 1L
                 if (active) {
                     SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken(subject, null, listOf(SimpleGrantedAuthority("ROLE_$role")))
                     req.setAttribute("deviceId", device)

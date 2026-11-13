@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Shared dashboard header: skip link, main navigation and sign-out. `active` is "servers" or "users". -->
+<header th:fragment="header(active)">
+  <a class="skip" href="#main">Skip to content</a>
+  <nav aria-label="Main">
+    <a class="brand" th:href="@{/ui}">ModSync</a>
+    <a th:href="@{/ui}" th:attr="aria-current=${active == 'servers' ? 'page' : null}">Servers</a>
+    <a th:href="@{/ui/users}" th:attr="aria-current=${active == 'users' ? 'page' : null}">Users</a>
+  </nav>
+  <form th:action="@{/logout}" method="post"><button type="submit">Sign out</button></form>
+</header>
+
+<!-- Flash feedback after a post: `notice` confirms an action, `error` explains a refusal. -->
+<div th:fragment="alerts">
+  <p th:if="${notice}" class="alert ok" role="status" th:text="${notice}">Done.</p>
+  <p th:if="${error}" class="alert bad" role="alert" th:text="${error}">Refused.</p>
+</div>
+</body>
+</html>

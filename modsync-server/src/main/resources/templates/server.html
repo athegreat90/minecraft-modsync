@@ -7,11 +7,8 @@
   <link rel="stylesheet" th:href="@{/ui/assets/ui.css}">
 </head>
 <body>
-<header>
-  <a th:href="@{/ui}">&larr; All servers</a>
-  <form th:action="@{/logout}" method="post"><button type="submit">Sign out</button></form>
-</header>
-<main>
+<header th:replace="~{fragments/layout :: header('servers')}"></header>
+<main id="main">
   <section>
     <h1 th:text="${page.info.name}">Server</h1>
     <p class="muted">

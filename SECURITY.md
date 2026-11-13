@@ -25,4 +25,24 @@ Audit records exclude token/password values and local paths. Structured server l
 - CSRF protection is enabled for every state-changing request; session cookies are HTTP-only and the session id is rotated at login.
 - Content-Security-Policy forbids scripts and foreign resources; frames are denied. All dynamic text is HTML-escaped by Thymeleaf.
 - State changes are audited and rejected in maintenance mode. Terminate TLS in front of the server so the session cookie is only sent over HTTPS.
+- The session cookie is `HttpOnly`, `SameSite=Strict` and `Secure` by default; set `MODSYNC_SESSION_COOKIE_SECURE=false` only for a plain-HTTP test setup. Sessions time out after 30 minutes and are tracked in an in-memory registry (lost on restart, like the sessions themselves).
+
+## User management and account status
+
+Administrators manage accounts at `/ui/users`; there is no self-registration.
+
+| Operation | ADMIN (dashboard) | CLIENT | AGENT |
+|---|---|---|---|
+| Open `/ui/**` | yes | 403 | not applicable (bearer-only API chain) |
+| List and view accounts | yes | no | no |
+| Create a CLIENT account | yes | no | no |
+| Disable, enable, reset password, revoke sessions or devices of a CLIENT | yes | no | no |
+| Change an ADMIN account, change roles, delete accounts | not supported | no | no |
+
+- Only CLIENT accounts can be changed from the dashboard. Administrator rows are read-only, so privilege escalation and removing the last administrator are impossible from the UI; the service enforces this regardless of what the page shows. Accounts are disabled, never deleted, so devices, profiles and synchronization history keep their references.
+- `users.enabled` is checked on every authentication path: API login, refresh, every bearer-token request and the dashboard login. A disabled account gets the same 401 (API) or `/login?error` (dashboard) as a wrong password, and only after the password has been verified, so the response does not reveal the account state.
+- Disabling or resetting a password deletes the account's access and refresh tokens and expires its live dashboard sessions after the transaction commits. Disabling keeps the account's devices registered, so enabling it again restores access. "Revoke sessions" ends tokens and sessions only. "Revoke devices" is permanent: a revoked device id can never log in again, so the client must register with a new one; the dashboard requires an explicit confirmation for it.
+- Password reset takes a password and its confirmation (16-256 characters, Argon2id). The administrator hands the password over out of band. Generated temporary passwords and forced first-login changes are not implemented, because they need a persisted must-change flag and a client change-password endpoint.
+- Audit events (`user-created`, `user-disabled`, `user-enabled`, `user-password-reset`, `user-sessions-revoked`, `user-devices-revoked`) record the acting administrator and the target id only, never a password, hash or token, and are written in the same transaction as the change. Changes lock the account row, so concurrent logins, resets and status changes serialize.
+- Known limits: dashboard login throttling is per address, not per username; failed logins are not audited; there is no per-device revocation list in the UI.
 

@@ -7,6 +7,8 @@ import jakarta.persistence.LockModeType
 import jakarta.persistence.Table
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
@@ -21,6 +23,7 @@ import java.time.Instant
  * @property username Unique login name.
  * @property passwordHash Argon2 hash of the password.
  * @property role Role name (`ADMIN` or `CLIENT`).
+ * @property enabled Whether the account may authenticate; disabled accounts keep their history but cannot log in, refresh or use tokens.
  */
 @Entity
 @Table(name = "users")
@@ -28,7 +31,8 @@ class UserAccount(
     @Id @JdbcTypeCode(SqlTypes.CHAR) @Column(length = 36) var id: String = "",
     @Column(nullable = false, length = 100, unique = true) var username: String = "",
     @Column(name = "password_hash", nullable = false) var passwordHash: String = "",
-    @Column(nullable = false, length = 20) var role: String = ""
+    @Column(nullable = false, length = 20) var role: String = "",
+    @Column(nullable = false) var enabled: Boolean = true
 )
 
 /**
@@ -77,6 +81,39 @@ interface UserRepository : JpaRepository<UserAccount, String> {
      * @return The account, or null.
      */
     fun findByUsername(username: String): UserAccount?
+
+    /**
+     * Checks whether a username is already taken.
+     *
+     * @param username Login name.
+     * @return True when an account with this exact username exists.
+     */
+    fun existsByUsername(username: String): Boolean
+
+    /**
+     * Row-locks an account so that concurrent logins, resets and status changes of the same user are serialized.
+     *
+     * @param id User UUID.
+     * @return The locked account, or null when unknown.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from UserAccount u where u.id = :id")
+    fun lockById(id: String): UserAccount?
+
+    /**
+     * Searches accounts for the administration dashboard.
+     *
+     * @param query Case-insensitive username fragment with `%`, `_` and `\` already escaped, or null for no text filter.
+     * @param role Exact role, or null for any role.
+     * @param enabled Exact status, or null for any status.
+     * @param pageable Requested page.
+     * @return One page of accounts ordered by username.
+     */
+    @Query(
+        "select u from UserAccount u where (:query is null or lower(u.username) like lower(concat('%', :query, '%')) escape '\\') " +
+            "and (:role is null or u.role = :role) and (:enabled is null or u.enabled = :enabled) order by u.username"
+    )
+    fun search(query: String?, role: String?, enabled: Boolean?, pageable: Pageable): Page<UserAccount>
 }
 
 /** Repository of [CredentialEntity] rows. */
@@ -175,4 +212,22 @@ interface ClientDeviceRepository : JpaRepository<ClientDevice, String> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update ClientDevice d set d.revoked = true where d.id = :id and d.userId = :user")
     fun revoke(id: String, user: String): Int
+
+    /**
+     * Counts a user's devices that have not been revoked.
+     *
+     * @param userId Owner UUID.
+     * @return Number of active devices.
+     */
+    fun countByUserIdAndRevokedFalse(userId: String): Long
+
+    /**
+     * Revokes every device of a user, permanently: a revoked device id can never log in again.
+     *
+     * @param user Owner UUID.
+     * @return Number of devices that were still active.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update ClientDevice d set d.revoked = true where d.userId = :user and d.revoked = false")
+    fun revokeAllForUser(user: String): Int
 }

@@ -70,7 +70,7 @@ Offline scans and diagnostics do not authenticate or claim current synchronizati
 
 ## Automatic synchronization, inventory and dashboard
 
-Players can opt in per instance with `modsync auto enable` (see [usage](docs/USAGE.md)); the client then installs approved changes only while Minecraft is closed, keeps personal and unmanaged mods, and reports its verified inventory to Host B. Administrators see server mods, client coverage and publication history at `/ui` on Host B and can choose an automatic publication policy per server. Quality tooling (Detekt, Spotless, Dokka, JaCoCo, SonarQube) is described in [code quality](docs/development/CODE_QUALITY.md) and [SonarQube](docs/development/SONARQUBE.md).
+Players can opt in per instance with `modsync auto enable` (see [usage](docs/USAGE.md)); the client then installs approved changes only while Minecraft is closed, keeps personal and unmanaged mods, and reports its verified inventory to Host B. Administrators see server mods, client coverage and publication history at `/ui` on Host B and can choose an automatic publication policy per server. They also manage CLIENT accounts at `/ui/users`: create, search, disable or enable, reset a password and revoke sessions or devices. Quality tooling (Detekt, Spotless, Dokka, JaCoCo, SonarQube) is described in [code quality](docs/development/CODE_QUALITY.md) and [SonarQube](docs/development/SONARQUBE.md).
 
 ## Documentation
 

@@ -5,14 +5,13 @@ import de.alexandermora.modsync.domain.PublicationPolicy
 import de.alexandermora.modsync.domain.uuid
 import de.alexandermora.modsync.protocol.OverrideRequest
 import de.alexandermora.modsync.server.common.AuditService
+import de.alexandermora.modsync.server.common.MaintenanceMode
 import de.alexandermora.modsync.server.common.actor
 import de.alexandermora.modsync.server.common.found
-import de.alexandermora.modsync.server.common.requireState
 import de.alexandermora.modsync.server.inventory.InventoryService
 import de.alexandermora.modsync.server.publication.AutoPublicationService
 import de.alexandermora.modsync.server.publication.PublicationPersistence
 import jakarta.servlet.http.HttpServletResponse
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Controller
@@ -36,7 +35,7 @@ import org.springframework.web.bind.annotation.RequestParam
  * @property persistence Publication policy storage.
  * @property autoPublication Service re-triggered by administrators.
  * @property audit Audit log writer.
- * @property maintenance Whether state changes are currently rejected.
+ * @property maintenance Maintenance switch that rejects state changes.
  */
 @Controller
 class DashboardController(
@@ -45,7 +44,7 @@ class DashboardController(
     private val persistence: PublicationPersistence,
     private val autoPublication: AutoPublicationService,
     private val audit: AuditService,
-    @Value($$"${modsync.maintenance}") private val maintenance: Boolean
+    private val maintenance: MaintenanceMode
 ) {
     /**
      * Renders the login form.
@@ -162,7 +161,7 @@ class DashboardController(
      * @return Unit when changes are allowed.
      * @throws org.springframework.web.server.ResponseStatusException with 409 during maintenance.
      */
-    private fun mutable() = requireState(!maintenance, "Maintenance mode is active")
+    private fun mutable() = maintenance.requireWritable()
 }
 
 /** Maps malformed dashboard input to a plain 400 instead of the API's JSON failure body. */

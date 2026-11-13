@@ -6,6 +6,17 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+### Added
+- Administrator user management at `/ui/users`: paged search and filtering, user creation (CLIENT role), disable/enable, password reset, session revocation and permanent device revocation, with flash feedback, a shared layout fragment, a skip link and focus/alert styles. Logic lives in `users.UserManagementService`; `UserManagementController` only renders and binds explicit parameters.
+- `users.enabled` column (Flyway `V5__user_status.sql`, additive, existing accounts stay enabled). Disabled accounts are refused by API login, refresh, bearer authentication and the dashboard login with the same response as a wrong password.
+- `auth.AccountPolicy` (shared username/password rules and role constants) and `common.MaintenanceMode` (shared maintenance switch used by the dashboard and user management).
+- Dashboard sessions are tracked in a `SessionRegistry`, so disabling an account or resetting its password expires its live sessions; expired sessions are sent to `/login?expired`.
+- Audit actions `user-disabled`, `user-enabled`, `user-password-reset`, `user-sessions-revoked`, `user-devices-revoked`.
+
+### Changed
+- Dashboard session cookies are now `HttpOnly`, `SameSite=Strict` and `Secure` by default with a 30 minute timeout. Plain-HTTP setups must set `MODSYNC_SESSION_COOKIE_SECURE=false`.
+- `overview.html` and `server.html` use the shared header fragment; the "All servers" back link is replaced by the main navigation.
+
 ## [0.3.2] - 2026-11-07
 
 ### Changed
