@@ -1,7 +1,7 @@
 plugins {
     id("modsync.root")
 }
-allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.4.1-SNAPSHOT").get() }
+allprojects { group = "de.alexandermora.modsync"; version = providers.gradleProperty("releaseVersion").orElse("0.4.2-SNAPSHOT").get() }
 sonar {
     properties {
         property("sonar.host.url", providers.gradleProperty("sonar.host.url").orElse("https://sonarqube.alexandermora.de").get())

@@ -13,7 +13,7 @@ def version(sha, timestamp):
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Expected full commit SHA")
     stamp = dt.datetime.fromtimestamp(int(timestamp),dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    return f"v0.4.1-dev.{stamp}.{sha}"
+    return f"v0.4.2-dev.{stamp}.{sha}"
 
 def candidates(commits, released, running, attempted, now):
     eligible = [sha for sha in commits if sha not in released and sha not in running and now-attempted.get(sha,0)>=21600]
