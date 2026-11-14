@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } fro
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { AdminApi, describeError } from '../../core/api/admin-api';
+import { runCommand } from '../../core/api/run-command';
 import {
   CLASSIFICATIONS,
   Classification,
@@ -93,15 +94,9 @@ export class ServerPageView implements OnInit {
   }
 
   private run(command: Observable<unknown>, success: string, done: () => void = () => undefined): void {
-    this.error.set('');
-    this.notice.set('');
-    command.subscribe({
-      next: () => {
-        this.notice.set(success);
-        done();
-        this.load();
-      },
-      error: (failure: unknown) => this.error.set(describeError(failure)),
+    runCommand(command, { error: this.error, notice: this.notice }, success, () => {
+      done();
+      this.load();
     });
   }
 }
