@@ -102,4 +102,6 @@ jobs:
       # The Angular unit tests produce the LCOV report SonarQube reads; the paths are made relative to the repository root.
       - run: npm ci --no-audit --no-fund && npm run test:coverage && sed -i 's#^SF:#SF:frontend/#' coverage/frontend/lcov.info
         working-directory: frontend
-      - run: gradle --no-daemon -x :modsync-server:installFrontend check sonar "-Dsonar.host.url=$SONAR_HOST_URL" -Dsonar.qualitygate.wait=true
+      # SonarQube only reads the JaCoCo reports and the compiled classes, so the lint, Dokka and boundary checks that `validate`
+      # already runs are not repeated here. --info prints per-sensor timings: the analysis, not the build, dominates this job.
+      - run: gradle --no-daemon --info -x :modsync-server:installFrontend test jacocoTestReport sonar "-Dsonar.host.url=$SONAR_HOST_URL" -Dsonar.qualitygate.wait=true
