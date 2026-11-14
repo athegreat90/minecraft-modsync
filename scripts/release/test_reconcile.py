@@ -23,6 +23,23 @@ class ReleaseTests(unittest.TestCase):
     def test_canceled_attempt_recovers_at_cooldown_boundary(self):
         self.assertEqual(candidates(['head'], set(), set(), {'head': 100}, 21700), ['head'])
 
+    def test_repeated_failures_back_off_exponentially_up_to_a_cap(self):
+        hour = 3600
+        # One failure keeps the 6 hour cooldown, each further failure doubles it.
+        self.assertEqual(candidates(['x'], set(), set(), {'x': 0}, 6 * hour, {'x': 1}), ['x'])
+        self.assertEqual(candidates(['x'], set(), set(), {'x': 0}, 6 * hour, {'x': 2}), [])
+        self.assertEqual(candidates(['x'], set(), set(), {'x': 0}, 12 * hour, {'x': 2}), ['x'])
+        # 21 failed attempts must not push the retry beyond seven days.
+        self.assertEqual(candidates(['x'], set(), set(), {'x': 0}, 7 * 24 * hour, {'x': 21}), ['x'])
+        self.assertEqual(candidates(['x'], set(), set(), {'x': 0}, 7 * 24 * hour - 1, {'x': 21}), [])
+
+    def test_unknown_failure_count_keeps_the_default_cooldown(self):
+        self.assertEqual(candidates(['x'], set(), set(), {'x': 0}, 21600, {}), ['x'])
+
+    def test_floor_excludes_the_unbuildable_commit(self):
+        import reconcile
+        self.assertTrue(reconcile.RELEASE_FLOOR.startswith('7c29453'))
+
     def test_running_head_does_not_duplicate_dispatch(self):
         self.assertEqual(candidates(['old', 'head'], set(), {'head'}, {}, 30000), ['old'])
 
