@@ -16,11 +16,29 @@ def version(sha, timestamp):
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Expected full commit SHA")
     stamp = dt.datetime.fromtimestamp(int(timestamp),dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    return f"v0.4.5-dev.{stamp}.{sha}"
+    return f"v0.4.6-dev.{stamp}.{sha}"
 
 def cooldown(failures):
     """Seconds to wait after the last attempt: 6 hours, doubled for every further failure, capped at 7 days."""
     return min(COOLDOWN * 2 ** max(failures - 1, 0), MAX_COOLDOWN)
+
+def workflows_tree(sha):
+    """Git tree id of `.github/workflows` at [sha], or None when the directory does not exist."""
+    try:
+        return run("git","rev-parse",f"{sha}:.github/workflows")
+    except subprocess.CalledProcessError:
+        return None
+
+def unpublishable(commits, released, tree=workflows_tree):
+    """Commits the release workflow can never publish.
+
+    The workflow's GITHUB_TOKEN cannot create a branch or tag at a commit whose `.github/workflows` differ from the
+    tip of main (HTTP 403 "Resource not accessible by integration", observed for two historical commits while the
+    same call at the tip succeeded), so `publish` fails for them and every retry only burns runners.
+    Already released commits are not checked.
+    """
+    tip = tree(commits[-1]) if commits else None
+    return [sha for sha in commits if sha not in released and tree(sha) != tip]
 
 def candidates(commits, released, running, attempted, now, failures=None):
     failures = failures or {}
@@ -59,8 +77,9 @@ def main():
             at=dt.datetime.fromisoformat(item.get("updated_at", item["created_at"]).replace("Z","+00:00")).timestamp()
             attempted[sha]=max(at,attempted.get(sha,0))
     now=dt.datetime.now(dt.timezone.utc).timestamp()
-    selected=candidates(commits,released,running,attempted,now,failures)[:20]
+    skipped = unpublishable(commits, released)
+    selected=candidates([sha for sha in commits if sha not in skipped],released,running,attempted,now,failures)[:20]
     for sha in selected:
         subprocess.run(["gh","workflow","run","release.yaml","--ref","main","-f",f"sha={sha}"],check=True)
-    print(json.dumps({"reachable":len(commits),"released":len(set(commits)&released),"running":len(running),"dispatched":selected,"failed":failed,"invalidReleases":invalid,"remaining":len(set(commits)-released)},indent=2))
+    print(json.dumps({"reachable":len(commits),"released":len(set(commits)&released),"running":len(running),"dispatched":selected,"failed":failed,"invalidReleases":invalid,"unpublishable":skipped,"remaining":len(set(commits)-released-set(skipped))},indent=2))
 if __name__ == "__main__": main()

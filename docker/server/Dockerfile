@@ -1,6 +1,6 @@
 # The build output is platform independent (JVM bytecode and scripts): compile once natively, not once per target under QEMU.
 FROM --platform=$BUILDPLATFORM gradle:9.9.1-jdk25-ubi AS build
-ARG RELEASE_VERSION=0.4.5-SNAPSHOT
+ARG RELEASE_VERSION=0.4.6-SNAPSHOT
 WORKDIR /workspace
 COPY . .
 RUN gradle --no-daemon -PreleaseVersion=${RELEASE_VERSION} :modsync-server:bootJar && cp modsync-server/build/libs/modsync-server.jar /tmp/server.jar && javac -d /health docker/server/Health.java
