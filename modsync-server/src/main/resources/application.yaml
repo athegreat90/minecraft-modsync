@@ -1,5 +1,7 @@
 server:
   port: 8080
+  # Set MODSYNC_FORWARD_HEADERS=framework only behind a reverse proxy you control, so redirects use the public https address.
+  forward-headers-strategy: ${MODSYNC_FORWARD_HEADERS:none}
   max-http-request-header-size: 16KB
   tomcat:
     max-http-form-post-size: 2MB
@@ -8,7 +10,7 @@ server:
       timeout: 30m
       cookie:
         http-only: true
-        same-site: strict
+        same-site: lax
         secure: ${MODSYNC_SESSION_COOKIE_SECURE:true}
 spring:
   http:
@@ -43,6 +45,14 @@ modsync:
   bootstrap-user: ${MODSYNC_BOOTSTRAP_USER:admin}
   bootstrap-password-file: ${MODSYNC_BOOTSTRAP_PASSWORD_FILE:}
   maintenance: ${MODSYNC_MAINTENANCE:false}
+  # Single sign-on is active only for providers whose client id is set; with none set the application behaves as before.
+  sso:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+    github:
+      client-id: ${GITHUB_CLIENT_ID:}
+      client-secret: ${GITHUB_CLIENT_SECRET:}
 logging:
   structured:
     format:

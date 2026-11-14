@@ -1,11 +1,17 @@
 package de.alexandermora.modsync.server.ui
 
 import de.alexandermora.modsync.server.auth.UserRepository
+import de.alexandermora.modsync.server.common.AuditService
+import de.alexandermora.modsync.server.sso.GOOGLE
+import de.alexandermora.modsync.server.sso.LINKED_MARKER
+import de.alexandermora.modsync.server.sso.SsoAccounts
+import de.alexandermora.modsync.server.sso.SsoUserServices
 import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
 import jakarta.servlet.RequestDispatcher
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
@@ -20,7 +26,16 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.AuthenticationFailureHandler
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 import org.springframework.security.web.authentication.HttpStatusEntryPoint
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.web.authentication.session.SessionLimit
@@ -35,6 +50,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 private const val MAX_LOGIN_ATTEMPTS_PER_MINUTE = 10
 private const val MAX_TRACKED_ADDRESSES = 10_000
+private const val MAX_AUDITED_CODE = 60
 private const val API_PREFIX = "/ui/api/"
 private const val CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; form-action 'self'"
 
@@ -49,7 +65,7 @@ private const val CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'self
  */
 fun isDashboardRequest(request: HttpServletRequest): Boolean {
     val path = if (request.dispatcherType == DispatcherType.ERROR) request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI) as? String ?: "" else request.requestURI
-    return path == "/login" || path == "/logout" || path == "/ui" || path.startsWith("/ui/")
+    return path == "/login" || path == "/logout" || path == "/ui" || path.startsWith("/ui/") || path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")
 }
 
 /**
@@ -127,7 +143,9 @@ class LoginThrottleFilter : OncePerRequestFilter() {
      * @param chain Remaining filter chain.
      */
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
-        if (request.method == "POST" && request.requestURI == "/login") {
+        val loginAttempt = request.method == "POST" && request.requestURI == "/login"
+        val providerCallback = request.method == "GET" && request.requestURI.startsWith("/login/oauth2/code/")
+        if (loginAttempt || providerCallback) {
             val minute = System.currentTimeMillis() / 60_000
             if (attempts.size > MAX_TRACKED_ADDRESSES) attempts.entries.removeIf { it.value.first < minute }
             val counter = attempts.compute(request.remoteAddr) { _, old -> if (old?.first == minute) minute to old.second + 1 else minute to 1 }
@@ -137,6 +155,68 @@ class LoginThrottleFilter : OncePerRequestFilter() {
             }
         }
         chain.doFilter(request, response)
+    }
+}
+
+/**
+ * Adds OAuth2 login (Google and GitHub) to the dashboard chain.
+ *
+ * Authorization-code flow with `state` validation, PKCE for Google and the OpenID Connect `nonce`. The account is always
+ * chosen by [SsoUserServices], so a provider can only ever sign in an account that was explicitly linked.
+ *
+ * @param http Dashboard security builder.
+ * @param repository Configured providers.
+ * @param accounts Mapping between provider identities and accounts.
+ * @param audit Audit log writer.
+ */
+private fun configureSso(http: HttpSecurity, repository: ClientRegistrationRepository, accounts: SsoAccounts, audit: AuditService) {
+    val services = SsoUserServices(accounts)
+    http.oauth2Login {
+        it.loginPage("/login")
+        it.authorizationEndpoint { endpoint -> endpoint.authorizationRequestResolver(pkceForGoogle(repository)) }
+        it.userInfoEndpoint { user ->
+            user.userService { request -> services.loadOAuth2(request) }
+            user.oidcUserService { request -> services.loadOidc(request) }
+        }
+        it.successHandler(
+            AuthenticationSuccessHandler { request, response, authentication ->
+                val provider = (authentication as OAuth2AuthenticationToken).authorizedClientRegistrationId
+                val session = request.getSession(false)
+                val linked = session?.getAttribute(LINKED_MARKER) != null
+                session?.removeAttribute(LINKED_MARKER)
+                audit.record(authentication.name, (if (linked) "sso-linked:" else "sso-login:") + provider, authentication.name)
+                response.sendRedirect(request.contextPath + if (linked) "/ui/account" else "/ui")
+            }
+        )
+        it.failureHandler(
+            AuthenticationFailureHandler { request, response, exception ->
+                val code = (exception as? OAuth2AuthenticationException)?.error?.errorCode ?: "sso_failed"
+                audit.record("anonymous", "sso-denied:" + code.take(MAX_AUDITED_CODE), "-")
+                response.sendRedirect(request.contextPath + "/login?sso=denied")
+            }
+        )
+    }
+}
+
+/**
+ * Builds the authorization request resolver; Google requests carry a PKCE challenge, GitHub requests rely on `state`.
+ *
+ * @param repository Configured providers.
+ * @return The resolver used by the authorization endpoint.
+ */
+private fun pkceForGoogle(repository: ClientRegistrationRepository): OAuth2AuthorizationRequestResolver {
+    val plain = DefaultOAuth2AuthorizationRequestResolver(repository, "/oauth2/authorization")
+    val pkce =
+        DefaultOAuth2AuthorizationRequestResolver(repository, "/oauth2/authorization").apply {
+            setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce())
+        }
+    return object : OAuth2AuthorizationRequestResolver {
+        override fun resolve(request: HttpServletRequest): OAuth2AuthorizationRequest? = (if (request.requestURI.endsWith("/$GOOGLE")) pkce else plain).resolve(request)
+
+        override fun resolve(
+            request: HttpServletRequest,
+            clientRegistrationId: String
+        ): OAuth2AuthorizationRequest? = (if (clientRegistrationId == GOOGLE) pkce else plain).resolve(request, clientRegistrationId)
     }
 }
 
@@ -164,7 +244,15 @@ class DashboardSecurityConfiguration {
      */
     @Bean
     @Order(1)
-    fun dashboardChain(http: HttpSecurity, users: UserRepository, passwords: PasswordEncoder, sessionRegistry: SessionRegistry): SecurityFilterChain {
+    fun dashboardChain(
+        http: HttpSecurity,
+        users: UserRepository,
+        passwords: PasswordEncoder,
+        sessionRegistry: SessionRegistry,
+        registrations: ObjectProvider<ClientRegistrationRepository>,
+        ssoAccounts: SsoAccounts,
+        audit: AuditService
+    ): SecurityFilterChain {
         val provider =
             DaoAuthenticationProvider(DashboardUserDetailsService(users)).apply {
                 setPasswordEncoder(passwords)
@@ -178,7 +266,7 @@ class DashboardSecurityConfiguration {
                 it
                     .dispatcherTypeMatchers(DispatcherType.ERROR)
                     .permitAll()
-                    .requestMatchers("/login", "/ui/assets/**")
+                    .requestMatchers("/login", "/ui/assets/**", "/ui/api/sso/providers", "/oauth2/**", "/login/oauth2/**")
                     .permitAll()
                     .anyRequest()
                     .hasRole("ADMIN")
@@ -205,6 +293,7 @@ class DashboardSecurityConfiguration {
                 headers.contentSecurityPolicy { it.policyDirectives(CONTENT_SECURITY_POLICY) }
                 headers.frameOptions { it.deny() }
             }.addFilterBefore(LoginThrottleFilter(), UsernamePasswordAuthenticationFilter::class.java)
+        registrations.ifAvailable?.let { configureSso(http, it, ssoAccounts, audit) }
         return http.build()
     }
 
