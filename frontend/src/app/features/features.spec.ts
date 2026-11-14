@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccountPage } from './account/account-page';
 import { Login } from './authentication/login';
 import { Overview } from './dashboard/overview';
@@ -11,6 +11,7 @@ import { UserDetailView } from './users/user-detail';
 import { UserNew } from './users/user-new';
 
 function setup(): HttpTestingController {
+  Element.prototype.scrollIntoView = vi.fn();
   TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
   return TestBed.inject(HttpTestingController);
 }

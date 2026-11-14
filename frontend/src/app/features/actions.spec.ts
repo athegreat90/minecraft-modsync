@@ -13,6 +13,7 @@ import { UsersPage } from './users/users-page';
 let http: HttpTestingController;
 
 beforeEach(() => {
+  Element.prototype.scrollIntoView = vi.fn();
   TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
   http = TestBed.inject(HttpTestingController);
 });
@@ -158,6 +159,18 @@ describe('ServerPageView actions', () => {
     expect(reevaluate.request.method).toBe('POST');
     reevaluate.flush({});
     http.expectOne('/ui/api/servers/s1').flush(page);
+  });
+
+  it('brings the classification form into view and focuses the reason field', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const fixture = await open();
+
+    button(fixture, 'Classify').click();
+    await settle(fixture);
+
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(document.activeElement?.getAttribute('formcontrolname')).toBe('reason');
   });
 
   it('classifies a mod with a reason and can cancel', async () => {
