@@ -12,6 +12,7 @@ import de.alexandermora.modsync.server.common.notFound
 import de.alexandermora.modsync.server.inventory.InventoryService
 import de.alexandermora.modsync.server.publication.ManifestGateway
 import de.alexandermora.modsync.server.publication.PublicationPersistence
+import kotlinx.serialization.Serializable
 import org.springframework.stereotype.Service
 
 private const val HISTORY_LIMIT = 20
@@ -23,6 +24,7 @@ private const val SHORT_HASH = 12
  * @property info Server summary.
  * @property policy Publication policy in force.
  */
+@Serializable
 data class ServerRow(val info: ServerInfo, val policy: PublicationPolicy)
 
 /**
@@ -33,6 +35,7 @@ data class ServerRow(val info: ServerInfo, val policy: PublicationPolicy)
  * @property shortHash Abbreviated hash for display.
  * @property classification Approved classification name, or null when unreviewed.
  */
+@Serializable
 data class EntryRow(val fileName: String, val sha512: String, val shortHash: String, val classification: String?)
 
 /**
@@ -43,6 +46,7 @@ data class EntryRow(val fileName: String, val sha512: String, val shortHash: Str
  * @property versionId Modrinth version id.
  * @property classification Artifact classification.
  */
+@Serializable
 data class ManifestRow(val fileName: String, val projectId: String, val versionId: String, val classification: Classification)
 
 /**
@@ -57,6 +61,7 @@ data class ManifestRow(val fileName: String, val projectId: String, val versionI
  * @property coverage Client coverage, or null without a manifest.
  * @property history Recent publication attempts.
  */
+@Serializable
 data class ServerPage(
     val info: ServerInfo,
     val policy: PublicationPolicy,

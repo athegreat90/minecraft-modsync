@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
+import org.springframework.http.HttpStatus
 import org.springframework.security.authentication.DisabledException
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -20,8 +21,13 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.HttpStatusEntryPoint
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.web.authentication.session.SessionLimit
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import org.springframework.security.web.csrf.CsrfToken
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 import org.springframework.security.web.session.HttpSessionEventPublisher
 import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.filter.OncePerRequestFilter
@@ -29,7 +35,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 private const val MAX_LOGIN_ATTEMPTS_PER_MINUTE = 10
 private const val MAX_TRACKED_ADDRESSES = 10_000
-private const val CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'self'; script-src 'none'; frame-ancestors 'none'; form-action 'self'"
+private const val API_PREFIX = "/ui/api/"
+private const val CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; form-action 'self'"
 
 /**
  * Decides whether a request belongs to the dashboard chain.
@@ -82,6 +89,26 @@ class DashboardUserDetailsService(private val users: UserRepository) : UserDetai
  */
 fun rejectDisabledAccount(details: UserDetails) {
     if (!details.isEnabled) throw DisabledException("Account is disabled")
+}
+
+/**
+ * Forces the deferred CSRF token to load so the `XSRF-TOKEN` cookie is written on every response that needs it.
+ *
+ * Spring Security 6 and later generate the token lazily; without this filter a single-page client would never receive
+ * the cookie on pages that do not render the token themselves.
+ */
+class CsrfCookieFilter : OncePerRequestFilter() {
+    /**
+     * Touches the token, then continues the chain.
+     *
+     * @param request Incoming request.
+     * @param response Response that receives the cookie.
+     * @param chain Remaining filter chain.
+     */
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
+        (request.getAttribute(CsrfToken::class.java.name) as? CsrfToken)?.token
+        chain.doFilter(request, response)
+    }
 }
 
 /**
@@ -162,6 +189,15 @@ class DashboardSecurityConfiguration {
                     .defaultSuccessUrl("/ui", true)
                     .permitAll()
             }.logout { it.logoutUrl("/logout").logoutSuccessUrl("/login?logout") }
+            .exceptionHandling {
+                // Script clients get a plain 401 instead of a redirect to the login page.
+                it.defaultAuthenticationEntryPointFor(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) { request -> request.requestURI.startsWith(API_PREFIX) }
+            }.csrf {
+                // The Angular client reads the token from the XSRF-TOKEN cookie and echoes it in X-XSRF-TOKEN. The token is never
+                // rendered into HTML bodies, so the plain handler is safe here and also serves the form-based login page.
+                it.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                it.csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
+            }.addFilterAfter(CsrfCookieFilter(), BasicAuthenticationFilter::class.java)
             .sessionManagement {
                 it.sessionFixation { fixation -> fixation.migrateSession() }
                 it.sessionConcurrency { concurrency -> concurrency.maximumSessions(SessionLimit.UNLIMITED).sessionRegistry(sessionRegistry).expiredUrl("/login?expired") }

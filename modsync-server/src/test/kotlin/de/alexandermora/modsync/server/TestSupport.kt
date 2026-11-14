@@ -60,6 +60,28 @@ internal class TestBrowser(
         password: String
     ): HttpResponse<String> = post("/login", mapOf("username" to user, "password" to password), csrfOf("/login"))
 
+    /** Returns the value of a cookie in the jar, or null when it is absent. */
+    fun cookie(name: String): String? =
+        cookies.cookieStore.cookies
+            .firstOrNull { it.name == name }
+            ?.value
+
+    /** Sends a JSON request; the CSRF token is echoed in the `X-XSRF-TOKEN` header when [xsrf] is not null. */
+    fun json(
+        method: String,
+        path: String,
+        body: String = "",
+        xsrf: String? = null
+    ): HttpResponse<String> {
+        val builder =
+            HttpRequest
+                .newBuilder(URI("$base$path"))
+                .header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(body))
+        xsrf?.let { builder.header("X-XSRF-TOKEN", it) }
+        return http.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+    }
+
     /** Returns the current session cookie value, or null when there is none. */
     fun sessionId(): String? =
         cookies.cookieStore.cookies

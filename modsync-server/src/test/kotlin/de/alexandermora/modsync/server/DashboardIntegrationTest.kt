@@ -170,7 +170,7 @@ class DashboardIntegrationTest {
                 .headers()
                 .firstValue("Content-Security-Policy")
                 .get()
-                .contains("script-src 'none'")
+                .contains("script-src 'self'")
         )
     }
 
