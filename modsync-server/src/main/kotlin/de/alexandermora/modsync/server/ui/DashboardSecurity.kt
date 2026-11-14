@@ -33,10 +33,13 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
+import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.AuthenticationFailureHandler
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler
+import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint
 import org.springframework.security.web.authentication.HttpStatusEntryPoint
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.web.authentication.session.SessionLimit
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
@@ -278,8 +281,11 @@ class DashboardSecurityConfiguration {
                     .permitAll()
             }.logout { it.logoutUrl("/logout").logoutSuccessUrl("/login?logout") }
             .exceptionHandling {
-                // Script clients get a plain 401 instead of a redirect to the login page.
-                it.defaultAuthenticationEntryPointFor(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) { request -> request.requestURI.startsWith(API_PREFIX) }
+                // Script clients get a plain 401; browsers are sent to the login page.
+                val api = RequestMatcher { request -> request.requestURI.startsWith(API_PREFIX) }
+                val entryPoint = DelegatingAuthenticationEntryPoint(linkedMapOf<RequestMatcher, AuthenticationEntryPoint>(api to HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                entryPoint.setDefaultEntryPoint(LoginUrlAuthenticationEntryPoint("/login"))
+                it.authenticationEntryPoint(entryPoint)
             }.csrf {
                 // The Angular client reads the token from the XSRF-TOKEN cookie and echoes it in X-XSRF-TOKEN. The token is never
                 // rendered into HTML bodies, so the plain handler is safe here and also serves the form-based login page.

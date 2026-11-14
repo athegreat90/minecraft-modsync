@@ -136,7 +136,8 @@ class SsoIntegrationTest {
     /** Linking needs a signed-in administrator, a CSRF token and a configured provider. */
     @Test fun linkingNeedsSessionCsrfAndAConfiguredProvider() {
         val anonymous = TestBrowser(urlOf(configured))
-        assertEquals(401, anonymous.json("POST", "/ui/api/me/identities/github/link").statusCode())
+        assertEquals(401, anonymous.json("GET", "/ui/api/me/identities").statusCode())
+        assertEquals(403, anonymous.json("POST", "/ui/api/me/identities/github/link").statusCode())
 
         val browser = TestBrowser(urlOf(configured))
         browser.signIn("admin", adminPassword)

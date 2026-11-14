@@ -130,10 +130,12 @@ class UserManagementIntegrationTest {
     @Test fun sessionIsRotatedOnLogin() {
         val browser = TestBrowser(base)
         val csrf = browser.csrfOf("/login")
-        val before = browser.sessionId()
-        assertNotNull(before)
+        val tokenBefore = browser.cookie("XSRF-TOKEN")
+        assertNotNull(tokenBefore)
         assertEquals("/ui", browser.post("/login", mapOf("username" to "admin", "password" to adminPassword), csrf).location())
-        assertNotEquals(before, browser.sessionId())
+        assertNotNull(browser.sessionId())
+        browser.get("/ui")
+        assertNotEquals(tokenBefore, browser.cookie("XSRF-TOKEN"))
     }
 
     /** Creating accounts validates input, reports specific reasons, never echoes passwords and audits the creation. */
