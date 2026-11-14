@@ -11,6 +11,7 @@ import de.alexandermora.modsync.domain.SyncPolicy
 import de.alexandermora.modsync.fixtures.Fixtures
 import de.alexandermora.modsync.protocol.ClientInventoryReport
 import de.alexandermora.modsync.protocol.SyncReport
+import de.alexandermora.modsync.scanner.directoryFingerprint
 import de.alexandermora.modsync.scanner.fileHash
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -111,7 +112,7 @@ class AutoSyncTest {
     /** A recent successful pass at the same revision skips manifest download and rescanning. */
     @Test fun unchangedRevisionSkipsWork() {
         val gateway = FakeGateway(manifest(3))
-        val settings = AutoSettings(instanceId, server, SyncPolicy.AUTO_APPROVED_INSTALL, "t", 3, System.currentTimeMillis() / 1000, 1, "SUCCESS")
+        val settings = AutoSettings(instanceId, server, SyncPolicy.AUTO_APPROVED_INSTALL, "t", 3, System.currentTimeMillis() / 1000, 1, "SUCCESS", modsFingerprint = directoryFingerprint(installer.mods))
         val (outcome, _) = runner(gateway, settings = settings).runOnce()
         assertEquals(AutoOutcome.UpToDate(3), outcome)
         assertEquals(0, gateway.manifestFetches)

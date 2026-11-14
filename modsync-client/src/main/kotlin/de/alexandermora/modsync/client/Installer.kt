@@ -216,8 +216,7 @@ class Installer(
  *
  * @return One explanation per duplicated mod id, empty when every mod id is provided by a single file.
  */
-    fun unresolvedDuplicates(): List<String> = Scanner().scan(mods).flatMap { entry -> entry.modIds.map { it to entry.fileName } }
-        .groupBy({ it.first }, { it.second }).filterValues { it.size > 1 }.map { (id, files) -> "mod $id is provided by ${files.sorted().joinToString()}" }.sorted()
+    fun unresolvedDuplicates(): List<String> = duplicateMods(Scanner().scan(mods))
 /**
  * Restores the pre-apply state from the journal and its verified backups under the instance lock.
  *
