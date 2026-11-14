@@ -16,7 +16,33 @@ def version(sha, timestamp):
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Expected full commit SHA")
     stamp = dt.datetime.fromtimestamp(int(timestamp),dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    return f"v0.5.0-dev.{stamp}.{sha}"
+    return f"v0.5.1-dev.{stamp}.{sha}"
+
+def tag_version(tag):
+    """Application version part of a development tag, for example `0.5.0` for `v0.5.0-dev.<time>.<sha>`."""
+    return tag[1:].split("-dev.", 1)[0]
+
+def source_version(sha):
+    """Application version a commit builds as, read from that commit's own release tooling; None when it cannot be determined."""
+    try:
+        text = run("git", "show", f"{sha}:scripts/release/reconcile.py")
+    except subprocess.CalledProcessError:
+        return None
+    match = re.search(r'return f"v([0-9]+\.[0-9]+\.[0-9]+)-dev\.', text)
+    return match.group(1) if match else None
+
+def superseded(commits, released, versions):
+    """Unreleased commits replaced by a later release of the same version.
+
+    Only the newest build of each version is kept, so a commit that is older than a released commit of its own version
+    must not be built again (nor rebuilt after its old release was pruned). Commits whose version is unknown are never
+    treated as superseded. `commits` is ordered from oldest to newest.
+    """
+    newest = {}
+    for index, sha in enumerate(commits):
+        if sha in released and versions.get(sha):
+            newest[versions[sha]] = index
+    return {sha for index, sha in enumerate(commits) if sha not in released and versions.get(sha) and newest.get(versions[sha], -1) > index}
 
 def cooldown(failures):
     """Seconds to wait after the last attempt: 6 hours, doubled for every further failure, capped at 7 days."""
@@ -51,7 +77,7 @@ def main():
     commits = run("git","rev-list","--reverse",f"{RELEASE_FLOOR}^..origin/main").splitlines()
     pages = json.loads(run("gh","api","--paginate","--slurp",f"repos/{repo}/releases?per_page=100"))
     from state import verify_complete
-    released, invalid = set(), {}
+    released, invalid, versions = set(), {}, {}
     for page in pages:
         for release in page:
             if release['draft'] or not TAG_PATTERN.fullmatch(release['tag_name']):
@@ -60,6 +86,7 @@ def main():
             try:
                 verify_complete(repo, release, sha)
                 released.add(sha)
+                versions[sha] = tag_version(release['tag_name'])
             except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
                 invalid[sha] = str(error)
     pages = json.loads(run("gh","api","--paginate","--slurp",f"repos/{repo}/actions/workflows/release.yaml/runs?event=workflow_dispatch&per_page=100"))
@@ -78,8 +105,12 @@ def main():
             attempted[sha]=max(at,attempted.get(sha,0))
     now=dt.datetime.now(dt.timezone.utc).timestamp()
     skipped = unpublishable(commits, released)
-    selected=candidates([sha for sha in commits if sha not in skipped],released,running,attempted,now,failures)[:20]
+    for sha in commits:
+        if sha not in released and sha not in versions:
+            versions[sha] = source_version(sha)
+    replaced = superseded(commits, released, versions)
+    selected=candidates([sha for sha in commits if sha not in skipped and sha not in replaced],released,running,attempted,now,failures)[:20]
     for sha in selected:
         subprocess.run(["gh","workflow","run","release.yaml","--ref","main","-f",f"sha={sha}"],check=True)
-    print(json.dumps({"reachable":len(commits),"released":len(set(commits)&released),"running":len(running),"dispatched":selected,"failed":failed,"invalidReleases":invalid,"unpublishable":skipped,"remaining":len(set(commits)-released-set(skipped))},indent=2))
+    print(json.dumps({"reachable":len(commits),"released":len(set(commits)&released),"running":len(running),"dispatched":selected,"failed":failed,"invalidReleases":invalid,"unpublishable":skipped,"superseded":sorted(replaced),"remaining":len(set(commits)-released-set(skipped)-replaced)},indent=2))
 if __name__ == "__main__": main()

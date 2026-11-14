@@ -6,6 +6,21 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-14
+
+### Fixed
+- Six frontend tests only matched their HTTP requests and had no assertion, which failed the SonarQube quality gate on `main` (`new_violations`, rule `typescript:S2699`). They now assert the request method or body. No rule was suppressed.
+
+### Changed
+- The Angular pages share one `runCommand` helper (`frontend/src/app/core/api/run-command.ts`) instead of three copies of the same command/notice/error code, which removes the only duplicated block SonarQube reported on new code. Behaviour is unchanged; the helper has its own tests (45 frontend tests, 95% line coverage).
+- Deprecated build API uses were replaced: `tasks.register<Exec>(...)` for the frontend tasks, `project(path)` for the Dokka aggregation dependency and `isUnprocessableContent` in a server test. The compiler reports no warnings. The remaining Gradle deprecation notices come from third-party plugins when they are applied.
+- The `sonar` CI job runs `test jacocoTestReport sonar` instead of `check`, because SonarQube reads only the JaCoCo reports and the compiled classes and `validate` already runs the lint, Dokka and boundary checks. It also logs per-sensor timings (`--info`). Measured on the first `main` run after 0.5.0, the repeated build was about 3 of 17 minutes and the `:sonar` task itself (analysis and quality-gate wait) 13.6 minutes, so this is a first, small reduction.
+- Release retention is one development prerelease per application version. The reconciler no longer builds a commit when a later commit of the same version already has a verified release (`superseded` in its report), and `scripts/release/prune.py` (dry run by default, `--apply` to delete) removes the older published releases and their tags without ever touching drafts or the last complete release of a version. See `RELEASES.md`.
+- Version bumped 0.5.0 -> 0.5.1 (patch: tests, refactoring and CI only; wire protocol 1 and minimum component compatibility are unchanged), including `frontend/package.json`.
+
+### Documentation
+- `MEMORY.md` records the quality-gate failure and fix, the published 0.5.0 prereleases and the measured CI timings; `docs/development/FRONTEND.md` and `docs/development/SONARQUBE.md` describe the shared helper, the test count and the `sonar` job.
+
 ## [0.5.0] - 2026-11-14
 
 ### Added

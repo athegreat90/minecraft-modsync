@@ -5,7 +5,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(TAG_PATTERN.fullmatch(version("a"*40,0)))
         self.assertTrue(TAG_PATTERN.fullmatch("v0.1.0-dev.19700101000000."+"a"*40))
     def test_version_stable_and_unique(self):
-        self.assertEqual(version("a"*40,0),"v0.5.0-dev.19700101000000."+"a"*40)
+        self.assertEqual(version("a"*40,0),"v0.5.1-dev.19700101000000."+"a"*40)
         self.assertNotEqual(version("a"*40,0),version("b"*40,0))
     def test_multicommit_and_canceled_pending_not_lost(self):
         self.assertEqual(candidates(["a","b","c"],{"a"},set(),{"b":1},30000),["c","b"])
@@ -97,3 +97,58 @@ class ReleaseTests(unittest.TestCase):
             reconcile.main()
         self.assertEqual([c.args[0][-1] for c in dispatch.call_args_list], ['sha='+commits[2], 'sha='+commits[0]])
         self.assertEqual(json.loads(output.getvalue())['failed'], {commits[0]: 'canceled-run'})
+
+    def test_tag_version_is_the_application_version(self):
+        from reconcile import tag_version
+        self.assertEqual(tag_version("v0.5.0-dev.19700101000000." + "a" * 40), "0.5.0")
+
+    def test_source_version_is_read_from_the_commits_own_tooling(self):
+        from unittest.mock import patch
+        import reconcile
+        with patch.object(reconcile, "run", return_value='    return f"v0.3.2-dev.{stamp}.{sha}"'):
+            self.assertEqual(reconcile.source_version("a" * 40), "0.3.2")
+        with patch.object(reconcile, "run", return_value="nothing useful"):
+            self.assertIsNone(reconcile.source_version("a" * 40))
+
+    def test_only_commits_older_than_a_release_of_the_same_version_are_superseded(self):
+        from reconcile import superseded
+        commits = ["a", "b", "c", "d", "e"]
+        versions = {"a": "0.1.0", "b": "0.1.0", "c": "0.1.0", "d": "0.2.0", "e": "0.2.0"}
+        # c is the newest released 0.1.0 build, so a and b are replaced; nothing of 0.2.0 is released, so d and e still build.
+        self.assertEqual(superseded(commits, {"c"}, versions), {"a", "b"})
+        # a newer commit of the same version after the release is not superseded.
+        self.assertEqual(superseded(["a", "b", "c"], {"b"}, {"a": "1", "b": "1", "c": "1"}), {"a"})
+
+    def test_commits_with_unknown_versions_are_never_superseded(self):
+        from reconcile import superseded
+        self.assertEqual(superseded(["a", "b", "c"], {"c"}, {"a": None, "c": "1"}), set())
+
+    def test_reconcile_does_not_rebuild_commits_replaced_by_a_later_release_of_the_same_version(self):
+        import contextlib
+        import io
+        import json
+        import os
+        from unittest.mock import patch
+        import reconcile
+        commits = ["a" * 40, "b" * 40, "c" * 40]
+        release = {"draft": False, "tag_name": "v0.5.0-dev.19700101000001." + commits[1]}
+
+        def command(*args):
+            if args[:2] == ("git", "rev-parse"):
+                return "same-tree"
+            if args[:2] == ("git", "show"):
+                return 'return f"v0.5.0-dev.{stamp}.{sha}"'
+            if args[0] == "git":
+                return chr(10).join(commits)
+            if "/releases?" in args[-1]:
+                return json.dumps([[release]])
+            return json.dumps([{"workflow_runs": []}])
+
+        import state
+        output = io.StringIO()
+        with patch.dict(os.environ, GITHUB_REPOSITORY="owner/repo"), patch.object(reconcile, "run", side_effect=command), patch.object(state, "verify_complete"), patch.object(reconcile.subprocess, "run") as dispatch, contextlib.redirect_stdout(output):
+            reconcile.main()
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["superseded"], [commits[0]])
+        self.assertEqual([c.args[0][-1] for c in dispatch.call_args_list], ["sha=" + commits[2]])
+
