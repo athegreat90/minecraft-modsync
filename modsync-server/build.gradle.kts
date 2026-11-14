@@ -3,7 +3,7 @@ dependencies {
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -26,3 +26,29 @@ tasks.jar { enabled = false }
 dependencies { testImplementation(project(":modsync-test-fixtures")) }
 tasks.bootJar { archiveFileName.set("modsync-server.jar") }
 tasks.processResources { from(rootProject.file("docs/architecture/openapi.json")) }
+
+// The Angular administration UI is built once by npm and packaged under /ui in the server jar (no Node at runtime).
+// Pass -PwithoutFrontend to skip it, for example when only Kotlin is being compiled.
+val frontendDir = rootProject.layout.projectDirectory.dir("frontend")
+val npm = if (System.getProperty("os.name").lowercase().contains("win")) "npm.cmd" else "npm"
+val installFrontend = tasks.register<Exec>("installFrontend") {
+    workingDir = frontendDir.asFile
+    commandLine(npm, "ci", "--no-audit", "--no-fund")
+    inputs.file(frontendDir.file("package-lock.json"))
+    outputs.dir(frontendDir.dir("node_modules"))
+}
+val buildFrontend = tasks.register<Exec>("buildFrontend") {
+    dependsOn(installFrontend)
+    workingDir = frontendDir.asFile
+    commandLine(npm, "run", "build")
+    inputs.files(frontendDir.file("package.json"), frontendDir.file("angular.json"), frontendDir.file("tsconfig.json"), frontendDir.file("tsconfig.app.json"))
+    inputs.dir(frontendDir.dir("src"))
+    inputs.dir(frontendDir.dir("public"))
+    outputs.dir(frontendDir.dir("dist"))
+}
+if (!project.hasProperty("withoutFrontend")) {
+    tasks.processResources {
+        dependsOn(buildFrontend)
+        from(frontendDir.dir("dist")) { into("static/ui") }
+    }
+}

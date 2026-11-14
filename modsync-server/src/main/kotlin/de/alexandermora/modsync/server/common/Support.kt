@@ -81,5 +81,5 @@ class Errors {
     @ExceptionHandler(IllegalArgumentException::class, HttpMessageNotReadableException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun invalid(request: HttpServletRequest) =
-        Failure("INVALID_REQUEST", "Invalid request payload", request.getAttribute("correlationId").toString())
+        Failure("INVALID_REQUEST", "Invalid request payload", request.getAttribute("correlationId")?.toString().orEmpty())
 }

@@ -1,7 +1,10 @@
 package de.alexandermora.modsync.server
 
 import de.alexandermora.modsync.protocol.UserRegistration
+import de.alexandermora.modsync.protocol.wire
 import de.alexandermora.modsync.server.auth.AuthService
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -22,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** Drives the user-management pages end to end: authorization, validation, account lifecycle, credential revocation, escaping and maintenance. */
@@ -90,58 +94,71 @@ class UserManagementIntegrationTest {
     /** Looks up the id of an account by login name. */
     private fun idOf(name: String): String = requireNotNull(db.queryForObject("SELECT id FROM users WHERE username = ?", String::class.java, name))
 
-    /** Posts a form to an account action, using a fresh CSRF token from the account page. */
+    /** Calls an account action as [browser], with the CSRF header the Angular client sends. */
     private fun act(
         browser: TestBrowser,
         id: String,
         action: String,
-        form: Map<String, String> = emptyMap()
-    ) = browser.post("/ui/users/$id/$action", form, browser.csrfOf("/ui/users/$id"))
+        body: String = "{}"
+    ) = browser.call("POST", "/ui/api/users/$id/$action", body)
 
-    /** Anonymous visitors are redirected, CLIENT sessions get 403 and neither can post, while the API chain is unchanged. */
+    private fun createBody(
+        username: String,
+        pass: String = password,
+        confirmation: String = pass
+    ) = """{"username":"$username","password":"$pass","confirmation":"$confirmation"}"""
+
+    private fun userIdOf(body: String): String =
+        wire
+            .parseToJsonElement(body)
+            .jsonObject
+            .getValue("userId")
+            .jsonPrimitive.content
+
+    /** Anonymous visitors are redirected or get 401, CLIENT sessions get 403 and neither can write, while the client API chain is unchanged. */
     @Test fun nonAdministratorsAreDenied() {
         val anonymous = TestBrowser(base)
-        assertEquals("/login", anonymous.get("/ui/users").location())
-        assertEquals(403, anonymous.post("/ui/users", mapOf("username" to "x", "password" to password, "confirmation" to password), null).statusCode())
+        assertEquals("/ui/login", anonymous.get("/ui/users").location())
+        assertEquals(401, anonymous.json("GET", "/ui/api/users").statusCode())
+        assertEquals(403, anonymous.json("POST", "/ui/api/users", createBody("x")).statusCode())
 
         val name = newClient()
         val id = idOf(name)
         val client = TestBrowser(base)
         assertEquals("/ui", client.signIn(name, password).location())
-        assertEquals(403, client.get("/ui/users").statusCode())
-        assertEquals(403, client.get("/ui/users/$id").statusCode())
-        val csrf = client.csrfOf("/login")
-        assertEquals(403, client.post("/ui/users/$id/disable", emptyMap(), csrf).statusCode())
-        assertEquals(403, client.post("/ui/users", mapOf("username" to "evil", "password" to password, "confirmation" to password), csrf).statusCode())
+        assertEquals(403, client.json("GET", "/ui/api/users").statusCode())
+        assertEquals(403, client.json("GET", "/ui/api/users/$id").statusCode())
+        assertEquals(403, act(client, id, "disable").statusCode())
+        assertEquals(403, client.call("POST", "/ui/api/users", createBody("evil")).statusCode())
         assertTrue(db.queryForObject("SELECT enabled FROM users WHERE id = ?", Boolean::class.java, id) == true)
         assertEquals(0, db.queryForObject("SELECT COUNT(*) FROM users WHERE username = 'evil'", Int::class.java))
     }
 
-    /** Posts without a CSRF token are refused and change nothing. */
+    /** Writes without a CSRF token are refused and change nothing. */
     @Test fun postsRequireCsrf() {
         val id = idOf(newClient())
-        assertEquals(403, admin.post("/ui/users/$id/disable", emptyMap(), null).statusCode())
-        assertEquals(403, admin.post("/ui/users", mapOf("username" to "nocsrf", "password" to password, "confirmation" to password), null).statusCode())
+        assertEquals(403, admin.json("POST", "/ui/api/users/$id/disable", "{}").statusCode())
+        assertEquals(403, admin.json("POST", "/ui/api/users", createBody("nocsrf")).statusCode())
         assertTrue(db.queryForObject("SELECT enabled FROM users WHERE id = ?", Boolean::class.java, id) == true)
         assertEquals(0, db.queryForObject("SELECT COUNT(*) FROM users WHERE username = 'nocsrf'", Int::class.java))
     }
 
-    /** The session id changes at login, so a pre-login session cannot be fixated. */
+    /** The CSRF token changes at login and a session exists only afterwards, so a pre-login session cannot be fixated. */
     @Test fun sessionIsRotatedOnLogin() {
         val browser = TestBrowser(base)
-        val csrf = browser.csrfOf("/login")
-        val before = browser.sessionId()
-        assertNotNull(before)
+        val csrf = browser.csrfOf("/ui/login")
+        val tokenBefore = browser.cookie("XSRF-TOKEN")
+        assertNotNull(tokenBefore)
+        assertNull(browser.sessionId())
         assertEquals("/ui", browser.post("/login", mapOf("username" to "admin", "password" to adminPassword), csrf).location())
-        assertNotEquals(before, browser.sessionId())
+        assertNotNull(browser.sessionId())
+        browser.get("/ui")
+        assertNotEquals(tokenBefore, browser.cookie("XSRF-TOKEN"))
     }
 
     /** Creating accounts validates input, reports specific reasons, never echoes passwords and audits the creation. */
     @Test fun createValidatesAndAudits() {
-        val form = admin.get("/ui/users/new")
-        assertEquals(200, form.statusCode())
-
-        fun submit(username: String, pass: String, confirmation: String) = admin.post("/ui/users", mapOf("username" to username, "password" to pass, "confirmation" to confirmation), admin.csrf(form.body()))
+        fun submit(username: String, pass: String, confirmation: String) = admin.call("POST", "/ui/api/users", createBody(username, pass, confirmation))
 
         val invalidName = submit("bad name", password, password)
         assertEquals(422, invalidName.statusCode())
@@ -152,14 +169,13 @@ class UserManagementIntegrationTest {
         assertFalse(mismatch.body().contains(password))
 
         val created = submit("created-${UUID.randomUUID().toString().take(8)}", password, password)
-        assertEquals(302, created.statusCode())
-        val page = admin.get(created.location())
-        assertTrue(page.body().contains("Account created."))
-        val id = created.location().substringAfterLast('/')
-        assertEquals(200, api.login(db.queryForObject("SELECT username FROM users WHERE id = ?", String::class.java, id)!!, password).first)
+        assertEquals(201, created.statusCode())
+        val id = userIdOf(created.body())
+        val username = db.queryForObject("SELECT username FROM users WHERE id = ?", String::class.java, id)!!
+        assertEquals(200, api.login(username, password).first)
 
-        val duplicate = submit(db.queryForObject("SELECT username FROM users WHERE id = ?", String::class.java, id)!!, password, password)
-        assertEquals(422, duplicate.statusCode())
+        val duplicate = submit(username, password, password)
+        assertEquals(409, duplicate.statusCode())
         assertTrue(duplicate.body().contains("already in use"))
         val actor = db.queryForObject("SELECT actor FROM audit_events WHERE action = 'user-created' AND target = ?", String::class.java, id)
         assertEquals(idOf("admin"), actor)
@@ -173,17 +189,17 @@ class UserManagementIntegrationTest {
         newClient("underXscore")
         assertEquals(3, db.update("UPDATE users SET enabled = FALSE WHERE username LIKE ? ORDER BY username LIMIT 3", "$prefix%"))
 
-        val first = admin.get("/ui/users?q=$prefix").body()
-        assertTrue(first.contains("Page 1 of 2 (27 accounts)"))
-        assertTrue(admin.get("/ui/users?q=$prefix&page=1").body().contains("Page 2 of 2"))
-        assertTrue(admin.get("/ui/users?q=under_score").body().contains("under_score-"))
-        assertFalse(admin.get("/ui/users?q=under_score").body().contains("underXscore-"))
-        assertTrue(admin.get("/ui/users?role=ADMIN").body().contains(">admin<"))
-        assertFalse(admin.get("/ui/users?role=CLIENT").body().contains(">admin<"))
-        assertEquals(200, admin.get("/ui/users?role=ROOT&status=bogus&page=-1").statusCode())
-        val disabled = admin.get("/ui/users?q=$prefix&status=disabled").body()
-        assertEquals(3, "badge bad".toRegex().findAll(disabled).count())
-        assertFalse(disabled.contains("badge ok"))
+        val first = admin.json("GET", "/ui/api/users?q=$prefix").body()
+        assertTrue(first.contains("\"totalPages\":2") && first.contains("\"total\":27"), first)
+        assertTrue(admin.json("GET", "/ui/api/users?q=$prefix&page=1").body().contains("\"page\":1"))
+        assertTrue(admin.json("GET", "/ui/api/users?q=under_score").body().contains("under_score-"))
+        assertFalse(admin.json("GET", "/ui/api/users?q=under_score").body().contains("underXscore-"))
+        assertTrue(admin.json("GET", "/ui/api/users?role=ADMIN").body().contains("\"username\":\"admin\""))
+        assertFalse(admin.json("GET", "/ui/api/users?role=CLIENT").body().contains("\"username\":\"admin\""))
+        assertEquals(200, admin.json("GET", "/ui/api/users?role=ROOT&status=bogus&page=-1").statusCode())
+        val disabled = admin.json("GET", "/ui/api/users?q=$prefix&status=disabled").body()
+        assertEquals(3, "\"enabled\":false".toRegex().findAll(disabled).count())
+        assertFalse(disabled.contains("\"enabled\":true"))
     }
 
     /** Disabling ends API access and live dashboard sessions; enabling restores sign-in. */
@@ -193,18 +209,17 @@ class UserManagementIntegrationTest {
         val session = requireNotNull(api.login(name, password).second)
         val clientBrowser = TestBrowser(base)
         assertEquals("/ui", clientBrowser.signIn(name, password).location())
-        assertEquals(403, clientBrowser.get("/ui").statusCode())
+        assertEquals(403, clientBrowser.json("GET", "/ui/api/overview").statusCode())
 
-        val disabled = act(admin, id, "disable")
-        assertEquals("/ui/users/$id", disabled.location())
-        assertTrue(admin.get("/ui/users/$id").body().contains("badge bad"))
+        assertEquals(200, act(admin, id, "disable").statusCode())
+        assertTrue(admin.json("GET", "/ui/api/users/$id").body().contains("\"enabled\":false"))
         assertEquals(401, api.status("GET", "/api/v1/devices", session.token))
         assertEquals(401, api.refresh(requireNotNull(session.refreshToken)))
         assertEquals(401, api.login(name, password).first)
-        assertEquals("/login?error", TestBrowser(base).signIn(name, password).location())
-        assertEquals("/login?expired", clientBrowser.get("/ui").location())
+        assertEquals("/ui/login?error", TestBrowser(base).signIn(name, password).location())
+        assertEquals("/ui/login?expired", clientBrowser.get("/ui").location())
 
-        assertEquals("/ui/users/$id", act(admin, id, "enable").location())
+        assertEquals(200, act(admin, id, "enable").statusCode())
         assertEquals(200, api.login(name, password).first)
         assertEquals(listOf("user-disabled", "user-enabled"), db.queryForList("SELECT action FROM audit_events WHERE target = ? AND action LIKE 'user-%' AND action <> 'user-created' ORDER BY id", String::class.java, id))
     }
@@ -215,12 +230,12 @@ class UserManagementIntegrationTest {
         val id = idOf(name)
         val session = requireNotNull(api.login(name, password).second)
 
-        assertEquals("/ui/users/$id", act(admin, id, "password", mapOf("password" to "short", "confirmation" to "short")).location())
-        assertTrue(admin.get("/ui/users/$id").body().contains("Passwords need 16 to 256 characters."))
+        val rejected = act(admin, id, "password", """{"password":"short","confirmation":"short"}""")
+        assertEquals(422, rejected.statusCode())
+        assertTrue(rejected.body().contains("Passwords need 16 to 256 characters."))
         assertEquals(200, api.status("GET", "/api/v1/devices", session.token))
 
-        act(admin, id, "password", mapOf("password" to newPassword, "confirmation" to newPassword))
-        assertTrue(admin.get("/ui/users/$id").body().contains("Password changed."))
+        assertEquals(200, act(admin, id, "password", """{"password":"$newPassword","confirmation":"$newPassword"}""").statusCode())
         assertEquals(401, api.status("GET", "/api/v1/devices", session.token))
         assertEquals(401, api.login(name, password).first)
         assertEquals(200, api.login(name, newPassword).first)
@@ -235,15 +250,14 @@ class UserManagementIntegrationTest {
         val device = UUID.randomUUID().toString()
         val session = requireNotNull(api.login(name, password, device).second)
 
-        act(admin, id, "revoke-sessions")
+        assertEquals(200, act(admin, id, "revoke-sessions").statusCode())
         assertEquals(401, api.status("GET", "/api/v1/devices", session.token))
         assertEquals(200, api.login(name, password, device).first)
 
-        act(admin, id, "revoke-devices")
-        assertTrue(admin.get("/ui/users/$id").body().contains("Tick the confirmation box"))
+        assertEquals(422, act(admin, id, "revoke-devices", """{"confirm":false}""").statusCode())
         assertEquals(200, api.login(name, password, device).first)
 
-        act(admin, id, "revoke-devices", mapOf("confirm" to "yes"))
+        assertEquals(200, act(admin, id, "revoke-devices", """{"confirm":true}""").statusCode())
         assertEquals(409, api.login(name, password, device).first)
         assertEquals(200, api.login(name, password).first)
     }
@@ -251,33 +265,41 @@ class UserManagementIntegrationTest {
     /** Administrator accounts and unknown ids cannot be changed from the dashboard. */
     @Test fun administratorsAreReadOnly() {
         val adminId = idOf("admin")
-        assertTrue(admin.get("/ui/users/$adminId").body().contains("read-only"))
-        val csrf = admin.csrfOf("/ui/users/$adminId")
-        assertEquals("/ui/users/$adminId", admin.post("/ui/users/$adminId/disable", emptyMap(), csrf).location())
-        assertTrue(admin.get("/ui/users/$adminId").body().contains("Only CLIENT accounts can be changed"))
+        assertTrue(admin.json("GET", "/ui/api/users/$adminId").body().contains("\"manageable\":false"))
+        val refused = act(admin, adminId, "disable")
+        assertEquals(403, refused.statusCode())
+        assertTrue(refused.body().contains("Only CLIENT accounts can be changed"))
         assertEquals(true, db.queryForObject("SELECT enabled FROM users WHERE id = ?", Boolean::class.java, adminId))
-        assertEquals(404, admin.get("/ui/users/${UUID.randomUUID()}").statusCode())
-        assertEquals(404, admin.post("/ui/users/${UUID.randomUUID()}/disable", emptyMap(), csrf).statusCode())
+        assertEquals(404, admin.json("GET", "/ui/api/users/${UUID.randomUUID()}").statusCode())
+        assertEquals(404, act(admin, UUID.randomUUID().toString(), "disable").statusCode())
     }
 
-    /** Usernames are escaped, and no page ever contains a password hash. */
-    @Test fun outputIsEscapedAndHashesNeverLeak() {
+    /** Usernames are returned as JSON data with a strict type, and no response ever contains a password hash. */
+    @Test fun outputIsDataAndHashesNeverLeak() {
         val hostile = "<img src=x onerror=alert(1)>"
         val id = UUID.randomUUID().toString()
         db.update("INSERT INTO users (id, username, password_hash, role) VALUES (?,?,?,'CLIENT')", id, hostile, "\$argon2id\$secret-hash")
-        listOf("/ui/users?q=img", "/ui/users/$id").forEach {
-            val body = admin.get(it).body()
-            assertTrue(body.contains("&lt;img src=x onerror=alert(1)&gt;"), it)
-            assertFalse(body.contains("<img src=x"), it)
-            assertFalse(body.contains("argon2id"), it)
+        listOf("/ui/api/users?q=img", "/ui/api/users/$id").forEach {
+            val response = admin.json("GET", it)
+            assertTrue(
+                response
+                    .headers()
+                    .firstValue("Content-Type")
+                    .get()
+                    .startsWith("application/json"),
+                it
+            )
+            assertEquals("nosniff", response.headers().firstValue("X-Content-Type-Options").get())
+            assertTrue(response.body().contains(hostile), it)
+            assertFalse(response.body().contains("argon2id"), it)
         }
         assertTrue(
             admin
-                .get("/ui/users/$id")
+                .json("GET", "/ui/api/users/$id")
                 .headers()
                 .firstValue("Content-Security-Policy")
                 .get()
-                .contains("script-src 'none'")
+                .contains("script-src 'self'")
         )
     }
 
@@ -286,17 +308,17 @@ class UserManagementIntegrationTest {
         val name = newClient()
         val id = idOf(name)
         val session = requireNotNull(api.login(name, password).second)
-        val csrf = admin.csrfOf("/ui/users/$id")
+        admin.call("GET", "/ui/api/users/$id")
         val pool = Executors.newFixedThreadPool(4)
         try {
             val calls =
                 listOf(
-                    Callable { admin.post("/ui/users/$id/disable", emptyMap(), csrf).statusCode() },
-                    Callable { admin.post("/ui/users/$id/password", mapOf("password" to newPassword, "confirmation" to newPassword), csrf).statusCode() },
-                    Callable { admin.post("/ui/users/$id/revoke-sessions", emptyMap(), csrf).statusCode() },
-                    Callable { admin.post("/ui/users/$id/disable", emptyMap(), csrf).statusCode() }
+                    Callable { act(admin, id, "disable").statusCode() },
+                    Callable { act(admin, id, "password", """{"password":"$newPassword","confirmation":"$newPassword"}""").statusCode() },
+                    Callable { act(admin, id, "revoke-sessions").statusCode() },
+                    Callable { act(admin, id, "disable").statusCode() }
                 )
-            assertEquals(listOf(302, 302, 302, 302), pool.invokeAll(calls).map { it.get() })
+            assertEquals(listOf(200, 200, 200, 200), pool.invokeAll(calls).map { it.get() })
         } finally {
             pool.shutdownNow()
         }
@@ -306,7 +328,7 @@ class UserManagementIntegrationTest {
         assertEquals(401, api.login(name, newPassword).first)
     }
 
-    /** During maintenance the pages stay readable, every mutation is refused with 409 and nothing changes. */
+    /** During maintenance the data stays readable, every mutation is refused with 409 and nothing changes. */
     @Test fun maintenanceRejectsMutations() {
         val name = newClient()
         val id = idOf(name)
@@ -314,12 +336,11 @@ class UserManagementIntegrationTest {
         try {
             val root = baseUrl(maintenance)
             val admin = adminBrowser(root)
-            assertEquals(200, admin.get("/ui/users").statusCode())
-            val csrf = admin.csrfOf("/ui/users/$id")
-            assertEquals(409, admin.post("/ui/users/$id/disable", emptyMap(), csrf).statusCode())
-            assertEquals(409, admin.post("/ui/users/$id/password", mapOf("password" to newPassword, "confirmation" to newPassword), csrf).statusCode())
-            assertEquals(409, admin.post("/ui/users/$id/revoke-devices", mapOf("confirm" to "yes"), csrf).statusCode())
-            assertEquals(409, admin.post("/ui/users", mapOf("username" to "maint", "password" to password, "confirmation" to password), csrf).statusCode())
+            assertEquals(200, admin.json("GET", "/ui/api/users").statusCode())
+            assertEquals(409, act(admin, id, "disable").statusCode())
+            assertEquals(409, act(admin, id, "password", """{"password":"$newPassword","confirmation":"$newPassword"}""").statusCode())
+            assertEquals(409, act(admin, id, "revoke-devices", """{"confirm":true}""").statusCode())
+            assertEquals(409, admin.call("POST", "/ui/api/users", createBody("maint")).statusCode())
             assertEquals(true, db.queryForObject("SELECT enabled FROM users WHERE id = ?", Boolean::class.java, id))
             assertEquals(0, db.queryForObject("SELECT COUNT(*) FROM users WHERE username = 'maint'", Int::class.java))
         } finally {

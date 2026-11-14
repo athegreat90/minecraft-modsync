@@ -1,0 +1,23 @@
+<main class="login">
+  <h1>ModSync</h1>
+  <p class="tagline">Administration</p>
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+  <form method="post" action="/login">
+    <input type="hidden" name="_csrf" [value]="csrf()" />
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" required />
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required />
+    <button class="ms-button" type="submit">Sign in</button>
+  </form>
+  @if (providers().length > 0) {
+    <p class="ms-muted divider">or</p>
+    <div class="providers">
+      @for (provider of providers(); track provider.id) {
+        <a class="ms-button secondary" [href]="'/oauth2/authorization/' + provider.id">Continue with {{ provider.name }}</a>
+      }
+    </div>
+  }
+</main>

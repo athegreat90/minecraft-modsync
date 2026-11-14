@@ -80,144 +80,91 @@ class DashboardIntegrationTest {
         state.toFile().deleteRecursively()
     }
 
-    /** Minimal browser: cookie jar, no automatic redirects. */
-    private inner class Browser {
-        private val http =
-            HttpClient
-                .newBuilder()
-                .cookieHandler(CookieManager())
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build()
+    private fun admin(): TestBrowser = TestBrowser(base).also { assertEquals("/ui", it.signIn("admin", adminPassword).location()) }
 
-        /** Sends a GET and returns the response. */
-        fun get(path: String): HttpResponse<String> =
-            http.send(HttpRequest.newBuilder(URI("$base$path")).build(), HttpResponse.BodyHandlers.ofString())
-
-        /** Sends a form POST, adding the CSRF token when [csrf] is not null. */
-        fun post(path: String, form: Map<String, String>, csrf: String?): HttpResponse<String> {
-            val fields = form + (csrf?.let { mapOf("_csrf" to it) } ?: emptyMap())
-            val body = fields.entries.joinToString("&") { "${URLEncoder.encode(it.key, Charsets.UTF_8)}=${URLEncoder.encode(it.value, Charsets.UTF_8)}" }
-            return http.send(
-                HttpRequest
-                    .newBuilder(URI("$base$path"))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build(),
-                HttpResponse.BodyHandlers.ofString()
-            )
-        }
-
-        /** Extracts the CSRF token rendered in a page. */
-        fun csrf(page: String): String = Regex("name=\"_csrf\" value=\"([^\"]+)\"").find(page)?.groupValues?.get(1) ?: error("No CSRF token in page")
-
-        /** Signs in and returns the login response. */
-        fun login(user: String, password: String): HttpResponse<String> =
-            post("/login", mapOf("username" to user, "password" to password), csrf(get("/login").body()))
+    /** Anonymous browsers go to the login page, script clients get 401, the application shell is public and the client API stays bearer-protected. */
+    @Test fun anonymousIsRedirected() {
+        val browser = TestBrowser(base)
+        assertEquals("/ui/login", browser.get("/ui").location())
+        assertEquals(401, browser.json("GET", "/ui/api/overview").statusCode())
+        assertEquals(200, browser.get("/ui/index.html").statusCode())
+        assertEquals(426, browser.get("/api/v1/servers").statusCode())
     }
 
-    /** Anonymous requests are redirected to the login page and the API stays bearer-protected. */
-    @Test fun anonymousIsRedirected() {
-        val browser = Browser()
-        val response = browser.get("/ui")
-        assertEquals(302, response.statusCode())
+    /** Wrong credentials are rejected; the administrator reaches the overview and server data and the client-side routes. */
+    @Test fun adminCanBrowse() {
+        val browser = TestBrowser(base)
+        assertEquals("/ui/login?error", browser.signIn("admin", "wrong-password-value").location())
+        assertEquals("/ui", browser.signIn("admin", adminPassword).location())
+        val overview = browser.json("GET", "/ui/api/overview")
+        assertEquals(200, overview.statusCode())
+        assertTrue(overview.body().contains("Survival"))
+        assertEquals(200, browser.json("GET", "/ui/api/servers/$serverId").statusCode())
+        assertEquals(404, browser.json("GET", "/ui/api/servers/${UUID.randomUUID()}").statusCode())
+        assertEquals(200, browser.get("/ui").statusCode())
+        assertEquals(200, browser.get("/ui/servers/$serverId").statusCode())
+    }
+
+    /** Server-controlled text is returned as JSON data with a strict type and security headers, never as markup. */
+    @Test fun outputIsDataNotMarkup() {
+        val response = admin().json("GET", "/ui/api/overview")
         assertTrue(
             response
                 .headers()
-                .firstValue("Location")
+                .firstValue("Content-Type")
                 .get()
-                .endsWith("/login")
+                .startsWith("application/json")
         )
-        assertEquals(426, browser.get("/api/v1/servers").statusCode())
-        assertEquals(200, browser.get("/ui/assets/ui.css").statusCode())
-    }
-
-    /** Wrong credentials are rejected; the administrator reaches the overview and server page. */
-    @Test fun adminCanBrowse() {
-        val browser = Browser()
+        assertEquals("nosniff", response.headers().firstValue("X-Content-Type-Options").get())
+        assertTrue(response.body().contains("\"name\":\"<script>alert(1)</script>\""))
         assertTrue(
-            browser
-                .login("admin", "wrong-password-value")
-                .headers()
-                .firstValue("Location")
-                .get()
-                .contains("error")
-        )
-        assertTrue(
-            browser
-                .login("admin", adminPassword)
-                .headers()
-                .firstValue("Location")
-                .get()
-                .endsWith("/ui")
-        )
-        val overview = browser.get("/ui")
-        assertEquals(200, overview.statusCode())
-        assertTrue(overview.body().contains("Survival"))
-        assertEquals(200, browser.get("/ui/servers/$serverId").statusCode())
-        assertEquals(404, browser.get("/ui/servers/${UUID.randomUUID()}").statusCode())
-    }
-
-    /** Server-controlled text is escaped and never rendered as markup. */
-    @Test fun outputIsEscaped() {
-        val browser = Browser()
-        browser.login("admin", adminPassword)
-        val body = browser.get("/ui").body()
-        assertFalse(body.contains("<script>alert(1)</script>"))
-        assertTrue(body.contains("&lt;script&gt;alert(1)&lt;/script&gt;"))
-        assertTrue(
-            browser
-                .get("/ui")
+            response
                 .headers()
                 .firstValue("Content-Security-Policy")
                 .get()
-                .contains("script-src 'none'")
+                .contains("script-src 'self'")
         )
     }
 
     /** State changes require a CSRF token and are applied and audited with it. */
     @Test fun policyChangeRequiresCsrf() {
-        val browser = Browser()
-        browser.login("admin", adminPassword)
-        val path = "/ui/servers/$serverId/publication-policy"
-        assertEquals(403, browser.post(path, mapOf("policy" to "TRUSTED_AUTO"), null).statusCode())
+        val browser = admin()
+        val path = "/ui/api/servers/$serverId/publication-policy"
+        val body = """{"policy":"TRUSTED_AUTO"}"""
+        assertEquals(403, browser.json("PUT", path, body).statusCode())
         assertEquals("MANUAL", db.queryForObject("SELECT publication_policy FROM minecraft_servers WHERE id=?", String::class.java, serverId))
-        val token = browser.csrf(browser.get("/ui/servers/$serverId").body())
-        assertEquals(302, browser.post(path, mapOf("policy" to "TRUSTED_AUTO"), token).statusCode())
+        assertEquals(200, browser.call("PUT", path, body).statusCode())
         assertEquals("TRUSTED_AUTO", db.queryForObject("SELECT publication_policy FROM minecraft_servers WHERE id=?", String::class.java, serverId))
         assertEquals(1L, db.queryForObject("SELECT COUNT(*) FROM audit_events WHERE action='publication-policy-set:TRUSTED_AUTO' AND target=?", Long::class.java, serverId))
     }
 
     /** Invalid enum input is rejected without changing state. */
     @Test fun invalidPolicyIsRejected() {
-        val browser = Browser()
-        browser.login("admin", adminPassword)
-        val token = browser.csrf(browser.get("/ui/servers/$hostileId").body())
-        assertEquals(400, browser.post("/ui/servers/$hostileId/publication-policy", mapOf("policy" to "ROOT"), token).statusCode())
+        assertEquals(400, admin().call("PUT", "/ui/api/servers/$hostileId/publication-policy", """{"policy":"ROOT"}""").statusCode())
     }
 
-    /** Inventory, manifest, coverage matrix and history render from persisted data, with review forms for unapproved mods. */
-    @Test fun serverPageRendersPersistedData() {
+    /** Inventory, manifest, coverage matrix and history are returned from persisted data, with the unapproved mods marked. */
+    @Test fun serverPageReturnsPersistedData() {
         val server = seedDataServer()
-        val browser = Browser()
-        browser.login("admin", adminPassword)
-        val page = browser.get("/ui/servers/$server")
+        val page = admin().json("GET", "/ui/api/servers/$server")
         assertEquals(200, page.statusCode())
-        listOf("unreviewed-mod.jar", "UNREVIEWED", "client-mod.jar", "player-main", "MISSING_MODS", "1 unreviewed").forEach { assertTrue(page.body().contains(it), it) }
-        assertTrue(page.body().contains("/ui/servers/$server/classify"))
+        listOf("unreviewed-mod.jar", "client-mod.jar", "player-main", "MISSING_MODS", "\"unreviewed\":1").forEach { assertTrue(page.body().contains(it), it) }
     }
 
-    /** Approving a classification and requesting re-evaluation work through CSRF-protected forms. */
-    @Test fun classifyAndReevaluateForms() {
+    /** Approving a classification and requesting re-evaluation work through CSRF-protected calls. */
+    @Test fun classifyAndReevaluate() {
         val server = seedDataServer()
-        val browser = Browser()
-        browser.login("admin", adminPassword)
-        val token = browser.csrf(browser.get("/ui/servers/$server").body())
-        assertEquals(403, browser.post("/ui/servers/$server/classify", mapOf("sha512" to "c".repeat(128), "classification" to "SERVER_ONLY", "reason" to "x"), null).statusCode())
-        assertEquals(302, browser.post("/ui/servers/$server/classify", mapOf("sha512" to "c".repeat(128), "classification" to "SERVER_ONLY", "reason" to "checked metadata"), token).statusCode())
+        val browser = admin()
+        val path = "/ui/api/servers/$server/classification"
+        val hash = "c".repeat(128)
+
+        fun body(sha: String, reason: String) = """{"sha512":"$sha","classification":"SERVER_ONLY","reason":"$reason"}"""
+        assertEquals(403, browser.json("PUT", path, body(hash, "x")).statusCode())
+        assertEquals(200, browser.call("PUT", path, body(hash, "checked metadata")).statusCode())
         assertEquals("SERVER_ONLY", db.queryForObject("SELECT classification FROM classification_overrides WHERE server_id=?", String::class.java, server))
-        assertEquals(302, browser.post("/ui/servers/$server/reevaluate", emptyMap(), token).statusCode())
+        assertEquals(200, browser.call("POST", "/ui/api/servers/$server/reevaluate").statusCode())
         assertEquals(1L, db.queryForObject("SELECT COUNT(*) FROM audit_events WHERE action='publication-reevaluation-requested' AND target=?", Long::class.java, server))
-        assertEquals(400, browser.post("/ui/servers/$server/classify", mapOf("sha512" to "bad", "classification" to "SERVER_ONLY", "reason" to "x"), token).statusCode())
+        assertEquals(400, browser.call("PUT", path, body("bad", "x")).statusCode())
     }
 
     /** Bearer-token API endpoints for inventory reporting, coverage and publication policy work end to end. */
@@ -287,13 +234,13 @@ class DashboardIntegrationTest {
         return server
     }
 
-    /** Non-administrator accounts cannot use the dashboard. */
+    /** Non-administrator accounts cannot use the administration API. */
     @Test fun clientAccountIsForbidden() {
         val name = "player" + UUID.randomUUID().toString().take(8)
         val password = "a-sufficiently-long-password"
         context.getBean(AuthService::class.java).createUser("test", UserRegistration(name, password))
-        val browser = Browser()
-        browser.login(name, password)
-        assertEquals(403, browser.get("/ui").statusCode())
+        val browser = TestBrowser(base)
+        browser.signIn(name, password)
+        assertEquals(403, browser.json("GET", "/ui/api/overview").statusCode())
     }
 }

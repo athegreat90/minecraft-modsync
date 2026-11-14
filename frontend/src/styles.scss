@@ -1,0 +1,88 @@
+@use 'styles/tokens';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #12201d 0%, var(--ms-bg) 55%);
+  color: var(--ms-text);
+  font-family: var(--ms-font-body);
+  line-height: 1.5;
+}
+
+h1, h2, h3 { font-family: var(--ms-font-display); font-weight: 600; letter-spacing: 0.02em; }
+
+a { color: var(--ms-emerald); }
+
+:focus-visible { outline: 3px solid var(--ms-focus); outline-offset: 2px; }
+
+.ms-visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+.ms-button {
+  min-height: var(--ms-touch);
+  padding: 0 var(--ms-space-3);
+  border: 1px solid var(--ms-gold);
+  border-radius: var(--ms-radius);
+  background: var(--ms-forest);
+  color: var(--ms-text);
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--ms-motion-fast);
+}
+.ms-button:hover { background: var(--ms-teal); }
+.ms-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+// Shared building blocks. Tables below the regular breakpoint become stacked cards using each cell's data-label.
+.ms-card {
+  padding: var(--ms-space-3);
+  background: var(--ms-surface);
+  border: 1px solid var(--ms-border);
+  border-top: 2px solid var(--ms-gold);
+  border-radius: var(--ms-radius);
+}
+
+.ms-grid { display: grid; gap: var(--ms-space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); }
+
+.ms-muted { color: var(--ms-text-muted); }
+
+.ms-badge {
+  display: inline-block; padding: 0 var(--ms-space-2); border: 1px solid var(--ms-border);
+  border-radius: 999px; font-size: 0.85rem; background: var(--ms-surface-raised);
+}
+.ms-badge.ok { border-color: var(--ms-emerald); }
+.ms-badge.warn { border-color: var(--ms-warning); color: var(--ms-warning); }
+
+.ms-alert { padding: var(--ms-space-2) var(--ms-space-3); border-left: 3px solid var(--ms-warning); background: var(--ms-surface-raised); }
+.ms-alert.error { border-left-color: var(--ms-danger); }
+.ms-alert.success { border-left-color: var(--ms-emerald); }
+
+.ms-form { display: grid; gap: var(--ms-space-2); max-width: 28rem; }
+.ms-form label { display: grid; gap: var(--ms-space-1); }
+.ms-form input, .ms-form select, .ms-toolbar input, .ms-toolbar select {
+  min-height: var(--ms-touch); padding: 0 var(--ms-space-2); border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius); background: var(--ms-bg); color: var(--ms-text); font: inherit;
+}
+.ms-field-error { color: var(--ms-danger); font-size: 0.9rem; }
+
+.ms-toolbar { display: flex; flex-wrap: wrap; gap: var(--ms-space-2); align-items: end; margin-bottom: var(--ms-space-3); }
+.ms-button.danger { border-color: var(--ms-danger); }
+.ms-button.secondary { background: transparent; }
+
+.ms-table { width: 100%; border-collapse: collapse; }
+.ms-table th, .ms-table td { padding: var(--ms-space-2); text-align: left; border-bottom: 1px solid var(--ms-border); vertical-align: top; }
+.ms-table th { color: var(--ms-text-muted); font-weight: 600; }
+.ms-table .wrap { overflow-wrap: anywhere; }
+
+@media (max-width: 47.99rem) {
+  .ms-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .ms-table, .ms-table tbody, .ms-table tr, .ms-table td { display: block; width: 100%; }
+  .ms-table tr { margin-bottom: var(--ms-space-3); border: 1px solid var(--ms-border); border-radius: var(--ms-radius); background: var(--ms-surface); }
+  .ms-table td { display: flex; justify-content: space-between; gap: var(--ms-space-3); border-bottom: 1px solid var(--ms-border); }
+  .ms-table td:last-child { border-bottom: 0; }
+  .ms-table td::before { content: attr(data-label); color: var(--ms-text-muted); flex: none; }
+}

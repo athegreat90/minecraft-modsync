@@ -1,9 +1,16 @@
 # The build output is platform independent (JVM bytecode and scripts): compile once natively, not once per target under QEMU.
+FROM --platform=$BUILDPLATFORM node:24.22.3-bookworm-slim AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
 FROM --platform=$BUILDPLATFORM gradle:9.9.1-jdk25-ubi AS build
-ARG RELEASE_VERSION=0.4.7-SNAPSHOT
+ARG RELEASE_VERSION=0.5.0-SNAPSHOT
 WORKDIR /workspace
 COPY . .
-RUN gradle --no-daemon -PreleaseVersion=${RELEASE_VERSION} :modsync-server:bootJar && cp modsync-server/build/libs/modsync-server.jar /tmp/server.jar && javac -d /health docker/server/Health.java
+COPY --from=frontend /frontend/dist frontend/dist
+RUN gradle --no-daemon -PreleaseVersion=${RELEASE_VERSION} -x :modsync-server:installFrontend -x :modsync-server:buildFrontend :modsync-server:bootJar && cp modsync-server/build/libs/modsync-server.jar /tmp/server.jar && javac -d /health docker/server/Health.java
 FROM eclipse-temurin:25.0.5_8-jre-noble
 RUN apt-get update && apt-get install -y --only-upgrade --no-install-recommends apt libapt-pkg6.0t64 libbrotli1 libssl3t64 openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

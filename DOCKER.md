@@ -14,6 +14,8 @@ A conventional dev include exists at `docker/dev/compose.yaml`; the meaningful d
 
 Troubleshoot DNS and HTTPS from each host independently, then identity/authentication, mapping permissions and database readiness. Never solve a permission failure by mounting the Docker socket or making all Minecraft files writable.
 
-## Administration dashboard
+## Administration interface
 
-The server image serves the dashboard on the same port as the API under `/ui` (login at `/login`). Terminate TLS in front of it (or use the built-in keystore settings) so the session cookie is only sent over HTTPS. No extra container, volume or port is required; the agent and client containers are unchanged.
+The server image contains the compiled Angular application and serves it on the same port as the API under `/ui` (sign-in at `/ui/login`). The image build has an extra Node stage (`node:24.22.3-bookworm-slim`) that runs `npm ci` and `npm run build`; the runtime image is unchanged (JRE only, no Node). Terminate TLS in front of it (or use the built-in keystore settings) so the session cookie is only sent over HTTPS. No extra container, volume or port is required; the agent and client containers are unchanged.
+
+Google and GitHub sign-in is an optional Compose override: `docker compose -f compose.yaml -f compose.sso.yaml up -d` in `docker/server`. It adds `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID` (from the environment) and the secret files `google_client_secret` and `github_client_secret` in `${MODSYNC_SECRETS_DIR}`; the container entrypoint exports the secrets from those files so they never appear in `docker inspect`. Behind a reverse proxy also set `MODSYNC_FORWARD_HEADERS=framework`. Details: [SSO setup guide](docs/security/SSO_SETUP.md).

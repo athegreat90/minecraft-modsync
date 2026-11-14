@@ -1,0 +1,28 @@
+<h1>Servers</h1>
+@if (error()) {
+  <p class="ms-alert error" role="alert">{{ error() }}</p>
+} @else if (servers() === null) {
+  <p class="ms-muted" role="status">Loading servers…</p>
+} @else if (servers()!.length === 0) {
+  <p class="ms-muted">No servers are registered yet. Enroll a scanner agent to see its server here.</p>
+} @else {
+  <ul class="ms-grid" aria-label="Servers">
+    @for (row of servers(); track row.info.id) {
+      <li class="ms-card">
+        <h2><a [routerLink]="['/servers', row.info.id]">{{ row.info.name }}</a></h2>
+        <p class="ms-muted">{{ row.info.loader }} · Minecraft {{ row.info.minecraftVersion }}</p>
+        <p>
+          <span class="ms-badge">{{ row.policy }}</span>
+          @if (row.info.publishedRevision !== null) {
+            <span class="ms-badge ok">manifest r{{ row.info.publishedRevision }}</span>
+          } @else {
+            <span class="ms-badge warn">unpublished</span>
+          }
+          @if (row.info.inventoryAt !== null && row.info.inventoryStale) {
+            <span class="ms-badge warn">stale inventory</span>
+          }
+        </p>
+      </li>
+    }
+  </ul>
+}

@@ -92,7 +92,7 @@ class AccountStatusIntegrationTest {
         val disabled = TestBrowser(base).signIn(name, password)
         assertEquals(302, disabled.statusCode())
         assertEquals(wrong.location(), disabled.location())
-        assertEquals("/login?error", disabled.location())
+        assertEquals("/ui/login?error", disabled.location())
 
         db.update("UPDATE users SET enabled = TRUE WHERE username = ?", name)
         assertEquals("/ui", TestBrowser(base).signIn(name, password).location())

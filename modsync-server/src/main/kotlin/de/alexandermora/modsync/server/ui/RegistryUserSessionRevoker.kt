@@ -1,6 +1,7 @@
 package de.alexandermora.modsync.server.ui
 
 import de.alexandermora.modsync.server.users.UserSessionRevoker
+import org.springframework.security.core.AuthenticatedPrincipal
 import org.springframework.security.core.session.SessionRegistry
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.stereotype.Component
@@ -21,8 +22,21 @@ class RegistryUserSessionRevoker(
      */
     override fun expireSessions(userId: String) {
         registry.allPrincipals
-            .filter { (it as? UserDetails)?.username == userId }
+            .filter { principalName(it) == userId }
             .flatMap { registry.getAllSessions(it, false) }
             .forEach { it.expireNow() }
     }
+
+    /**
+     * Names the account behind a session principal, whether it signed in locally or through a provider.
+     *
+     * @param principal Principal stored in the session registry.
+     * @return The account id, or null for principals this application never creates.
+     */
+    private fun principalName(principal: Any): String? =
+        when (principal) {
+            is UserDetails -> principal.username
+            is AuthenticatedPrincipal -> principal.name
+            else -> null
+        }
 }

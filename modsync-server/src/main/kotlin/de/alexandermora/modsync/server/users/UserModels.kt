@@ -1,5 +1,7 @@
 package de.alexandermora.modsync.server.users
 
+import kotlinx.serialization.Serializable
+
 /** Number of accounts shown per page of the user list. */
 const val USERS_PAGE_SIZE = 25
 
@@ -27,6 +29,7 @@ data class UserFilter(
  * @property enabled Whether the account may authenticate.
  * @property manageable Whether the dashboard may change this account (only CLIENT accounts).
  */
+@Serializable
 data class UserSummary(
     val id: String,
     val username: String,
@@ -43,6 +46,7 @@ data class UserSummary(
  * @property totalPages Number of pages for the current filter.
  * @property total Number of accounts matching the filter.
  */
+@Serializable
 data class UserPage(
     val users: List<UserSummary>,
     val page: Int,
@@ -56,6 +60,7 @@ data class UserPage(
  * @property user The account.
  * @property activeDevices Number of devices that have not been revoked.
  */
+@Serializable
 data class UserDetail(
     val user: UserSummary,
     val activeDevices: Long

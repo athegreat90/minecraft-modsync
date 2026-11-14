@@ -20,7 +20,7 @@ No component uses a shared cross-host mount, database access from a client, Dock
 
 ## Package layout
 
-Every module uses the base package `de.alexandermora.modsync.<module>` (for example `de.alexandermora.modsync.domain`, `de.alexandermora.modsync.protocol`). `modsync-server` is split into feature packages: `auth`, `agent`, `inventory`, `manifest`, `profile`, `catalog`, `system`, `common`, `config` and `observability`, plus `ui` (dashboard), `users` (administrator user management), `publication` and `clientinventory`. Each feature owns its controller (thin, typed request bodies, returns DTOs directly rather than `ResponseEntity`) and its service. See `docs/GUIDE.md` for details.
+Every module uses the base package `de.alexandermora.modsync.<module>` (for example `de.alexandermora.modsync.domain`, `de.alexandermora.modsync.protocol`). `modsync-server` is split into feature packages: `auth`, `agent`, `inventory`, `manifest`, `profile`, `catalog`, `system`, `common`, `config` and `observability`, plus `ui` (static application serving, the dashboard security chain and the JSON API in `ui.api`), `sso` (Google and GitHub sign-in), `users` (administrator user management), `publication` and `clientinventory`. Each feature owns its controller (thin, typed request bodies, returns DTOs directly rather than `ResponseEntity`) and its service. See `docs/GUIDE.md` for details.
 
 Instance registration requires explicit game/loader metadata, checked against manifests during planning/apply/verify. This metadata must match the actual launcher configuration; ModSync does not install the game/loader or claim to detect every launcher. Verified artifact hashes are recorded separately from managed ownership so pre-existing required files are checked without being adopted for later deletion.
 
@@ -30,5 +30,22 @@ Instance registration requires explicit game/loader metadata, checked against ma
 - **Server publication:** after an agent commits a snapshot, `publication.AutoPublicationService` evaluates the server's policy (`MANUAL`, `REVIEW_UNKNOWN`, `TRUSTED_AUTO`) on one background thread. Only artifacts with an approved or trusted-project classification, identified by exact hash, can publish; anything else is queued as `REVIEW_REQUIRED`. The normal `ManifestService.preview/publish` path validates dependencies and compatibility, so automatic and manual publication share all invariants. A manifest whose client-relevant requirements equal the latest revision is skipped, so no duplicate revisions exist.
 - **Client inventory and coverage:** `clientinventory` stores per-instance inventories (hashes, file names, recognized project/version ids, managed flag, applied revision, policy, activity, personal profile) reported with a per-instance sequence (higher replaces, equal is an idempotent retry, lower is stale). `domain.computeCoverage` compares exact SHA-512 hashes and is combined with freshness (15 min online window, 24 h stale limit) to yield the status matrix with two queries per server.
 - **Client automation:** `modsync auto` is opt-in per instance. `AutoSyncRunner` checks the cheap published revision first, then reuses `Resolver` and `Installer` unchanged; policy gates which operations may run, a running game defers installation, and every pass uploads an inventory. No broker or resident service is introduced; OS schedulers call `auto run --once`.
-- **Dashboard:** `ui` serves Thymeleaf pages from persisted data behind a separate session/CSRF filter chain for administrators.
-- **User management:** `users.UserManagementController` renders `/ui/users` and delegates to `users.UserManagementService`, which holds the rules (CLIENT accounts only, row lock plus audit per change, sealed `UserCommandResult`). It reuses `AuthService.createUser`, the shared `auth.AccountPolicy` and `common.MaintenanceMode`, and depends on the small `UserSessionRevoker` interface that `ui.RegistryUserSessionRevoker` implements with Spring's `SessionRegistry`. Account status (`users.enabled`) is enforced in `AuthService`, the API `Guard` and the dashboard authentication provider.
+- **Dashboard:** the Angular application in `frontend/` is built into the server jar and served under `/ui`. `ui.api.UiApiController` exposes JSON under `/ui/api` over the same services behind a separate session/CSRF filter chain for administrators (see *Administration interface* below).
+- **User management:** `ui.api.UiApiController` exposes the user endpoints under `/ui/api/users` and delegates to `users.UserManagementService`, which holds the rules (CLIENT accounts only, row lock plus audit per change, sealed `UserCommandResult`). It reuses `AuthService.createUser`, the shared `auth.AccountPolicy` and `common.MaintenanceMode`, and depends on the small `UserSessionRevoker` interface that `ui.RegistryUserSessionRevoker` implements with Spring's `SessionRegistry`. Account status (`users.enabled`) is enforced in `AuthService`, the API `Guard` and the dashboard authentication provider.
+
+## Administration interface
+
+```mermaid
+flowchart LR
+    Admin[Administrator browser] -- "HTTPS /ui, /ui/api, /oauth2, /login" --> Proxy[Reverse proxy]
+    Proxy --> Server["modsync-server (Spring Boot)<br/>static Angular app + /ui/api + /api/v1"]
+    Client[Minecraft client / scanner agent] -- "HTTPS /api/v1 (bearer tokens)" --> Proxy
+    Server --> DB[(MariaDB)]
+    Admin -. "Google / GitHub sign-in" .-> Provider[Identity provider]
+```
+
+- **One runtime artifact.** `frontend/` (Angular, strict TypeScript, standalone components, signals, OnPush, lazy routes) is built by npm during the Gradle `processResources` task and packaged under `static/ui` in `modsync-server.jar`. There is no Node.js at runtime and no extra container. See [frontend development](docs/development/FRONTEND.md).
+- **Routes.** `/ui/**` static application and client-side routes (an explicit allow-list), `/ui/api/**` session-protected JSON, `/api/v1/**` the unchanged bearer-token API for clients and agents, `/login`, `/logout`, `/oauth2/authorization/{id}` and `/login/oauth2/code/{id}` for sign-in.
+- **Responsibilities.** Angular renders, navigates and calls the API; Spring Boot authenticates, authorizes, validates, audits and persists. Angular never makes an authoritative decision.
+- **Authentication sequence.** Password sign-in posts a plain form to `/login`; provider sign-in is the OAuth2 authorization-code flow drawn in the [SSO guide](docs/security/SSO_SETUP.md#1-introduction). Both end in the same kind of session principal: the account id with its stored role.
+- **Single-sign-on data.** `external_identities` (migration V6) links `(provider, subject)` to a user; see [DATABASE.md](DATABASE.md).

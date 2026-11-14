@@ -12,6 +12,7 @@ def controller_routes():
         text=file.read_text()
         if '@RestController' not in text: continue  # server-rendered dashboard pages are not part of the API contract
         prefix=re.search(r'@RequestMapping\("([^"]*)"\)',text).group(1)
+        if not prefix.startswith('/api/v1'): continue  # the session-protected /ui/api used by the Angular UI is documented in docs/architecture/API.md, not in this client/agent contract
         for method,route in re.findall(r'@(Get|Post|Put)Mapping(?:\("([^"]*)"\))?',text):
             routes.add((method.lower(),prefix+route))
     return routes
@@ -125,7 +126,7 @@ def build():
         if parameters: operation['parameters']=parameters
         if request: operation['requestBody']={'required':True,'content':{'application/json':{'schema':model_schema(request)}}}
         paths.setdefault('/api/v1/'+path,{})[method.lower()]=operation
-    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.4.7','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
+    return {'openapi':'3.1.0','info':{'title':'Minecraft ModSync API','version':'0.5.0','description':'Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation.'},'paths':paths,'components':{'securitySchemes':{'bearerAuth':{'type':'http','scheme':'bearer'}},'schemas':schemas()}}
 
 def main():
     path=ROOT/'docs/architecture/openapi.json'
