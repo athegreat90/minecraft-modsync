@@ -1,6 +1,6 @@
 # MariaDB and disaster recovery
 
-The stack pins MariaDB 11.4.10 in the 11.4 LTS series. Review security updates before enabling publication; image digest pinning and scanner results are release gates. Connector/J and Flyway's MySQL/MariaDB support are included. Only MariaDB Testcontainers is used for database integration tests; H2 is not a substitute.
+The stack pins MariaDB 11.4.13 in the 11.4 LTS series. Review security updates before enabling publication; image digest pinning and scanner results are release gates. Connector/J and Flyway's MySQL/MariaDB support are included. Only MariaDB Testcontainers is used for database integration tests; H2 is not a substitute.
 
 Schema migrations use InnoDB, utf8mb4, UUID identities, foreign keys and transactional ownership/snapshot operations. The application pool is limited to five connections. Flyway runs on startup and must validate successfully after restore. Never edit an applied migration; add a new numbered migration.
 

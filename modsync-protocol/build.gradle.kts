@@ -1,6 +1,6 @@
 plugins { id("modsync.conventions"); `java-library`; kotlin("plugin.serialization") }
 dependencies {
     api(project(":modsync-domain"))
-    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
 }
 dependencies { testImplementation(project(":modsync-test-fixtures")) }

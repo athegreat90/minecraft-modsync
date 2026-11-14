@@ -2,7 +2,7 @@
 
 - **Server:** `https://sonarqube.alexandermora.de` (verified reachable; SonarQube 26.10.0.133078).
 - **Project key:** `athegreat90_minecraft-modsync` (verified: analyses upload to it).
-- **Scanner:** SonarScanner for Gradle `org.sonarqube` 7.5.0.8588, configured once at the root `build.gradle.kts`.
+- **Scanner:** SonarScanner for Gradle `org.sonarqube` 7.6.0.18749, configured once at the root `build.gradle.kts`.
 - **Authentication:** only the `SONAR_TOKEN` environment variable (locally) or the `SONAR_TOKEN` GitHub secret. Never put a token in files, command lines or logs.
 
 ## Local scan

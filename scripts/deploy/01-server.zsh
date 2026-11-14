@@ -136,7 +136,7 @@ if [[ $dbmode == external ]]; then
   if (( skipcheck )); then
     print "    pre-flight check skipped"
   else
-    print "==> Pre-flight check (throwaway mariadb:11.4.10 client container)"
+    print "==> Pre-flight check (throwaway mariadb:11.4.13 client container)"
     case $dbssl in
       disable) sslflags=(--skip-ssl) ;;
       trust) sslflags=(--ssl) ;;
@@ -146,7 +146,7 @@ if [[ $dbmode == external ]]; then
     if ! out=$(docker run --rm --add-host host.docker.internal:host-gateway \
         -v "$secrets/db_password:/pw:ro" \
         -e H="$connect_host" -e P="$dbport" -e U="$dbuser" -e N="$dbname" \
-        mariadb:11.4.10 sh -c 'MYSQL_PWD=$(cat /pw) exec mariadb -h"$H" -P"$P" -u"$U" "$N" -N -B '"${sslflags[*]}"' -e "$0"' "$probe" 2>&1); then
+        mariadb:11.4.13 sh -c 'MYSQL_PWD=$(cat /pw) exec mariadb -h"$H" -P"$P" -u"$U" "$N" -N -B '"${sslflags[*]}"' -e "$0"' "$probe" 2>&1); then
       print -u2 "Pre-flight failed:\n$out"
       print -u2 "Check host, port, credentials, TLS (--db-ssl-mode), firewall and that the user may CREATE/DROP tables in $dbname."
       exit 1

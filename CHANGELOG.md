@@ -6,6 +6,16 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-11-14
+
+### Changed
+- Dependencies updated to the latest stable releases: `kotlinx-serialization-json` 1.9.0 -> 1.13.0, JLine 3.30.6 -> 4.7.0 (TUI), TOML parser `tomlj` 1.1.1 -> 2.2.0 (scanner), MariaDB JDBC driver 3.5.6 -> 4.0.0, Testcontainers 1.21.3 -> 1.21.4, `kotlin-logging-jvm` 8.0.6 -> 8.0.7, `slf4j-simple` 2.0.17 -> 2.0.20, SonarScanner for Gradle 7.5.0.8588 -> 7.6.0.18749. Kotlin 2.4.21, Spring Boot 4.1.2, Spotless 8.11.0, Dokka 2.3.0, JUnit 6.1.3, picocli 4.7.7 and Detekt 2.0.0-alpha.6 were already the latest stable (or latest published) releases. `gradle/libs.versions.toml` (not referenced by any build file) was brought in line with the versions actually used.
+- Container images: `eclipse-temurin` 25.0.1_8 -> 25.0.5_8 (`jre-noble`, both Dockerfiles) and `mariadb` 11.4.10 -> 11.4.13 (compose files, integration fixture, Testcontainers tests, docs).
+- GitHub Actions: `actions/checkout` v4 -> v7, `actions/setup-java` v4 -> v6, `gradle/actions/setup-gradle` v4 -> v6, `actions/upload-artifact` v4 -> v7, `actions/download-artifact` v4 -> v8, `docker/login-action`, `docker/setup-buildx-action` and `docker/setup-qemu-action` v3 -> v4. The breaking changes of these majors are the Node 24 runtime (provided by GitHub-hosted runners), removal of deprecated inputs the workflows do not use, and stricter artifact digest checks; the Node 20 deprecation warnings in the release logs should disappear.
+- `gradle/verification-metadata.xml` gains 32 artifacts for the new versions; each checksum was verified against the companion checksums published next to the artifact on Maven Central or the Gradle plugin portal. Entries of the previous versions are kept (they are still needed to build older sources).
+- Not updated on purpose: GraalVM Native Build Tools 0.11.5 -> 1.1.18 (a major step that can only be validated by the release `native` builds on three platforms) and Testcontainers 1.x -> 2.x (new artifact names and API).
+- Version bumped 0.4.4 -> 0.4.5 (patch: dependency and tooling updates only; wire protocol 1 and minimum component compatibility are unchanged). Updated in the same files as the previous bump.
+
 ## [0.4.4] - 2026-11-14
 
 ### Fixed

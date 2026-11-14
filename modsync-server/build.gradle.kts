@@ -13,14 +13,14 @@ dependencies {
     implementation(project(":modsync-resolver"))
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("io.github.oshai:kotlin-logging-jvm:8.0.6")
+    implementation("io.github.oshai:kotlin-logging-jvm:8.0.7")
     implementation("org.flywaydb:flyway-mysql")
-    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.6")
+    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:4.0.0")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.testcontainers:mariadb:1.21.3")
-    testImplementation("org.testcontainers:junit-jupiter:1.21.3")
-    testRuntimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.6")
+    testImplementation("org.testcontainers:mariadb:1.21.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
+    testRuntimeOnly("org.mariadb.jdbc:mariadb-java-client:4.0.0")
 }
 tasks.jar { enabled = false }
 dependencies { testImplementation(project(":modsync-test-fixtures")) }

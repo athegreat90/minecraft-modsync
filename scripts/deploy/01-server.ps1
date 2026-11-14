@@ -125,14 +125,14 @@ if ($external) {
   Write-Host "      GRANT ALL PRIVILEGES ON $DbName.* TO '$DbUser'@'%';"
   if ($SkipDbCheck) { Write-Host '    pre-flight check skipped' }
   else {
-    Write-Host '==> Pre-flight check (throwaway mariadb:11.4.10 client container)'
+    Write-Host '==> Pre-flight check (throwaway mariadb:11.4.13 client container)'
     $ssl = switch ($DbSslMode) { 'disable' { '--skip-ssl' } 'trust' { '--ssl' } default { '--ssl --ssl-verify-server-cert' } }
     # SQL is piped on stdin so the shell snippet needs no quoting.
     $probe = "SELECT VERSION(); CREATE TABLE modsync_preflight_probe (id INT) ENGINE=InnoDB; DROP TABLE modsync_preflight_probe;"
     $sh = "MYSQL_PWD=`$(cat /pw) exec mariadb -h`$H -P`$P -u`$U `$N -N -B $ssl"
     $out = $probe | docker run --rm -i --add-host host.docker.internal:host-gateway `
       -v "${dbPwPath}:/pw:ro" -e "H=$connectHost" -e "P=$DbPort" -e "U=$DbUser" -e "N=$DbName" `
-      mariadb:11.4.10 sh -c $sh 2>&1
+      mariadb:11.4.13 sh -c $sh 2>&1
     if ($LASTEXITCODE -ne 0) {
       Write-Error "Pre-flight failed:`n$out`nCheck host, port, credentials, TLS (-DbSslMode), firewall and that the user may CREATE/DROP tables in $DbName." -ErrorAction Continue
       exit 1
