@@ -13,10 +13,12 @@ import de.alexandermora.modsync.protocol.ClientModEntry
 import de.alexandermora.modsync.protocol.SyncReport
 import de.alexandermora.modsync.resolver.Resolver
 import de.alexandermora.modsync.scanner.Scanner
+import de.alexandermora.modsync.scanner.directoryFingerprint
+import de.alexandermora.modsync.scanner.duplicateMods
 import java.time.Clock
 import java.time.Duration
 
-private val MUTATING = setOf(OperationKind.INSTALL, OperationKind.UPDATE, OperationKind.REMOVE_MANAGED)
+private val MUTATING = setOf(OperationKind.INSTALL, OperationKind.UPDATE, OperationKind.REMOVE_MANAGED, OperationKind.QUARANTINE_DUPLICATE)
 private val FULL_CHECK_INTERVAL: Duration = Duration.ofHours(24)
 private const val MAX_REPORTED_MODS = 2000
 
@@ -174,11 +176,24 @@ class AutoSyncRunner(
         val published =
             gateway.publishedRevision(settings.serverId)
                 ?: return AutoOutcome.Failed("No manifest published") to settings
-        if (published == settings.lastRevision && settings.lastOutcome == SUCCESS && now - settings.lastFullCheckEpoch < FULL_CHECK_INTERVAL.seconds) {
-            return AutoOutcome.UpToDate(published) to settings
-        }
+        if (canSkipFullPass(published, now)) return AutoOutcome.UpToDate(published) to settings
         return runCatching { synchronize(gateway.manifest(settings.serverId), now) }
             .getOrElse { AutoOutcome.Failed(it.javaClass.simpleName) to settings.copy(lastOutcome = FAILED) }
+    }
+
+    /**
+     * Decides whether the last successful pass still proves the instance is up to date.
+     *
+     * Requires the same published revision, a recent full check and a mods folder whose names, sizes and times
+     * match the fingerprint of that pass, so a mod added or changed since then forces a full pass.
+     *
+     * @param published Currently published revision.
+     * @param now Current epoch seconds.
+     * @return True when the full pass can be skipped.
+     */
+    private fun canSkipFullPass(published: Long, now: Long): Boolean {
+        val recent = published == settings.lastRevision && settings.lastOutcome == SUCCESS && now - settings.lastFullCheckEpoch < FULL_CHECK_INTERVAL.seconds
+        return recent && settings.modsFingerprint != null && settings.modsFingerprint == directoryFingerprint(installer.mods)
     }
 
     /**
@@ -191,16 +206,19 @@ class AutoSyncRunner(
     private fun synchronize(manifest: Manifest, now: Long): Pair<AutoOutcome, AutoSettings> {
         installer.validateTarget(manifest)
         val personal = settings.profileId?.let(gateway::personalArtifacts).orEmpty()
-        val plan =
+        val (plan, duplicates) =
             installer.locked {
-                Resolver().plan(manifest, personal, Scanner().scan(installer.mods), installer.state().hashes, false)
+                val local = Scanner().scan(installer.mods)
+                Resolver().plan(manifest, personal, local, installer.state().hashes, false) to duplicateMods(local)
             }
         val changes = plan.operations.any { it.kind in MUTATING }
         if (!changes && !plan.blocked) {
+            // Never report UpToDate while two files still provide the same mod, even when the manifest cannot link them.
+            if (duplicates.isNotEmpty()) return finish(AutoOutcome.Pending("Duplicate mods installed: ${duplicates.first()}"), manifest, ClientActivity.SYNC_PENDING, now)
             return finish(AutoOutcome.UpToDate(manifest.revision), manifest, ClientActivity.IDLE, now, applied = manifest.revision)
         }
         if (!policyAllows(plan, settings.policy) || removesNonServerFile(plan)) {
-            return finish(AutoOutcome.Pending("Plan exceeds the approved policy or needs manual action"), manifest, ClientActivity.SYNC_PENDING, now)
+            return finish(AutoOutcome.Pending(pendingReason(plan)), manifest, ClientActivity.SYNC_PENDING, now)
         }
         if (gameRunning.isRunning()) {
             return finish(AutoOutcome.DeferredGameRunning, manifest, ClientActivity.PENDING_GAME_EXIT, now)
@@ -213,6 +231,18 @@ class AutoSyncRunner(
             runCatching { gateway.reportSync(SyncReport(manifest.serverId, manifest.revision, "FAILED")) }
             finish(AutoOutcome.Failed(error.javaClass.simpleName), manifest, ClientActivity.SYNC_FAILED, now)
         }
+    }
+
+    /**
+     * Explains why a plan is not applied automatically, naming the first files that need the user.
+     *
+     * @param plan Candidate plan.
+     * @return Reason with up to three blocking operations, or the generic policy reason.
+     */
+    private fun pendingReason(plan: SyncPlan): String {
+        val blocking = plan.operations.filter { it.kind == OperationKind.CONFLICT || it.kind == OperationKind.MANUAL_ACTION_REQUIRED }
+        if (blocking.isEmpty()) return "Plan exceeds the approved policy or needs manual action"
+        return "Needs your action: " + blocking.take(MAX_REASONS).joinToString("; ") { "${it.fileName}: ${it.reason}" }
     }
 
     /**
@@ -254,7 +284,8 @@ class AutoSyncRunner(
                 lastSequence = sequence,
                 lastRevision = if (success) manifest.revision else settings.lastRevision,
                 lastFullCheckEpoch = if (success) now else settings.lastFullCheckEpoch,
-                lastOutcome = if (success) SUCCESS else outcome.javaClass.simpleName.uppercase()
+                lastOutcome = if (success) SUCCESS else outcome.javaClass.simpleName.uppercase(),
+                modsFingerprint = if (success) directoryFingerprint(installer.mods) else settings.modsFingerprint
             )
         runCatching { gateway.reportInventory(inventoryReport(manifest, activity, sequence, applied ?: installer.state().manifest?.revision)) }
         return outcome to updated
@@ -302,5 +333,6 @@ class AutoSyncRunner(
     private companion object {
         const val SUCCESS = "SUCCESS"
         const val FAILED = "FAILED"
+        const val MAX_REASONS = 3
     }
 }

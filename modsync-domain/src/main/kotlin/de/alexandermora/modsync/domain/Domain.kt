@@ -9,7 +9,7 @@ import java.util.UUID
 /** Relationship of an artifact to another project it references. */
 @Serializable enum class DependencyKind { REQUIRED, OPTIONAL, INCOMPATIBLE, EMBEDDED }
 /** Action a sync plan performs on one file; only the file-changing kinds mutate the instance. */
-@Serializable enum class OperationKind { INSTALL, UPDATE, KEEP, DISABLE, REMOVE_MANAGED, SKIP, CONFLICT, MANUAL_ACTION_REQUIRED }
+@Serializable enum class OperationKind { INSTALL, UPDATE, KEEP, DISABLE, REMOVE_MANAGED, SKIP, CONFLICT, MANUAL_ACTION_REQUIRED, QUARANTINE_DUPLICATE }
 /** How a server publishes client manifests automatically after an inventory snapshot. */
 @Serializable enum class PublicationPolicy { MANUAL, TRUSTED_AUTO, REVIEW_UNKNOWN }
 /** Synchronization state of one client instance relative to a server manifest. */
@@ -26,6 +26,15 @@ import java.util.UUID
  */
 @Serializable data class Evidence(val source: String, val detail: String)
 /**
+ * One mod declared inside a JAR, as read from its own metadata.
+ *
+ * @property id Mod id such as `jei`; the identity used to detect several versions of the same mod.
+ * @property version Declared version, or null when it is missing or an unresolved build placeholder.
+ * @property minecraftRange Declared Minecraft version range, or null when none is declared.
+ * @property loaderRange Declared NeoForge/Forge version range, or null when none is declared.
+ */
+@Serializable data class ModInfo(val id: String, val version: String? = null, val minecraftRange: String? = null, val loaderRange: String? = null)
+/**
  * One scanned mod file in a server inventory.
  *
  * Only [fileName], [sha512] and [size] are part of the inventory digest.
@@ -37,11 +46,12 @@ import java.util.UUID
  * @property classification Where the mod must run.
  * @property evidence Findings that led to the classification.
  * @property metadata Additional key/value facts read from the JAR metadata.
+ * @property mods Mods declared in the JAR with their versions; empty when the metadata could not be read.
  */
 @Serializable data class ModEntry(
     val fileName: String, val sha512: String, val size: Long, val modIds: List<String> = emptyList(),
     val classification: Classification = Classification.UNKNOWN, val evidence: List<Evidence> = emptyList(),
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(), val mods: List<ModInfo> = emptyList()
 )
 /**
  * Reference from an artifact to another Modrinth project.
@@ -65,12 +75,14 @@ import java.util.UUID
  * @property classification Where the mod must run.
  * @property dependencies Declared dependencies.
  * @property evidence Findings that led to the classification.
+ * @property mods Mods declared inside the file with their versions, copied from the verified inventory; empty for
+ *   manifests published before duplicate detection, in which case no identity link to installed files exists.
  */
 @Serializable data class Artifact(
     val projectId: String, val versionId: String, val fileName: String, val sha512: String, val size: Long,
     val url: String? = null, val minecraftVersions: Set<String>, val loaders: Set<String>,
     val classification: Classification, val dependencies: List<Dependency> = emptyList(),
-    val evidence: List<Evidence> = emptyList()
+    val evidence: List<Evidence> = emptyList(), val mods: List<ModInfo> = emptyList()
 )
 /**
  * Immutable, numbered set of artifacts a server publishes for clients.
@@ -114,8 +126,12 @@ import java.util.UUID
  * @property operations Planned steps.
  * @property localDigest Digest of the local inventory the plan was computed from.
  * @property includeOptional Whether optional artifacts were included.
+ * @property approvedRemovals File names of unmanaged duplicates the user explicitly approved for removal to a recoverable backup.
  */
-@Serializable data class SyncPlan(val manifest: Manifest, val operations: List<PlanOperation>, val localDigest: String, val includeOptional: Boolean = false) {
+@Serializable data class SyncPlan(
+    val manifest: Manifest, val operations: List<PlanOperation>, val localDigest: String, val includeOptional: Boolean = false,
+    val approvedRemovals: Set<String> = emptySet()
+) {
     /** True when the plan contains a conflict or manual action and therefore must not be applied. */
     val blocked: Boolean get() = operations.any { it.kind in setOf(OperationKind.CONFLICT, OperationKind.MANUAL_ACTION_REQUIRED) }
 }

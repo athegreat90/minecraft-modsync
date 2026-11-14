@@ -157,13 +157,15 @@ class Installer(
         if (Files.exists(journalPath)) require(wire.decodeFromString<InstallJournal>(Files.readString(journalPath)).complete) { "Interrupted installation; rollback before applying" }
         val before=Scanner().scan(mods); require(inventoryDigest(before) == plan.localDigest) { "Local inventory changed; generate a new plan" }
         val old=state()
-        val expected=Resolver().plan(plan.manifest, plan.operations.filter { it.artifact?.classification == Classification.CLIENT_ONLY }.mapNotNull { it.artifact }, before, old.hashes, plan.includeOptional)
+        val personal=plan.operations.filter { it.artifact?.classification == Classification.CLIENT_ONLY }.mapNotNull { it.artifact }
+        val expected=Resolver().plan(plan.manifest, personal, before, old.hashes, plan.includeOptional, plan.approvedRemovals)
         require(expected == plan) { "Plan does not match current managed state or manifest" }
-        val changes=plan.operations.filter { it.kind in setOf(OperationKind.INSTALL, OperationKind.UPDATE, OperationKind.REMOVE_MANAGED) }
+        val changes=plan.operations.filter { it.kind in FILE_CHANGES }
         val id=UUID.randomUUID().toString(); val session=stateDir.resolve(id); directory(session); val backups=session.resolve("backup"); directory(backups)
         val journal=InstallJournal(id, changes.map { JournalEntry(it.fileName, before.find { e -> e.fileName == it.fileName }?.sha512, it.artifact?.sha512) }, old)
         changes.forEach { op -> op.artifact?.let { download(it, session.resolve(op.fileName)) } }
         require(inventoryDigest(Scanner().scan(mods)) == plan.localDigest) { "Inventory changed during downloads" }
+        requireNoDuplicateMods(session, before, changes)
         changes.forEach { operation ->
             val entry=journal.entries.first { it.fileName == operation.fileName }
             if (entry.before != null) { Files.copy(path(entry.fileName), backups.resolve(entry.fileName)); require(fileHash(backups.resolve(entry.fileName)) == entry.before) }
@@ -174,7 +176,7 @@ class Installer(
                 val p=path(operation.fileName)
                 val oldHash=journal.entries.first { it.fileName == operation.fileName }.before
                 require(if (oldHash == null) !Files.exists(p, NOFOLLOW_LINKS) else Files.exists(p, NOFOLLOW_LINKS) && fileHash(p) == oldHash) { "File changed during apply" }
-                if (operation.kind == OperationKind.REMOVE_MANAGED) Files.delete(p)
+                if (operation.kind in REMOVALS) Files.delete(p)
                 else Files.move(session.resolve(operation.fileName), p, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             }
             val verified=plan.operations.filter { it.kind in setOf(OperationKind.KEEP, OperationKind.INSTALL, OperationKind.UPDATE) }
@@ -185,6 +187,36 @@ class Installer(
             secureWrite(journalPath, wire.encodeToString(journal.copy(complete=true)))
         }.onFailure { rollbackLocked() }.getOrThrow()
     }
+/**
+ * Refuses an installation that would leave two files for the same mod id, whatever the manifest metadata says.
+ *
+ * Inspects the downloaded JARs themselves, so manifests without mod identity cannot sneak a second version in.
+ * Runs before any file of `mods` changes, so a refusal needs no rollback.
+ *
+ * @param session Session directory that holds the downloaded JARs.
+ * @param before Inventory of `mods` the plan was derived from.
+ * @param changes File-changing operations of the plan.
+ * @throws IllegalArgumentException when a mod id would be provided by more than one file.
+ */
+    private fun requireNoDuplicateMods(session: Path, before: List<ModEntry>, changes: List<PlanOperation>) {
+        val incoming = changes.filter { it.artifact != null }.map { it.fileName }.toSet()
+        if (incoming.isEmpty()) return
+        val removed = changes.filter { it.artifact == null }.map { it.fileName }.toSet() + incoming
+        val result = (before.filter { it.fileName !in removed } + Scanner().scan(session).filter { it.fileName in incoming })
+            .flatMap { entry -> entry.modIds.map { it to entry.fileName } }
+            .groupBy({ it.first }, { it.second })
+            .filterValues { it.distinct().size > 1 }
+        val listing = result.entries.joinToString("; ") { "${it.key} in ${it.value.joinToString()}" }
+        require(result.isEmpty()) { "Installation would leave several files for the same mod: $listing; resolve the duplicates first" }
+    }
+/**
+ * Lists mod ids that more than one installed file provides.
+ *
+ * Read-only and independent of any manifest, so it also covers files ModSync does not own.
+ *
+ * @return One explanation per duplicated mod id, empty when every mod id is provided by a single file.
+ */
+    fun unresolvedDuplicates(): List<String> = duplicateMods(Scanner().scan(mods))
 /**
  * Restores the pre-apply state from the journal and its verified backups under the instance lock.
  *
@@ -238,7 +270,7 @@ class Installer(
         require(uri.scheme == "https" && uri.host == "cdn.modrinth.com" && uri.userInfo == null && uri.port in setOf(-1,443) && uri.path.startsWith("/data/")) { "Download must use official HTTPS Modrinth CDN" }
         require(artifact.size in 1..536870912 && validHash(artifact.sha512))
         val client=newHttp()
-        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.4.0").build(), HttpResponse.BodyHandlers.ofInputStream())
+        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.4.1").build(), HttpResponse.BodyHandlers.ofInputStream())
         response.body().use { input ->
             require(response.statusCode() == 200) { "Download failed: HTTP ${response.statusCode()}" }
             Files.newOutputStream(target, CREATE_NEW, WRITE).use { output ->
@@ -275,3 +307,6 @@ fun validateArchive(path: Path) {
         }
     }
 }
+
+private val REMOVALS = setOf(OperationKind.REMOVE_MANAGED, OperationKind.QUARANTINE_DUPLICATE)
+private val FILE_CHANGES = REMOVALS + setOf(OperationKind.INSTALL, OperationKind.UPDATE)

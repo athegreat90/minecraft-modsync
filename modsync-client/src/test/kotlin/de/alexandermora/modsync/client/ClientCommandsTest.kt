@@ -1,5 +1,7 @@
 package de.alexandermora.modsync.client
 
+import de.alexandermora.modsync.domain.Manifest
+import de.alexandermora.modsync.domain.ModInfo
 import de.alexandermora.modsync.fixtures.Fixtures
 import de.alexandermora.modsync.protocol.secureWrite
 import de.alexandermora.modsync.protocol.wire
@@ -118,6 +120,19 @@ class ClientCommandsTest {
     fun syncWithoutRecordedState() {
         assertEquals(1, cli("sync", "rollback", "--instance", "main").first)
         assertEquals(1, cli("sync", "verify", "--instance", "main").first)
+    }
+
+    /** Verification fails offline, naming the files, when several installed files provide the same mod. */
+    @Test
+    fun verifyRejectsDuplicateMods() {
+        val installer = Installer(instance)
+        Fixtures.modJar(installer.mods.resolve("alpha-1.jar"), ModInfo("alpha", "1.0.0"))
+        Fixtures.modJar(installer.mods.resolve("alpha-2.jar"), ModInfo("alpha", "2.0.0"))
+        val manifest = Manifest("s", 1, "1.21.1", "neoforge", null, emptyList(), "2026-01-01T00:00:00Z", "d")
+        secureWrite(instance.resolve(".modsync/managed.json"), wire.encodeToString(ManagedState.serializer(), ManagedState(emptyMap(), manifest, emptyMap())))
+        val (code, out) = cli("sync", "verify", "--instance", "main")
+        assertEquals(1, code)
+        assertTrue(out.contains("DUPLICATE mod alpha is provided by alpha-1.jar, alpha-2.jar"), out)
     }
 
     /** Online commands fail closed when the server is unreachable. */

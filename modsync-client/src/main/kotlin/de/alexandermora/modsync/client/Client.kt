@@ -249,6 +249,7 @@ class Client: Runnable {
 /**
  * Builds a deterministic sync plan from the published manifest and the local inventory, and writes it to a file.
  *
+ * Names the kept and the older version of every duplicated mod and whether removing the older file needs approval.
  * Also caches the manifest for offline inspection. Exits with an error when the plan is blocked by conflicts or manual actions.
  *
  * @param instance Registered instance name.
@@ -256,12 +257,14 @@ class Client: Runnable {
  * @param profile Optional personal profile UUID to include.
  * @param output Destination of the plan file.
  * @param includeOptional Also install optional artifacts.
+ * @param approveRemoval File names of unmanaged older duplicate mods that may be moved to a recoverable backup; repeat the option for several files.
  */
     @Command(name="plan") fun plan(@Option(names=["--instance"], required=true) instance: String, @Option(names=["--server"], required=true) server: String,
-        @Option(names=["--profile"]) profile: String?, @Option(names=["--out"], required=true) output: Path, @Option(names=["--include-optional"]) includeOptional: Boolean) {
+        @Option(names=["--profile"]) profile: String?, @Option(names=["--out"], required=true) output: Path, @Option(names=["--include-optional"]) includeOptional: Boolean,
+        @Option(names=["--approve-removal"], description=["Unmanaged older duplicate mod file that may be moved to a recoverable backup (repeatable)"]) approveRemoval: Array<String>?) {
         val api=root.api(); val manifest=wire.decodeFromString<Manifest>(api.request("/api/v1/servers/${uuid(server)}/manifest"))
         val personal=if (profile == null) emptyList() else wire.decodeFromString<List<PersonalProfile>>(api.request("/api/v1/personal")).first { it.id == uuid(profile) }.artifacts
-        val installer=Installer(root.instance(instance)); installer.validateTarget(manifest); val plan=installer.locked { Resolver().plan(manifest, personal, Scanner().scan(installer.mods), installer.state().hashes, includeOptional) }
+        val installer=Installer(root.instance(instance)); installer.validateTarget(manifest); val plan=installer.locked { Resolver().plan(manifest, personal, Scanner().scan(installer.mods), installer.state().hashes, includeOptional, approveRemoval.orEmpty().onEach { require(safeFileName(it)) { "Invalid file name for --approve-removal" } }.toSet()) }
         secureWrite(output, wire.encodeToString(plan)); secureWrite(root.stateDir.resolve("manifest-${uuid(server)}.json"), wire.encodeToString(manifest)); secureWrite(root.stateDir.resolve("manifest-${uuid(server)}.cached-at"), Instant.now().toString())
         plan.operations.forEach { println("${it.kind} ${it.fileName}: ${it.reason}") }; if (plan.blocked) error("Plan is blocked; resolve conflicts or manual actions")
     }
@@ -288,12 +291,16 @@ class Client: Runnable {
         println("Installation verified")
     }
 /**
- * Verifies the managed files locally and then against the currently published manifest.
+ * Verifies the managed files locally, then rejects installations where several files provide the same mod,
+ * and finally checks the currently published manifest.
  *
  * @param instance Registered instance name.
  */
     @Command(name="verify") fun verify(@Option(names=["--instance"], required=true) instance: String) {
         val installer=Installer(root.instance(instance)); require(installer.verify()) { "Managed file verification failed" }
+        val duplicates=installer.unresolvedDuplicates()
+        duplicates.forEach { println("DUPLICATE $it; run sync plan to choose the file to keep") }
+        require(duplicates.isEmpty()) { "Unresolved duplicate mods" }
         val manifest=checkNotNull(installer.state().manifest) { "No managed manifest found" }; val current=wire.decodeFromString<Manifest>(root.api().request("/api/v1/servers/${uuid(manifest.serverId)}/manifest"))
         require(current == manifest) { "Local files verified, but a newer manifest is published" }; println("Managed artifacts verified against current published manifest")
     }

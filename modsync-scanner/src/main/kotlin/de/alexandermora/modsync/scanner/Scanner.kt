@@ -1,13 +1,12 @@
 package de.alexandermora.modsync.scanner
 
 import de.alexandermora.modsync.domain.*
-import kotlinx.serialization.json.*
-import org.tomlj.Toml
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
 /**
@@ -57,39 +56,26 @@ class Scanner(private val maxJarBytes: Long = 512L * 1024 * 1024, private val ma
                         digest.update(buffer, 0, n)
                     }
                 }
-                val ids = mutableListOf<String>()
+                val mods = mutableListOf<ModInfo>()
                 val metadata = mutableMapOf<String, String>()
                 val evidence = mutableListOf<Evidence>()
                 ZipFile(path.toFile()).use { zip ->
                     require(zip.size() <= 100000) { "Archive has too many entries" }
                     for (name in listOf("META-INF/neoforge.mods.toml", "META-INF/mods.toml", "fabric.mod.json", "META-INF/jarjar/metadata.json")) {
                         val entry = zip.getEntry(name) ?: continue
-                        require(entry.size in 0..1048576) { "Metadata exceeds limit" }
-                        val bytes = zip.getInputStream(entry).use { it.readNBytes(1048577) }
-                        require(bytes.size <= 1048576)
+                        val bytes = readBounded(zip, entry)
                         metadataBytes += bytes.size
                         require(metadataBytes <= 2 * 1024 * 1024) { "Inventory metadata exceeds scanner memory budget" }
                         val text = bytes.toString(Charsets.UTF_8)
                         metadata[name] = text
-                        if (name.endsWith(".toml")) {
-                            val toml = Toml.parse(text)
-                            require(!toml.hasErrors()) { "Invalid mod metadata" }
-                            val table = toml.getArray("mods")
-                            if (table != null) for (i in 0 until table.size()) table.getTable(i).getString("modId")?.let(ids::add)
-                        } else if (name == "fabric.mod.json") {
-                            wireJson
-                                .parseToJsonElement(text)
-                                .jsonObject["id"]
-                                ?.jsonPrimitive
-                                ?.content
-                                ?.let(ids::add)
-                        }
+                        mods += ModMetadataParser.parse(name, text) { manifestVersion(zip) }
                         evidence += Evidence("jar-metadata", name)
                     }
                 }
                 val after = Files.readAttributes(path, BasicFileAttributes::class.java, NOFOLLOW_LINKS)
                 require(before.size() == after.size() && before.lastModifiedTime() == after.lastModifiedTime() && before.fileKey() == after.fileKey()) { "JAR changed during scan; snapshot discarded" }
-                ModEntry(path.fileName.toString(), digest.digest().toHex(), after.size(), ids.distinct(), evidence = evidence, metadata = metadata)
+                val distinctMods = mods.distinctBy { it.id }
+                ModEntry(path.fileName.toString(), digest.digest().toHex(), after.size(), distinctMods.map { it.id }, evidence = evidence, metadata = metadata, mods = distinctMods)
             }
         require(
             paths.map { it.fileName.toString() }.toSet() ==
@@ -113,8 +99,32 @@ class Scanner(private val maxJarBytes: Long = 512L * 1024 * 1024, private val ma
         }
     }
 
-    /** Lenient JSON parser for `fabric.mod.json`. */
-    private val wireJson = Json { ignoreUnknownKeys = true }
+    /**
+     * Reads a metadata entry with the per-file size limit.
+     *
+     * @param zip Open archive.
+     * @param entry Entry to read.
+     * @return The entry content, at most 1 MiB.
+     */
+    private fun readBounded(zip: ZipFile, entry: ZipEntry): ByteArray {
+        require(entry.size in 0..MAX_METADATA_BYTES) { "Metadata exceeds limit" }
+        val bytes = zip.getInputStream(entry).use { it.readNBytes(MAX_METADATA_BYTES + 1) }
+        require(bytes.size <= MAX_METADATA_BYTES)
+        return bytes
+    }
+
+    /**
+     * Reads the `Implementation-Version` of the JAR manifest, used to resolve `${file.jarVersion}`.
+     *
+     * @param zip Open archive.
+     * @return The manifest version, or null when the manifest or the attribute is missing.
+     */
+    private fun manifestVersion(zip: ZipFile): String? =
+        zip.getEntry("META-INF/MANIFEST.MF")?.let { ModMetadataParser.implementationVersion(readBounded(zip, it).toString(Charsets.UTF_8)) }
+
+    private companion object {
+        const val MAX_METADATA_BYTES = 1048576
+    }
 }
 
 /**

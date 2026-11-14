@@ -29,6 +29,7 @@ import java.nio.file.Path
  * @property lastSequence Last inventory sequence sent.
  * @property lastOutcome Short result name of the last pass.
  * @property profileId Personal profile UUID whose client-only mods are kept and installed, or null for none.
+ * @property modsFingerprint Fingerprint of the mods folder after the last successful pass; a different folder forces a full pass.
  */
 @Serializable
 data class AutoSettings(
@@ -40,7 +41,8 @@ data class AutoSettings(
     val lastFullCheckEpoch: Long = 0,
     val lastSequence: Long = 0,
     val lastOutcome: String = "NONE",
-    val profileId: String? = null
+    val profileId: String? = null,
+    val modsFingerprint: String? = null
 )
 
 /** Persists [AutoSettings] per instance name in the client state directory. */

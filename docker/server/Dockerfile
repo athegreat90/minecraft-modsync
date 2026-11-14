@@ -1,5 +1,5 @@
 FROM gradle:9.8.2-jdk25-ubi AS build
-ARG RELEASE_VERSION=0.4.0-SNAPSHOT
+ARG RELEASE_VERSION=0.4.1-SNAPSHOT
 WORKDIR /workspace
 COPY . .
 RUN gradle --no-daemon -PreleaseVersion=${RELEASE_VERSION} :modsync-server:bootJar && cp modsync-server/build/libs/modsync-server.jar /tmp/server.jar && javac -d /health docker/server/Health.java
