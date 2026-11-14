@@ -6,6 +6,14 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-11-14
+
+### Fixed
+- Releases of historical `main` commits (`7c29453`, `cd6c32d`) failed after the Gradle 9.9.1 upgrade: `validate` and all three `native` jobs stopped on dependency verification (`kotlin-dsl` plugin 6.7.13 and `kotlin-stdlib-common-2.4.21.module`). `release.yaml` is always the version from `main`, but it builds the old source, whose `gradle/verification-metadata.xml` only knows the plugins of the Gradle it was written for (9.8.2). The `version` job now reads the Gradle version from the checked-out source's `gradle/wrapper/gradle-wrapper.properties` (strictly validated) and `validate` and `native` pass it to `setup-gradle`, so every commit is built with its own pinned Gradle while `main` keeps using the current one.
+
+### Changed
+- Version bumped 0.4.3 -> 0.4.4 (patch: release workflow fix only; wire protocol 1 and minimum component compatibility are unchanged). Updated in the same files as the previous bump.
+
 ## [0.4.3] - 2026-11-14
 
 ### Changed
