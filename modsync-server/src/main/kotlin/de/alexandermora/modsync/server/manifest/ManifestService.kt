@@ -1,5 +1,6 @@
 package de.alexandermora.modsync.server.manifest
 
+import de.alexandermora.modsync.domain.Artifact
 import de.alexandermora.modsync.domain.Classification
 import de.alexandermora.modsync.domain.Evidence
 import de.alexandermora.modsync.domain.Manifest
@@ -24,6 +25,18 @@ import java.time.Instant
 import java.util.UUID
 
 private val REPORT_STATUSES = setOf("SUCCESS", "FAILED", "ROLLED_BACK")
+
+/**
+ * Copies the mods declared in the scanned inventory file onto a published artifact.
+ *
+ * Clients use them to recognize installed files of the same mod under other file names. The identity comes from
+ * the very JAR the artifact pins by hash, so it is as trustworthy as the inventory.
+ *
+ * @receiver Artifact being published.
+ * @param scanned Inventory entry with the same hash, or null when the artifact was not scanned.
+ * @return The artifact carrying the scanned mods, or unchanged when nothing was scanned.
+ */
+internal fun Artifact.withInventoryMods(scanned: ModEntry?): Artifact = if (scanned == null || scanned.sha512 != sha512) this else copy(mods = scanned.mods)
 
 /**
  * Builds, publishes and serves immutable manifest revisions and records client sync reports.
@@ -86,10 +99,10 @@ class ManifestService(
                 val classification = approval?.let { Classification.valueOf(it.classification) } ?: artifact.classification
                 val evidence = listOf(Evidence("administrator", approval?.reason ?: "Explicit dependency approval"))
                 if (artifact.url != null) {
-                    modrinth.artifact(artifact.sha512, classification, evidence)
+                    modrinth.artifact(artifact.sha512, classification, evidence).withInventoryMods(scanned)
                 } else {
                     requireState(scanned != null && scanned.size == artifact.size, "Manual artifact must match scanned inventory")
-                    artifact.copy(classification = classification, evidence = evidence)
+                    artifact.copy(classification = classification, evidence = evidence).withInventoryMods(scanned)
                 }
             }
         requireState(entries.all { e -> artifacts.any { it.sha512 == e.sha512 } }, "Manifest must account for every scanned artifact")
