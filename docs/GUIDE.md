@@ -383,10 +383,10 @@ Tests: Kotlin unit tests (scanner, resolver, transport, installer) and MariaDB i
 
 ```mermaid
 flowchart LR
-  PR[push / PR] --> CI["ci.yaml: Gradle check + bootJar/installDist,\narchitecture, OpenAPI, Python tests,\nTrivy scan, distributed fixture"]
+  PR[push / PR] --> CI["ci.yaml: Gradle check + bootJar/installDist,\narchitecture, OpenAPI, Python tests,\nTrivy v0.76.2 scan, distributed fixture"]
   main[main push / hourly] --> REC["reconcile.yaml:\nfind unreleased reachable commits"]
   REC --> REL["release.yaml: exact SHA build,\nnative (Win x64, Linux x64/ARM64),\nimages amd64/arm64 + SBOM, scans"]
-  REL --> PRE["prerelease v0.4.1-dev.<time>.<sha>"]
+  REL --> PRE["prerelease v0.4.2-dev.<time>.<sha>"]
 ```
 Details: [RELEASES.md](../RELEASES.md).
 

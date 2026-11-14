@@ -2,8 +2,11 @@
 """Reconcile every reachable main commit, rather than just push event head."""
 import datetime as dt, json, os, re, subprocess
 
-# First main commit whose build supports the release pipeline (Dokka, native verification).
-RELEASE_FLOOR = "d9f75f5781262e42efe6b6116dfb935ec3004bfb"
+# First main commit whose build supports the release pipeline. d9f75f5 was the previous floor, but its native build can never
+# pass: Gradle dependency verification lacks the graalvm-reachability-metadata checksum, which was added by this commit.
+RELEASE_FLOOR = "7c2945334787ca9f28d15bde513de55134fdf4ed"
+COOLDOWN = 6 * 3600
+MAX_COOLDOWN = 7 * 24 * 3600
 TAG_PATTERN = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]{14}\.[0-9a-f]{40}")
 
 def run(*args):
@@ -13,10 +16,15 @@ def version(sha, timestamp):
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Expected full commit SHA")
     stamp = dt.datetime.fromtimestamp(int(timestamp),dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    return f"v0.4.1-dev.{stamp}.{sha}"
+    return f"v0.4.2-dev.{stamp}.{sha}"
 
-def candidates(commits, released, running, attempted, now):
-    eligible = [sha for sha in commits if sha not in released and sha not in running and now-attempted.get(sha,0)>=21600]
+def cooldown(failures):
+    """Seconds to wait after the last attempt: 6 hours, doubled for every further failure, capped at 7 days."""
+    return min(COOLDOWN * 2 ** max(failures - 1, 0), MAX_COOLDOWN)
+
+def candidates(commits, released, running, attempted, now, failures=None):
+    failures = failures or {}
+    eligible = [sha for sha in commits if sha not in released and sha not in running and now-attempted.get(sha,0)>=cooldown(failures.get(sha,0))]
     head = commits[-1] if commits else None
     return sorted(eligible, key=lambda sha: (sha != head, attempted.get(sha,0)))
 
@@ -37,7 +45,7 @@ def main():
             except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
                 invalid[sha] = str(error)
     pages = json.loads(run("gh","api","--paginate","--slurp",f"repos/{repo}/actions/workflows/release.yaml/runs?event=workflow_dispatch&per_page=100"))
-    running, attempted, failed = set(), {}, {}
+    running, attempted, failed, failures = set(), {}, {}, {}
     for page in pages:
         for item in page["workflow_runs"]:
             match = re.fullmatch(r"release:([0-9a-f]{40})",item["display_title"])
@@ -46,10 +54,12 @@ def main():
             if item["status"] in ("queued","in_progress","waiting","pending","requested"): running.add(sha)
             if item.get('conclusion') in ('failure', 'timed_out', 'cancelled', 'action_required'):
                 failed.setdefault(sha, item.get('html_url'))
+            if item.get('conclusion') in ('failure', 'timed_out'):
+                failures[sha] = failures.get(sha, 0) + 1
             at=dt.datetime.fromisoformat(item.get("updated_at", item["created_at"]).replace("Z","+00:00")).timestamp()
             attempted[sha]=max(at,attempted.get(sha,0))
     now=dt.datetime.now(dt.timezone.utc).timestamp()
-    selected=candidates(commits,released,running,attempted,now)[:20]
+    selected=candidates(commits,released,running,attempted,now,failures)[:20]
     for sha in selected:
         subprocess.run(["gh","workflow","run","release.yaml","--ref","main","-f",f"sha={sha}"],check=True)
     print(json.dumps({"reachable":len(commits),"released":len(set(commits)&released),"running":len(running),"dispatched":selected,"failed":failed,"invalidReleases":invalid,"remaining":len(set(commits)-released)},indent=2))

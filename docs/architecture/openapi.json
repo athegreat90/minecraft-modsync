@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Minecraft ModSync API",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "description": "Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation."
   },
   "paths": {

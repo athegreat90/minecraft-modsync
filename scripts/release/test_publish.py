@@ -64,6 +64,26 @@ class PublicationTests(unittest.TestCase):
                 publish.main()
             mutate.assert_not_called()
 
+    def version_check_error(self, candidate):
+        """Runs main() with a given RELEASE_VERSION and returns the ValueError message; stops right after the version check."""
+        with patch.dict(os.environ, RELEASE_VERSION=candidate), patch.object(publish, 'run', side_effect=self.run_command), patch.object(state, 'tag_source', return_value='b'*40), patch.object(publish.subprocess, 'run') as mutate:
+            with self.assertRaises(ValueError) as caught:
+                publish.main()
+            mutate.assert_not_called()
+        return str(caught.exception)
+
+    def test_historical_source_keeps_its_own_version_prefix(self):
+        # validate() computes the version with the historical commit's own tooling, so an older semver prefix is legitimate.
+        historical = 'v0.0.1-dev.' + VERSION.split('-dev.', 1)[1]
+        self.assertNotEqual(historical, VERSION)
+        self.assertEqual(self.version_check_error(historical), 'Existing immutable tag points to another revision')
+
+    def test_version_must_still_identify_the_source_commit(self):
+        stamp, sha = VERSION.split('-dev.', 1)[1].split('.')
+        for wrong in (f'v0.0.1-dev.{stamp}.{"b" * 40}', f'v0.0.1-dev.20000101000000.{sha}', f'v0.0.1-dev.{stamp}.{sha[:7]}', 'v0.0.1', VERSION + 'x', 'x' + VERSION):
+            with self.subTest(wrong=wrong):
+                self.assertEqual(self.version_check_error(wrong), 'Release version does not identify source commit')
+
     def test_missing_assets_fail_before_preflight(self):
         pathlib.Path('artifacts/modsync-server.jar').unlink()
         with patch.object(publish, 'run', side_effect=self.run_command), patch.object(state, 'tag_source', return_value=SHA), patch.object(publish, 'verify_source'), patch.object(publish, 'preflight') as preflight:

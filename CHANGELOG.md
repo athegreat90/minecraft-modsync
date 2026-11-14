@@ -6,6 +6,18 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-14
+
+### Fixed
+- Release runs for historical `main` commits (for example `cd6c32d`, `7c29453`) built and tested successfully, then failed in `publish` with `Release version does not identify source commit`. `validate` derives the version from the checked-out historical source (`v0.3.2-dev...`), while `publish` deliberately runs the current publication tooling and compared the whole string with its own `v0.4.1-dev...`, so every version bump made all unreleased older commits unpublishable and the hourly reconciler kept retrying them. `publish.py` now compares only the commit-identifying `<UTC stamp>.<full sha>` suffix and still requires a well-formed `v<X.Y.Z>-dev.<14 digits>.<40 hex>` tag; a different SHA, timestamp or malformed tag is still rejected.
+
+- The release reconciler retried `d9f75f5` every 6 hours forever (21 failed runs on three runners each). Its native build can never pass because Gradle dependency verification lacks the `graalvm-reachability-metadata` checksum, which was only added by the next commit. `RELEASE_FLOOR` now starts at `7c29453`.
+- A commit that keeps failing is no longer retried at a fixed 6 hour interval: the cooldown doubles for each failed or timed-out attempt (6h, 12h, 24h, ...) up to 7 days. Cancelled runs do not count, and the reported `failed` list is unchanged.
+
+### Changed
+- Trivy is pinned to the latest release, v0.76.2 (previously the `trivy-action` default v0.70.0 for the source scan and `aquasec/trivy:0.67.2` for the image scan) in `ci.yaml`, `release.yaml` and `scripts/release/publish.py`. `aquasecurity/trivy-action` was already at its latest release, v0.36.0, pinned by commit SHA.
+- Version bumped 0.4.1 -> 0.4.2 (patch: release tooling fix only; wire protocol 1 and minimum component compatibility are unchanged). Updated in `build.gradle.kts`, both Dockerfiles, `scripts/openapi.py` (and the regenerated `docs/architecture/openapi.json`), `scripts/release/reconcile.py` and its test, the User-Agent strings (`Installer.kt`, `Modrinth.kt` and their tests), `RELEASES.md`, `docs/deployment/README.md` and `docs/GUIDE.md`.
+
 ## [0.4.1] - 2026-11-14
 
 ### Fixed

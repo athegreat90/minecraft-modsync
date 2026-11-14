@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import hashlib, json, os, pathlib, subprocess, tempfile, uuid
-from reconcile import run, version as release_version
+from reconcile import TAG_PATTERN, run, version as release_version
 from state import required_assets, verify_complete, verify_source
 
 
@@ -48,12 +48,22 @@ def preflight(repo):
         run('gh', 'api', '--method', 'DELETE', f'repos/{repo}/git/refs/{ref}')
 
 
+def identifies_source(version, expected):
+    """True when [version] is a well-formed release tag naming the same commit time and SHA as [expected].
+
+    The `vX.Y.Z-dev.` prefix is deliberately not compared: `validate` derives it from the checked-out
+    (possibly historical) source, whereas [expected] comes from the current publication tooling.
+    The `<UTC stamp>.<full sha>` suffix is what binds a version to its source commit.
+    """
+    return bool(TAG_PATTERN.fullmatch(version)) and version.split('-dev.', 1)[1] == expected.split('-dev.', 1)[1]
+
+
 def main():
     version=os.environ["RELEASE_VERSION"]
     sha=run("git","rev-parse","HEAD")
     repo=os.environ["GITHUB_REPOSITORY"]
     expected = release_version(sha, run('git', 'show', '-s', '--format=%ct', 'HEAD'))
-    if version != expected:
+    if not identifies_source(version, expected):
         raise ValueError('Release version does not identify source commit')
     pages = json.loads(run('gh', 'api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'))
     matches = [r for page in pages for r in page if r['tag_name'] == version]
@@ -93,7 +103,7 @@ def main():
             subprocess.run(["docker","buildx","build","--platform","linux/amd64,linux/arm64","--file",f"docker/{component}/Dockerfile","--tag",image,"--build-arg",f"RELEASE_VERSION={version}","--label",f"org.opencontainers.image.revision={sha}","--provenance=true","--sbom=true","--metadata-file",str(metadata),"--push","."],check=True)
             digest=json.loads(metadata.read_text())["containerimage.digest"]
             # Scan the pushed immutable digest; no release is finalized on failure.
-            subprocess.run(["docker","run","--rm","-e","TRIVY_USERNAME","-e","TRIVY_PASSWORD","aquasec/trivy:0.67.2","image","--exit-code","1","--severity","HIGH,CRITICAL",image.split(':')[0]+"@"+digest],check=True,env={**os.environ,"TRIVY_USERNAME":os.environ["GITHUB_ACTOR"],"TRIVY_PASSWORD":os.environ["GH_TOKEN"]})
+            subprocess.run(["docker","run","--rm","-e","TRIVY_USERNAME","-e","TRIVY_PASSWORD","aquasec/trivy:0.76.2","image","--exit-code","1","--severity","HIGH,CRITICAL",image.split(':')[0]+"@"+digest],check=True,env={**os.environ,"TRIVY_USERNAME":os.environ["GITHUB_ACTOR"],"TRIVY_PASSWORD":os.environ["GH_TOKEN"]})
             digests[component]={"image":image,"digest":digest}
     checksums={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
     manifest={"version":version,"sourceCommit":sha,"apiProtocol":1,"agentProtocol":1,"minimumClient":"0.1.0","minimumAgent":"0.1.0","images":digests,"artifactChecksums":checksums,"migrationRequirements":"Apply Flyway migrations; retain database, agent/client state and configured CA trust."}
