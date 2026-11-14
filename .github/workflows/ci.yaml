@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '25'}
       - uses: gradle/actions/setup-gradle@v4
-        with: {gradle-version: '9.8.2'}
+        with: {gradle-version: '9.9.1'}
       - run: gradle --no-daemon check dokkaGenerate :modsync-server:bootJar :modsync-agent:installDist :modsync-client:installDist :modsync-client-tui:installDist
       - run: python3 scripts/check-architecture.py
       - run: python3 scripts/openapi.py --check
@@ -67,5 +67,5 @@ jobs:
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '25'}
       - uses: gradle/actions/setup-gradle@v4
-        with: {gradle-version: '9.8.2'}
+        with: {gradle-version: '9.9.1'}
       - run: gradle --no-daemon check sonar "-Dsonar.host.url=$SONAR_HOST_URL" -Dsonar.qualitygate.wait=true

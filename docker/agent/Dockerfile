@@ -1,5 +1,5 @@
 ARG COMPONENT=agent
-FROM gradle:9.8.2-jdk25-ubi AS build
+FROM gradle:9.9.1-jdk25-ubi AS build
 ARG COMPONENT
 ARG RELEASE_VERSION=0.4.2-SNAPSHOT
 WORKDIR /workspace
