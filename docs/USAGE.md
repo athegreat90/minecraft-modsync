@@ -395,6 +395,10 @@ On Windows use `.\gradlew.bat` and `python` instead of `python3`.
 | Publish rejected, "preview again" | Policy or snapshot changed | Re-run preview |
 | Interrupted installation | Crash or game running during apply | `sync rollback`, then retry with Minecraft closed |
 | Inventory stale | Agent stopped or token revoked | `agent status`/`doctor`, check container, re-enroll |
+| `auto status` shows `lastOutcome=FAILED` (no reason is stored); `sync verify` throws `IllegalArgumentException` | The published manifest pins older versions of mods you already have in a newer, unmanaged version, so the installer refuses ("Installation would leave several files for the same mod") and nothing was ever applied | Run `sync plan` and compare the INSTALL lines with your mods folder. Fix it at the source: update the Minecraft server's mods to the versions you run, approve the new hashes and publish a new revision (§3.4); or move your newer copies away |
+| Dashboard: Classify seems to do nothing | Before 0.5.2 the form opened at the top of the section, far from a long mod list | Update the server to 0.5.2 or later |
+| Dashboard: after signing in nothing happens until you type `https://<host>/ui` | The server sits behind a TLS proxy without `MODSYNC_FORWARD_HEADERS=framework`, so redirects point to `http://` and the `Secure` session cookie is not sent | Set `MODSYNC_FORWARD_HEADERS=framework` on Host B and recreate the container ([SSO guide](security/SSO_SETUP.md#12-troubleshooting)) |
+| Windows: replacing `modsync.exe` or the TUI folder fails with "Permission denied" / "Device or resource busy" | The program or its JVM is still running (the TUI runs as a separate `java.exe` from `tui\lib`) | Rename a running `modsync.exe` first (Windows allows it), then copy the new file; end the TUI's `java.exe` before swapping its folder. Check downloads against `SHA256SUMS` of the release |
 | Agent can't read mods | UID 10001 lacks access or wrong mount | Fix permissions; mount `MINECRAFT_SERVERS_PATH` |
 
 ## 10. Cheat sheet

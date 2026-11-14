@@ -16,7 +16,7 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 - Version bumped 0.5.1 -> 0.5.2 (patch: bug fixes and documentation; wire protocol 1 and minimum component compatibility are unchanged).
 
 ### Documentation
-- `docs/security/SSO_SETUP.md`, `DOCKER.md` and `docs/deployment/README.md` state that password sign-in, not only SSO, needs `MODSYNC_FORWARD_HEADERS=framework` behind a TLS proxy, with the symptom and a one-line check. `MEMORY.md` records the diagnosis.
+- `docs/security/SSO_SETUP.md`, `DOCKER.md` and `docs/deployment/README.md` state that password sign-in, not only SSO, needs `MODSYNC_FORWARD_HEADERS=framework` behind a TLS proxy, with the symptom and a one-line check. `MEMORY.md` records the diagnosis. `docs/USAGE.md` troubleshooting gained rows for a failed automatic sync caused by older pinned mod versions, the Classify and login symptoms, and replacing `modsync.exe` or the TUI folder on Windows; `RELEASES.md` explains how to remove abandoned draft releases.
 
 ## [0.5.1] - 2026-11-14
 
