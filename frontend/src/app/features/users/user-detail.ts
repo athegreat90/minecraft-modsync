@@ -3,6 +3,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AdminApi, describeError } from '../../core/api/admin-api';
+import { runCommand } from '../../core/api/run-command';
 import { UserDetail } from '../../core/api/models';
 
 /** One account with its lifecycle actions. Administrator accounts are read-only; the server enforces that too. */
@@ -77,15 +78,9 @@ export class UserDetailView implements OnInit {
   }
 
   private run(command: Observable<unknown>, success: string, done: () => void = () => undefined): void {
-    this.error.set('');
-    this.notice.set('');
-    command.subscribe({
-      next: () => {
-        this.notice.set(success);
-        done();
-        this.load();
-      },
-      error: (failure: unknown) => this.error.set(describeError(failure)),
+    runCommand(command, { error: this.error, notice: this.notice }, success, () => {
+      done();
+      this.load();
     });
   }
 }

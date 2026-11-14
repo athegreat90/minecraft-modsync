@@ -94,7 +94,7 @@ describe('UserDetailView', () => {
     const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Revoke all devices'))!;
     button.click();
 
-    http.expectNone('/ui/api/users/u1/revoke-devices');
+    expect(http.match('/ui/api/users/u1/revoke-devices')).toEqual([]);
   });
 
   it('offers no actions for administrator accounts', async () => {

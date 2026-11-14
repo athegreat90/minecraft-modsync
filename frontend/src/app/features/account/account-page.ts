@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AdminApi, describeError } from '../../core/api/admin-api';
+import { runCommand } from '../../core/api/run-command';
 import { IdentitiesView } from '../../core/api/models';
 import { ASSIGN_LOCATION } from '../../core/navigation';
 
@@ -57,14 +58,6 @@ export class AccountPage implements OnInit {
   }
 
   private run(command: Observable<unknown>, success: string): void {
-    this.error.set('');
-    this.notice.set('');
-    command.subscribe({
-      next: () => {
-        this.notice.set(success);
-        this.load();
-      },
-      error: (failure: unknown) => this.error.set(describeError(failure)),
-    });
+    runCommand(command, { error: this.error, notice: this.notice }, success, () => this.load());
   }
 }
