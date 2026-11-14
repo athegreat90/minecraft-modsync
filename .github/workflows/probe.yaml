@@ -19,8 +19,7 @@ jobs:
               label=${pair%%:*}; sha=${pair#*:}
               ref="refs/$kind/zz-probe-$label-$RANDOM"
               out=$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=$ref" -f "sha=$sha" 2>&1); rc=$?
-              echo "RESULT $kind $label rc=$rc $(echo "$out" | head -c 160 | tr '
-' ' ')"
+              echo "RESULT $kind $label rc=$rc $(echo "$out" | head -c 160 | tr -cd '[:print:]')"
               if [ $rc -eq 0 ]; then gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/$ref" > /dev/null 2>&1; fi
             done
           done
