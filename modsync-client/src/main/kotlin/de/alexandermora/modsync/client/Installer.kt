@@ -270,7 +270,7 @@ class Installer(
         require(uri.scheme == "https" && uri.host == "cdn.modrinth.com" && uri.userInfo == null && uri.port in setOf(-1,443) && uri.path.startsWith("/data/")) { "Download must use official HTTPS Modrinth CDN" }
         require(artifact.size in 1..536870912 && validHash(artifact.sha512))
         val client=newHttp()
-        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.4.0").build(), HttpResponse.BodyHandlers.ofInputStream())
+        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.4.1").build(), HttpResponse.BodyHandlers.ofInputStream())
         response.body().use { input ->
             require(response.statusCode() == 200) { "Download failed: HTTP ${response.statusCode()}" }
             Files.newOutputStream(target, CREATE_NEW, WRITE).use { output ->

@@ -6,6 +6,23 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-14
+
+### Fixed
+- Activating ModSync on a client could leave several versions of the same mod installed. The planner matched installed files to manifest artifacts by file name only, so an older jar with a different file name was skipped ("Preserve unmanaged") and the new version was installed next to it; automatic synchronization then reported `UpToDate` because a plan of `SKIP` operations has no changes, and an unchanged manifest revision skipped scanning entirely. Mods are now identified by the mod ids declared in their metadata.
+
+### Added
+- `ModVersion` / `VersionRange` (domain): Minecraft-mod-aware version ordering (numeric segments, `1.21.1-3.2.0` prefixes, `alpha`/`beta`/`rc`/`patch` qualifiers, build metadata ignored) and Maven-style ranges. Ordering that cannot be established is `INCOMPARABLE` and becomes a conflict, never a guess.
+- `ModInfo` (id, version, Minecraft and loader ranges) on `ModEntry.mods` and `Artifact.mods`. The scanner reads them from `neoforge.mods.toml`, `mods.toml` and `fabric.mod.json` and resolves `${file.jarVersion}` from `MANIFEST.MF`; the server copies the scanned mods onto published artifacts. Both fields are additive; manifests published earlier simply carry no identity.
+- `OperationKind.QUARANTINE_DUPLICATE` and `SyncPlan.approvedRemovals`; `modsync sync plan --approve-removal FILE` (repeatable) approves moving an unmanaged older duplicate to a recoverable backup. The plan explains the kept version, the older file and whether approval is required.
+- `modsync sync verify` fails and lists `DUPLICATE mod <id> is provided by ...` when several installed files provide the same mod.
+
+### Changed
+- Older duplicates owned by ModSync are removed with the existing journal, backup and rollback; unmanaged ones require approval and are never removed by automatic synchronization. A newer installed version than the one the server pins is a `CONFLICT` (no silent downgrade). Duplicates without a manifest pin keep the highest version that verifiably supports the instance's Minecraft/NeoForge version, otherwise they are conflicts. Multi-mod jars, missing versions and unknown version formats are always conflicts.
+- `Installer.apply` inspects the downloaded jars and refuses, before changing any file, an installation that would leave two files for the same mod id, whatever the manifest says.
+- Automatic synchronization stores a cheap fingerprint of the mods folder (names, sizes, modification times) and rescans when it changes, even at an unchanged manifest revision; settings without a fingerprint force one full pass. A pass reports `Pending` (inventory activity `SYNC_PENDING`) naming the blocking files instead of `UpToDate` while duplicates remain.
+- Version bumped 0.4.0 -> 0.4.1 (patch: bug fix with additive fields and one additive CLI option; wire protocol 1 and minimum component compatibility are unchanged). Updated in `build.gradle.kts`, both Dockerfiles, `scripts/openapi.py` with the regenerated `docs/architecture/openapi.json`, `scripts/release/reconcile.py` and its test, the `User-Agent` strings of `Modrinth` and `Installer` with their tests, and the version examples in `RELEASES.md`, `docs/deployment/README.md` and `docs/GUIDE.md`.
+
 ## [0.4.0] - 2026-11-13
 
 ### Added

@@ -90,7 +90,7 @@ class InstallerFailureTest {
         val withFake = Installer(root) { http }
         withFake.apply(Resolver().plan(manifest(listOf(artifact)), emptyList(), Scanner().scan(withFake.mods), withFake.state().hashes))
         assertEquals(
-            "Minecraft-ModSync/0.4.0",
+            "Minecraft-ModSync/0.4.1",
             http.requests
                 .single()
                 .headers()

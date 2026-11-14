@@ -56,7 +56,7 @@ modsync login --username player
 modsync instances discover
 modsync instances add game /path/to/game-directory --minecraft-version 1.21.1 --loader neoforge
 modsync servers list
-modsync sync plan --instance game --server SERVER_UUID --out plan.json
+modsync sync plan --instance game --server SERVER_UUID --out plan.json   # add --approve-removal FILE to move an older duplicate mod to a backup
 modsync sync apply --instance game --plan plan.json --dry-run
 modsync sync apply --instance game --plan plan.json
 modsync sync verify --instance game

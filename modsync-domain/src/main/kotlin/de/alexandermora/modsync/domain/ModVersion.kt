@@ -78,7 +78,10 @@ class ModVersion private constructor(val raw: String, private val tokens: List<T
             return if (text != null && tokens != null && tokens.any { it is Token.Num }) ModVersion(text, tokens) else null
         }
 
-        private fun String.removeLeadingV(): String = if (length > 1 && (this[0] == 'v' || this[0] == 'V') && this[1].isDigit()) substring(1) else this
+        private fun String.removeLeadingV(): String {
+            val prefixed = length > 1 && this[0].lowercaseChar() == 'v'
+            return if (prefixed && this[1].isDigit()) substring(1) else this
+        }
 
         private fun tokenize(text: String): List<Token>? {
             val tokens = mutableListOf<Token>()

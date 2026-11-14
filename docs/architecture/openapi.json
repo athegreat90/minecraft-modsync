@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Minecraft ModSync API",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "Protocol 1; staged snapshots and immutable manifests. Administrator/user/agent scopes are described per operation."
   },
   "paths": {
@@ -2890,7 +2890,8 @@
           "REMOVE_MANAGED",
           "SKIP",
           "CONFLICT",
-          "MANUAL_ACTION_REQUIRED"
+          "MANUAL_ACTION_REQUIRED",
+          "QUARANTINE_DUPLICATE"
         ]
       },
       "PublicationPolicy": {
@@ -2951,6 +2952,47 @@
           "detail"
         ]
       },
+      "ModInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "minecraftRange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "loaderRange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
       "ModEntry": {
         "type": "object",
         "properties": {
@@ -2983,6 +3025,12 @@
             "type": "object",
             "additionalProperties": {
               "type": "string"
+            }
+          },
+          "mods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModInfo"
             }
           }
         },
@@ -3072,6 +3120,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "mods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModInfo"
             }
           }
         },
@@ -3207,6 +3261,13 @@
           },
           "includeOptional": {
             "type": "boolean"
+          },
+          "approvedRemovals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
           }
         },
         "required": [

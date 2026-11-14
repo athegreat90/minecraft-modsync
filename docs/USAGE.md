@@ -287,14 +287,27 @@ PowerShell path example: `"$env:APPDATA\.minecraft"` or your launcher's instance
 **Close Minecraft first.**
 
 ```bash
-modsync sync plan --instance survival --server SERVER_UUID --out plan.json [--profile PROFILE_UUID] [--include-optional]
+modsync sync plan --instance survival --server SERVER_UUID --out plan.json [--profile PROFILE_UUID] [--include-optional] [--approve-removal FILE ...]
 modsync sync apply --instance survival --plan plan.json --dry-run     # preview only
 modsync sync apply --instance survival --plan plan.json
 modsync sync verify --instance survival
 ```
 
-Plan operations: `INSTALL`, `UPDATE`, `KEEP`, `DISABLE`, `REMOVE_MANAGED`, `SKIP` (unmanaged files are never touched), `CONFLICT`, `MANUAL_ACTION_REQUIRED`.
+Plan operations: `INSTALL`, `UPDATE`, `KEEP`, `DISABLE`, `REMOVE_MANAGED`, `QUARANTINE_DUPLICATE`, `SKIP` (unmanaged files are never touched), `CONFLICT`, `MANUAL_ACTION_REQUIRED`.
 A plan containing `CONFLICT` or `MANUAL_ACTION_REQUIRED` is blocked; fix it before applying. `apply` re-checks that the published manifest has not changed.
+
+#### Duplicate mod versions
+
+ModSync identifies mods by the mod id declared in their metadata, not by file name, so two jars of the same mod are found even when their file names differ. The plan names the version it keeps and the older file for every duplicate:
+
+| Situation | Plan result | What you do |
+|---|---|---|
+| Older version installed by ModSync | `REMOVE_MANAGED` (needs a policy that allows removals in automatic mode) | Nothing; `apply` removes it with a backup |
+| Older version you installed yourself | `MANUAL_ACTION_REQUIRED` ("removing it needs your approval") | Re-run `sync plan ... --approve-removal FILE`; the file becomes `QUARANTINE_DUPLICATE` and is moved to a recoverable backup under `.modsync/<session>/backup` (`sync rollback` restores it) |
+| Installed version is newer than the exact version the server pins | `CONFLICT`; ModSync never downgrades or installs a second copy | Ask the server administrator to publish that version or newer, or remove your file yourself |
+| Version order, version or Minecraft/NeoForge compatibility cannot be established (missing version, unknown format, multi-mod jar) | `CONFLICT` | Decide manually which file to keep and remove the other |
+
+Automatic synchronization (`auto run`) never removes files you installed yourself and never reports `UpToDate` while two files provide the same mod. `sync verify` fails and lists duplicates (`DUPLICATE mod <id> is provided by ...`). Manifests published before 0.4.1 carry no mod identity: ModSync still refuses to install a downloaded jar that would duplicate an installed mod id, and the server administrator should publish a new revision to restore full duplicate planning.
 
 ### 5.3a Automatic synchronization (opt-in, per instance)
 
@@ -377,6 +390,7 @@ On Windows use `.\gradlew.bat` and `python` instead of `python3`.
 | Enrollment fails | Token expired (60–3600 s TTL) or already used | Create a new one |
 | `servers list` is empty/no revision | Nothing published yet | §3.4 |
 | Plan is blocked | `CONFLICT` or `MANUAL_ACTION_REQUIRED` | Read the plan, resolve the file or dependency, re-plan |
+| Plan says "removing it needs your approval" | An older duplicate that ModSync did not install | Re-plan with `--approve-removal FILE`, or remove the file yourself |
 | "Published manifest changed" | A newer revision was published after `plan` | Run `sync plan` again |
 | Publish rejected, "preview again" | Policy or snapshot changed | Re-run preview |
 | Interrupted installation | Crash or game running during apply | `sync rollback`, then retry with Minecraft closed |
