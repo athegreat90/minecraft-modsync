@@ -56,7 +56,7 @@ import kotlin.test.assertTrue
 class ApiFlowIntegrationTest {
     companion object {
         @Container @JvmField
-        val database = MariaDBContainer<Nothing>("mariadb:11.4.10")
+        val database = MariaDBContainer<Nothing>("mariadb:11.4.13")
     }
 
     private val state: Path = Files.createTempDirectory("modsync-api-test")

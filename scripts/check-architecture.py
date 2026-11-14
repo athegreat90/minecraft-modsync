@@ -12,5 +12,5 @@ for name in ('agent','client'):
     assert 'docker.sock' not in source
     if name=='agent': assert ':ro' in source and 'ports:' not in source
 server=(root/'docker/server/compose.yaml').read_text()
-assert '5432' not in server and 'mariadb:11.4.10' in server
+assert '5432' not in server and 'mariadb:11.4.13' in server
 print('Module and deployment boundary checks passed')

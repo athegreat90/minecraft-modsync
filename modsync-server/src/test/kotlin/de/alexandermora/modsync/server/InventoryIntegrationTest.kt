@@ -40,7 +40,10 @@ import kotlin.test.assertTrue
 
 @Testcontainers
 class InventoryIntegrationTest {
-    companion object { @Container @JvmField val database = MariaDBContainer<Nothing>("mariadb:11.4.10") }
+    companion object {
+        @Container @JvmField
+        val database = MariaDBContainer<Nothing>("mariadb:11.4.13")
+    }
 
     private lateinit var db: JdbcTemplate
     private lateinit var agents: AgentService
@@ -49,20 +52,42 @@ class InventoryIntegrationTest {
 
     @BeforeEach fun prepare() {
         val source = DriverManagerDataSource(database.jdbcUrl, database.username, database.password)
-        Flyway.configure().dataSource(source).load().migrate()
-        val emf = LocalContainerEntityManagerFactoryBean().apply {
-            dataSource = source; setPackagesToScan("de.alexandermora.modsync.server"); jpaVendorAdapter = HibernateJpaVendorAdapter()
-            setJpaPropertyMap(mapOf("hibernate.type.preferred_instant_jdbc_type" to "TIMESTAMP")); afterPropertiesSet()
-        }
+        Flyway
+            .configure()
+            .dataSource(source)
+            .load()
+            .migrate()
+        val emf =
+            LocalContainerEntityManagerFactoryBean().apply {
+                dataSource = source
+                setPackagesToScan("de.alexandermora.modsync.server")
+                jpaVendorAdapter = HibernateJpaVendorAdapter()
+                setJpaPropertyMap(mapOf("hibernate.type.preferred_instant_jdbc_type" to "TIMESTAMP"))
+                afterPropertiesSet()
+            }
         val factory = JpaRepositoryFactory(SharedEntityManagerCreator.createSharedEntityManager(emf.`object`!!))
         val audit = AuditService(factory.getRepository(AuditEventRepository::class.java))
         val credentials = factory.getRepository(CredentialRepository::class.java)
         val servers = factory.getRepository(MinecraftServerRepository::class.java)
-        agents = AgentService(factory.getRepository(ScannerAgentRepository::class.java), factory.getRepository(MinecraftHostRepository::class.java),
-            factory.getRepository(AgentEnrollmentRepository::class.java), factory.getRepository(AgentHeartbeatRepository::class.java),
-            servers, credentials, CredentialService(credentials), audit)
-        inventory = InventoryService(servers, factory.getRepository(InventorySnapshotRepository::class.java),
-            factory.getRepository(InventoryEntryRepository::class.java), factory.getRepository(ClassificationOverrideRepository::class.java), audit)
+        agents =
+            AgentService(
+                factory.getRepository(ScannerAgentRepository::class.java),
+                factory.getRepository(MinecraftHostRepository::class.java),
+                factory.getRepository(AgentEnrollmentRepository::class.java),
+                factory.getRepository(AgentHeartbeatRepository::class.java),
+                servers,
+                credentials,
+                CredentialService(credentials),
+                audit
+            )
+        inventory =
+            InventoryService(
+                servers,
+                factory.getRepository(InventorySnapshotRepository::class.java),
+                factory.getRepository(InventoryEntryRepository::class.java),
+                factory.getRepository(ClassificationOverrideRepository::class.java),
+                audit
+            )
         db = JdbcTemplate(source)
         tx = TransactionTemplate(JpaTransactionManager(emf.`object`!!))
     }
@@ -86,30 +111,50 @@ class InventoryIntegrationTest {
     private fun acceptedSnapshot(server: String) = db.queryForObject("SELECT snapshot_id FROM minecraft_servers WHERE id=?", String::class.java, server)
 
     @Test fun `retry is idempotent and older snapshot cannot overwrite`() {
-        val agent = agent(); val server = server(); val assignment = tx.execute { agents.transfer("test", server, Transfer(agent, "mods")) }
-        val first = snapshot(server, assignment.generation, 1); tx.execute { inventory.begin(agent, first) }
+        val agent = agent()
+        val server = server()
+        val assignment = tx.execute { agents.transfer("test", server, Transfer(agent, "mods")) }
+        val first = snapshot(server, assignment.generation, 1)
+        tx.execute { inventory.begin(agent, first) }
         val ack = tx.execute { inventory.commit(agent, first.scanId) }
-        assertEquals(0, java.time.Instant.parse(ack.committedAt).nano % 1000)
+        assertEquals(
+            0,
+            java.time.Instant
+                .parse(ack.committedAt)
+                .nano % 1000
+        )
         assertEquals(ack, tx.execute { inventory.commit(agent, first.scanId) })
-        val next = snapshot(server, assignment.generation, 3); tx.execute { inventory.begin(agent, next) }; tx.execute { inventory.commit(agent, next.scanId) }
+        val next = snapshot(server, assignment.generation, 3)
+        tx.execute { inventory.begin(agent, next) }
+        tx.execute { inventory.commit(agent, next.scanId) }
         assertFails { tx.execute { inventory.begin(agent, snapshot(server, assignment.generation, 2)) } }
         assertEquals(next.scanId, acceptedSnapshot(server))
     }
 
     @Test fun `migration fences old agent and preserves server identity`() {
-        val old = agent(); val replacement = agent(); val server = server()
+        val old = agent()
+        val replacement = agent()
+        val server = server()
         val assignment = tx.execute { agents.transfer("test", server, Transfer(old, "mods")) }
-        val scan = snapshot(server, assignment.generation, 1); tx.execute { inventory.begin(old, scan) }; tx.execute { inventory.commit(old, scan.scanId) }
+        val scan = snapshot(server, assignment.generation, 1)
+        tx.execute { inventory.begin(old, scan) }
+        tx.execute { inventory.commit(old, scan.scanId) }
         val newer = tx.execute { agents.transfer("test", server, Transfer(replacement, "newmods")) }
-        assertTrue(newer.generation > assignment.generation); assertFails { tx.execute { inventory.begin(old, snapshot(server, assignment.generation, 2)) } }
+        assertTrue(newer.generation > assignment.generation)
+        assertFails { tx.execute { inventory.begin(old, snapshot(server, assignment.generation, 2)) } }
         assertEquals(scan.scanId, acceptedSnapshot(server))
-        val replacementScan = snapshot(server, newer.generation, 1); tx.execute { inventory.begin(replacement, replacementScan) }; tx.execute { inventory.commit(replacement, replacementScan.scanId) }
+        val replacementScan = snapshot(server, newer.generation, 1)
+        tx.execute { inventory.begin(replacement, replacementScan) }
+        tx.execute { inventory.commit(replacement, replacementScan.scanId) }
         assertEquals(server, db.queryForObject("SELECT id FROM minecraft_servers WHERE id=?", String::class.java, server))
     }
 
     @Test fun `incomplete scan never changes authoritative inventory`() {
-        val a = agent(); val s = server(); val assignment = tx.execute { agents.transfer("test", s, Transfer(a, "mods")) }
-        val scan = snapshot(s, assignment.generation, 1).copy(count = 1); tx.execute { inventory.begin(a, scan) }
+        val a = agent()
+        val s = server()
+        val assignment = tx.execute { agents.transfer("test", s, Transfer(a, "mods")) }
+        val scan = snapshot(s, assignment.generation, 1).copy(count = 1)
+        tx.execute { inventory.begin(a, scan) }
         assertFails { tx.execute { inventory.commit(a, scan.scanId) } }
         assertNull(acceptedSnapshot(s))
     }

@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 class UserStatusMigrationTest {
     companion object {
         @Container @JvmField
-        val database = MariaDBContainer<Nothing>("mariadb:11.4.10")
+        val database = MariaDBContainer<Nothing>("mariadb:11.4.13")
     }
 
     /** Builds a Flyway instance against the test database that stops at [version] (or the latest when null). */
