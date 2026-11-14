@@ -74,7 +74,9 @@ describe('UserDetailView actions', () => {
 
     button(fixture, 'Enable account').click();
 
-    http.expectOne('/ui/api/users/u1/enable').flush({ userId: 'u1' });
+    const enable = http.expectOne('/ui/api/users/u1/enable');
+    expect(enable.request.method).toBe('POST');
+    enable.flush({ userId: 'u1' });
     http.expectOne('/ui/api/users/u1').flush(client);
   });
 
@@ -82,7 +84,9 @@ describe('UserDetailView actions', () => {
     const fixture = await open();
     button(fixture, 'End sessions and tokens').click();
 
-    http.expectOne('/ui/api/users/u1/revoke-sessions').flush({ userId: 'u1' });
+    const revoke = http.expectOne('/ui/api/users/u1/revoke-sessions');
+    expect(revoke.request.method).toBe('POST');
+    revoke.flush({ userId: 'u1' });
     http.expectOne('/ui/api/users/u1').flush(client);
   });
 
@@ -92,7 +96,9 @@ describe('UserDetailView actions', () => {
     box.click();
     button(fixture, 'Revoke all devices').click();
 
-    http.expectOne('/ui/api/users/u1/revoke-devices').flush({ userId: 'u1' });
+    const revoke = http.expectOne('/ui/api/users/u1/revoke-devices');
+    expect(revoke.request.body).toEqual({ confirm: true });
+    revoke.flush({ userId: 'u1' });
     http.expectOne('/ui/api/users/u1').flush(client);
   });
 
@@ -142,11 +148,15 @@ describe('ServerPageView actions', () => {
   it('saves the publication policy and requests re-evaluation', async () => {
     const fixture = await open();
     button(fixture, 'Save').click();
-    http.expectOne('/ui/api/servers/s1/publication-policy').flush({});
+    const policy = http.expectOne('/ui/api/servers/s1/publication-policy');
+    expect(policy.request.body).toEqual({ policy: 'MANUAL' });
+    policy.flush({});
     http.expectOne('/ui/api/servers/s1').flush(page);
 
     button(fixture, 'Re-evaluate now').click();
-    http.expectOne('/ui/api/servers/s1/reevaluate').flush({});
+    const reevaluate = http.expectOne('/ui/api/servers/s1/reevaluate');
+    expect(reevaluate.request.method).toBe('POST');
+    reevaluate.flush({});
     http.expectOne('/ui/api/servers/s1').flush(page);
   });
 

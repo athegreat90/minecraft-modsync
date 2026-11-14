@@ -27,7 +27,7 @@ describe('AdminApi', () => {
   it('encodes identifiers placed in the path', () => {
     api.user('a/b').subscribe();
 
-    http.expectOne('/ui/api/users/a%2Fb');
+    expect(http.expectOne('/ui/api/users/a%2Fb').request.method).toBe('GET');
   });
 
   it('puts the policy in the request body', () => {
