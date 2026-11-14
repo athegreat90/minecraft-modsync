@@ -1,0 +1,251 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ASSIGN_LOCATION } from '../core/navigation';
+import { AccountPage } from './account/account-page';
+import { ServerPageView } from './servers/server-page';
+import { UserDetailView } from './users/user-detail';
+import { UserNew } from './users/user-new';
+import { UsersPage } from './users/users-page';
+
+let http: HttpTestingController;
+
+beforeEach(() => {
+  TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
+  http = TestBed.inject(HttpTestingController);
+});
+
+async function render<T>(type: new () => T, inputs: Record<string, unknown> = {}): Promise<ComponentFixture<T>> {
+  const fixture = TestBed.createComponent(type);
+  for (const [name, value] of Object.entries(inputs)) {
+    fixture.componentRef.setInput(name, value);
+  }
+  fixture.detectChanges();
+  return fixture;
+}
+
+async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
+  await fixture.whenStable();
+  fixture.detectChanges();
+}
+
+function button(fixture: ComponentFixture<unknown>, label: string): HTMLButtonElement {
+  const found = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes(label));
+  if (!found) {
+    throw new Error(`No button "${label}"`);
+  }
+  return found;
+}
+
+function type(fixture: ComponentFixture<unknown>, selector: string, value: string): void {
+  const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(selector)!;
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+}
+
+const client = { user: { id: 'u1', username: 'ann', role: 'CLIENT', enabled: true, manageable: true }, activeDevices: 1 };
+
+describe('UserDetailView actions', () => {
+  async function open() {
+    const fixture = await render(UserDetailView, { id: 'u1' });
+    http.expectOne('/ui/api/users/u1').flush(client);
+    await settle(fixture);
+    return fixture;
+  }
+
+  it('disables the account and reloads it', async () => {
+    const fixture = await open();
+    button(fixture, 'Disable account').click();
+
+    http.expectOne('/ui/api/users/u1/disable').flush({ userId: 'u1' });
+    http.expectOne('/ui/api/users/u1').flush({ ...client, user: { ...client.user, enabled: false } });
+    await settle(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Account disabled.');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Enable account');
+  });
+
+  it('enables a disabled account', async () => {
+    const fixture = await render(UserDetailView, { id: 'u1' });
+    http.expectOne('/ui/api/users/u1').flush({ ...client, user: { ...client.user, enabled: false } });
+    await settle(fixture);
+
+    button(fixture, 'Enable account').click();
+
+    http.expectOne('/ui/api/users/u1/enable').flush({ userId: 'u1' });
+    http.expectOne('/ui/api/users/u1').flush(client);
+  });
+
+  it('ends sessions', async () => {
+    const fixture = await open();
+    button(fixture, 'End sessions and tokens').click();
+
+    http.expectOne('/ui/api/users/u1/revoke-sessions').flush({ userId: 'u1' });
+    http.expectOne('/ui/api/users/u1').flush(client);
+  });
+
+  it('revokes devices once the confirmation is ticked', async () => {
+    const fixture = await open();
+    const box = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    box.click();
+    button(fixture, 'Revoke all devices').click();
+
+    http.expectOne('/ui/api/users/u1/revoke-devices').flush({ userId: 'u1' });
+    http.expectOne('/ui/api/users/u1').flush(client);
+  });
+
+  it('resets the password only with a valid one and shows server refusals', async () => {
+    const fixture = await open();
+    button(fixture, 'Change password').click();
+    http.expectNone('/ui/api/users/u1/password');
+
+    type(fixture, 'input[formcontrolname="password"]', 'a-brand-new-password-5678');
+    type(fixture, 'input[formcontrolname="confirmation"]', 'a-brand-new-password-5678');
+    button(fixture, 'Change password').click();
+    http.expectOne('/ui/api/users/u1/password').flush({ code: 'PASSWORD_MISMATCH', message: 'The password and its confirmation do not match.' }, { status: 422, statusText: 'Unprocessable' });
+    await settle(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('do not match');
+  });
+});
+
+describe('ServerPageView actions', () => {
+  const page = {
+    info: { id: 's1', name: 'Survival', minecraftVersion: '1.21', loader: 'fabric', loaderVersion: '0.16', inventoryAt: '2026-11-14', publishedRevision: 2, inventoryStale: true },
+    policy: 'MANUAL',
+    entries: [{ fileName: 'a.jar', sha512: 'abc', shortHash: 'abc', classification: 'SERVER_ONLY' }],
+    unreviewed: 0,
+    manifestRevision: 2,
+    manifest: [{ fileName: 'm.jar', projectId: 'p', versionId: 'v', classification: 'CLIENT_REQUIRED' }],
+    coverage: { serverId: 's1', manifestRevision: 2, rows: [{ instanceId: 'i', instanceName: 'main', status: 'UP_TO_DATE', appliedRevision: 2, verifiedAt: null, missingCount: 0 }] },
+    history: [{ id: 1, scanId: 's', policy: 'MANUAL', outcome: 'PUBLISHED', revision: 2, detail: 'ok', actor: 'a', createdAt: 't' }],
+  };
+
+  async function open() {
+    const fixture = await render(ServerPageView, { id: 's1' });
+    http.expectOne('/ui/api/servers/s1').flush(page);
+    await settle(fixture);
+    return fixture;
+  }
+
+  it('renders history, coverage and manifest sections', async () => {
+    const text = ((await open()).nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('PUBLISHED');
+    expect(text).toContain('UP_TO_DATE');
+    expect(text).toContain('m.jar');
+    expect(text).toContain('stale');
+  });
+
+  it('saves the publication policy and requests re-evaluation', async () => {
+    const fixture = await open();
+    button(fixture, 'Save').click();
+    http.expectOne('/ui/api/servers/s1/publication-policy').flush({});
+    http.expectOne('/ui/api/servers/s1').flush(page);
+
+    button(fixture, 'Re-evaluate now').click();
+    http.expectOne('/ui/api/servers/s1/reevaluate').flush({});
+    http.expectOne('/ui/api/servers/s1').flush(page);
+  });
+
+  it('classifies a mod with a reason and can cancel', async () => {
+    const fixture = await open();
+    button(fixture, 'Classify').click();
+    fixture.detectChanges();
+    button(fixture, 'Cancel').click();
+    fixture.detectChanges();
+    expect(button(fixture, 'Classify')).toBeTruthy();
+
+    button(fixture, 'Classify').click();
+    fixture.detectChanges();
+    type(fixture, 'input[formcontrolname="reason"]', 'checked the metadata');
+    button(fixture, 'Approve').click();
+
+    const request = http.expectOne('/ui/api/servers/s1/classification');
+    expect(request.request.body).toEqual({ sha512: 'abc', classification: 'SERVER_ONLY', reason: 'checked the metadata' });
+    request.flush({});
+    http.expectOne('/ui/api/servers/s1').flush(page);
+  });
+});
+
+describe('UserNew', () => {
+  it('creates the account and opens it', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const fixture = await render(UserNew);
+    type(fixture, 'input[formcontrolname="username"]', 'new-player');
+    type(fixture, 'input[formcontrolname="password"]', 'a-brand-new-password-5678');
+    type(fixture, 'input[formcontrolname="confirmation"]', 'a-brand-new-password-5678');
+
+    button(fixture, 'Create account').click();
+    http.expectOne('/ui/api/users').flush({ userId: 'u9' }, { status: 201, statusText: 'Created' });
+
+    expect(navigate).toHaveBeenCalledWith(['/users', 'u9']);
+  });
+
+  it('shows the refusal when the username is taken', async () => {
+    const fixture = await render(UserNew);
+    type(fixture, 'input[formcontrolname="username"]', 'taken');
+    type(fixture, 'input[formcontrolname="password"]', 'a-brand-new-password-5678');
+    type(fixture, 'input[formcontrolname="confirmation"]', 'a-brand-new-password-5678');
+
+    button(fixture, 'Create account').click();
+    http.expectOne('/ui/api/users').flush({ code: 'USERNAME_TAKEN', message: 'That username is already in use.' }, { status: 409, statusText: 'Conflict' });
+    await settle(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('already in use');
+  });
+});
+
+describe('UsersPage', () => {
+  const result = { users: [{ id: 'u1', username: 'ann', role: 'CLIENT', enabled: true, manageable: true }], page: 0, totalPages: 2, total: 30 };
+
+  it('searches with the chosen filter and pages forward', async () => {
+    const fixture = await render(UsersPage);
+    http.expectOne((r) => r.url === '/ui/api/users').flush(result);
+    await settle(fixture);
+
+    type(fixture, 'input[type="search"]', 'an');
+    button(fixture, 'Search').click();
+    const search = http.expectOne((r) => r.url === '/ui/api/users');
+    expect(search.request.params.get('q')).toBe('an');
+    search.flush(result);
+    await settle(fixture);
+
+    button(fixture, 'Next').click();
+    const next = http.expectOne((r) => r.url === '/ui/api/users');
+    expect(next.request.params.get('page')).toBe('1');
+    next.flush({ ...result, page: 1 });
+    await settle(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Page 2 of 2');
+  });
+
+  it('says so when nothing matches', async () => {
+    const fixture = await render(UsersPage);
+    http.expectOne((r) => r.url === '/ui/api/users').flush({ users: [], page: 0, totalPages: 0, total: 0 });
+    await settle(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No accounts match.');
+  });
+});
+
+describe('AccountPage linking', () => {
+  it('prepares the link on the server and then opens the provider', async () => {
+    const assign = vi.fn();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: ASSIGN_LOCATION, useValue: assign }],
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = await render(AccountPage);
+    http.expectOne('/ui/api/me/identities').flush({ linked: [], available: ['google'] });
+    await settle(fixture);
+
+    button(fixture, 'Link Google').click();
+    http.expectOne('/ui/api/me/identities/google/link').flush({ authorizationUrl: '/oauth2/authorization/google' });
+
+    expect(assign).toHaveBeenCalledWith('/oauth2/authorization/google');
+  });
+});

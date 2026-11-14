@@ -1,8 +1,8 @@
-import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AdminApi, describeError } from '../../core/api/admin-api';
 import { IdentitiesView } from '../../core/api/models';
+import { ASSIGN_LOCATION } from '../../core/navigation';
 
 /** Display names of the sign-in providers the server may offer. */
 const PROVIDER_NAMES: Readonly<Record<string, string>> = { google: 'Google', github: 'GitHub' };
@@ -15,7 +15,7 @@ const PROVIDER_NAMES: Readonly<Record<string, string>> = { google: 'Google', git
 })
 export class AccountPage implements OnInit {
   private readonly api = inject(AdminApi);
-  private readonly document = inject(DOCUMENT);
+  private readonly assignLocation = inject(ASSIGN_LOCATION);
 
   protected readonly view = signal<IdentitiesView | null>(null);
   protected readonly error = signal('');
@@ -39,7 +39,7 @@ export class AccountPage implements OnInit {
   protected link(id: string): void {
     this.error.set('');
     this.api.startLink(id).subscribe({
-      next: (start) => this.document.location.assign(start.authorizationUrl),
+      next: (start) => this.assignLocation(start.authorizationUrl),
       error: (failure: unknown) => this.error.set(describeError(failure)),
     });
   }
