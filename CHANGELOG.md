@@ -6,6 +6,14 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-11-14
+
+### Fixed
+- The reconciler kept dispatching releases that can never be published. Re-running the releases of `7c29453` and `cd6c32d` after the Gradle fix got through `validate`, `integration` and all three `native` jobs and then failed in `publish` with `Resource not accessible by integration (HTTP 403)` when the permission probe created a temporary branch at the old commit. A throwaway experiment (a pull request workflow using the same `GITHUB_TOKEN`, closed and deleted afterwards) showed that creating a branch **or a tag** succeeds at the tip of `main` and is refused at both historical commits. The reconciler now skips commits whose `.github/workflows` tree differs from the tip's (`unpublishable()`), reports them as `unpublishable` in its log and excludes them from `remaining`, so they are no longer retried with exponential backoff forever. The head commit is unaffected (it always matches itself), and a commit that is already released is never checked.
+
+### Changed
+- Version bumped 0.4.5 -> 0.4.6 (patch: release tooling only; wire protocol 1 and minimum component compatibility are unchanged). Updated in the same files as the previous bump.
+
 ## [0.4.5] - 2026-11-14
 
 ### Changed

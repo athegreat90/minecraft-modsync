@@ -5,7 +5,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(TAG_PATTERN.fullmatch(version("a"*40,0)))
         self.assertTrue(TAG_PATTERN.fullmatch("v0.1.0-dev.19700101000000."+"a"*40))
     def test_version_stable_and_unique(self):
-        self.assertEqual(version("a"*40,0),"v0.4.5-dev.19700101000000."+"a"*40)
+        self.assertEqual(version("a"*40,0),"v0.4.6-dev.19700101000000."+"a"*40)
         self.assertNotEqual(version("a"*40,0),version("b"*40,0))
     def test_multicommit_and_canceled_pending_not_lost(self):
         self.assertEqual(candidates(["a","b","c"],{"a"},set(),{"b":1},30000),["c","b"])
@@ -39,6 +39,39 @@ class ReleaseTests(unittest.TestCase):
     def test_floor_excludes_the_unbuildable_commit(self):
         import reconcile
         self.assertTrue(reconcile.RELEASE_FLOOR.startswith('7c29453'))
+
+    def test_commits_with_different_workflows_cannot_be_published(self):
+        trees = {'old': 'tree-1', 'same': 'tree-2', 'head': 'tree-2', 'done': 'tree-1'}
+        from reconcile import unpublishable
+        self.assertEqual(unpublishable(['old', 'same', 'head'], set(), trees.get), ['old'])
+        self.assertEqual(unpublishable(['done', 'same', 'head'], {'done'}, trees.get), [])
+        self.assertEqual(unpublishable([], set(), trees.get), [])
+        self.assertEqual(unpublishable(['gone', 'head'], set(), trees.get), ['gone'])
+
+    def test_reconcile_never_dispatches_or_counts_unpublishable_commits(self):
+        import contextlib
+        import io
+        import json
+        import os
+        from unittest.mock import patch
+        import reconcile
+        commits = ['a'*40, 'b'*40, 'c'*40]
+        trees = {commits[0]: 'old-workflows', commits[1]: 'current', commits[2]: 'current'}
+        def command(*args):
+            if args[:2] == ('git', 'rev-parse'):
+                return trees[args[2].split(':')[0]]
+            if args[0] == 'git':
+                return chr(10).join(commits)
+            if '/releases?' in args[-1]:
+                return '[[]]'
+            return json.dumps([{'workflow_runs': []}])
+        output = io.StringIO()
+        with patch.dict(os.environ, GITHUB_REPOSITORY='owner/repo'), patch.object(reconcile, 'run', side_effect=command), patch.object(reconcile.subprocess, 'run') as dispatch, contextlib.redirect_stdout(output):
+            reconcile.main()
+        self.assertEqual([c.args[0][-1] for c in dispatch.call_args_list], ['sha='+commits[2], 'sha='+commits[1]])
+        report = json.loads(output.getvalue())
+        self.assertEqual(report['unpublishable'], [commits[0]])
+        self.assertEqual(report['remaining'], 2)
 
     def test_running_head_does_not_duplicate_dispatch(self):
         self.assertEqual(candidates(['old', 'head'], set(), {'head'}, {}, 30000), ['old'])

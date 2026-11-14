@@ -8,11 +8,12 @@ opt-in is required. The latest eligible `main` commit is dispatched first, follo
 by historical reachable commits (including merged branch commits), at most 20 per
 pass. Active runs are skipped; canceled runs retry after a six-hour
 cooldown measured from their last update, and failed or timed-out runs back off
-exponentially (6h, 12h, 24h, ... up to 7 days). Reconciliation starts at
+exponentially (6h, 12h, 24h, ... up to 7 days). Commits whose workflow files differ from `main`'s are reported as `unpublishable` and skipped, because the
+workflow token cannot create refs for them. Reconciliation starts at
 `RELEASE_FLOOR` (`7c29453`); older commits are not rebuilt. The reconciliation log reports failures,
 invalid releases, dispatched commits and the remaining backlog.
 
-Release jobs run in parallel after a fast `version` gate (which also reads the Gradle version pinned by the source being released) (`validate`, `integration` for the distributed TLS fixture, and the native builds), and `publish` waits for all of them. Each immutable `v0.4.5-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
+Release jobs run in parallel after a fast `version` gate (which also reads the Gradle version pinned by the source being released) (`validate`, `integration` for the distributed TLS fixture, and the native builds), and `publish` waits for all of them. Each immutable `v0.4.6-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
 checks, architecture and API checks, source security scanning, distributed TLS
 integration, Linux x64/ARM64 and Windows x64 native builds, native smoke tests and
 benchmarks. JVM distributions, native binaries and multi-platform images all use
