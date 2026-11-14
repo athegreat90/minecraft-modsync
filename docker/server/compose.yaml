@@ -18,6 +18,8 @@ services:
       MODSYNC_DB_PASSWORD_FILE: /run/secrets/db_password
       MODSYNC_BOOTSTRAP_PASSWORD_FILE: /run/secrets/bootstrap_password
       MODSYNC_MAINTENANCE: ${MODSYNC_MAINTENANCE:-false}
+      # Set to "framework" only behind a reverse proxy you control, so redirects and cookies use the public https address.
+      MODSYNC_FORWARD_HEADERS: ${MODSYNC_FORWARD_HEADERS:-none}
     secrets: [db_password, bootstrap_password]
     networks: [api, database]
     depends_on:

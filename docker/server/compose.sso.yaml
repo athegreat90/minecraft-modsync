@@ -1,0 +1,20 @@
+# Optional override that enables Google and/or GitHub sign-in. Use it together with the base file:
+#   docker compose -f compose.yaml -f compose.sso.yaml up -d
+#
+# Client IDs are not secret and come from the environment (or an .env file next to this file).
+# Client secrets are read from files in ${MODSYNC_SECRETS_DIR}, exactly like the database password:
+#   google_client_secret and github_client_secret.
+# Both files must exist. Leave the client id empty (and the file empty) for a provider you do not use; it stays disabled.
+# Full walkthrough: docs/security/SSO_SETUP.md
+name: modsync-server
+services:
+  modsync-server:
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google_client_secret
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET_FILE: /run/secrets/github_client_secret
+    secrets: [google_client_secret, github_client_secret]
+secrets:
+  google_client_secret: {file: "${MODSYNC_SECRETS_DIR:?Set an absolute secrets directory}/google_client_secret"}
+  github_client_secret: {file: "${MODSYNC_SECRETS_DIR}/github_client_secret"}
