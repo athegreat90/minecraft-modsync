@@ -6,6 +6,15 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-11-14
+
+### Changed
+- Pipeline speed. A release took about 72 minutes, 53 of them in `publish`: the Gradle build stage of the server and agent Dockerfiles ran once per target platform, and the linux/arm64 copy compiled under QEMU emulation (27 min for the server image, about 23 min for the agent). Both Dockerfiles now pin the build stage to `--platform=$BUILDPLATFORM`, so the platform-independent JVM artifact is built once natively; a local multi-arch build of the agent image takes 171 s and the arm64 image starts correctly.
+- `release.yaml` is a job graph instead of one long chain: a fast `version` job validates the SHA and derives the version, then `validate`, `integration` (the distributed TLS fixture, previously the last step of `validate`) and the three `native` builds run in parallel, and `publish` needs all of them. No gate was removed.
+- `ci.yaml` runs the distributed fixture as its own `integration` job beside `validate`, and the Sonar job no longer waits for `validate` (it still never runs for pull requests).
+- Gradle upgraded from 9.8.2 to 9.9.1 (latest stable) in the bootstrap, wrapper properties, workflows and Dockerfiles. Gradle 9.9.1 embeds `kotlin-dsl` 6.7.13 and Kotlin 2.4.21 build-logic plugins, so `gradle/verification-metadata.xml` gains nine artifacts and the three `kotlin-dsl` entries move from 6.7.6; every new checksum was cross-checked against Maven Central companion checksums or the plugin portal's content-addressed URLs.
+- Version bumped 0.4.2 -> 0.4.3 (patch: build and delivery tooling only; wire protocol 1 and minimum component compatibility are unchanged). Updated in the same files as the previous bump.
+
 ## [0.4.2] - 2026-11-14
 
 ### Fixed
