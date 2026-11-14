@@ -103,7 +103,7 @@ class SsoIntegrationTest {
         assertTrue(params.getValue("redirect_uri").endsWith("/login/oauth2/code/google"))
     }
 
-    /** GitHub gets the same flow with the single read:user scope and no OpenID Connect parameters. */
+    /** GitHub gets the same flow with PKCE, the single read:user scope and no OpenID Connect parameters. */
     @Test fun githubAuthorizationRequestIsMinimal() {
         val response = TestBrowser(urlOf(configured)).get("/oauth2/authorization/github")
 
@@ -112,6 +112,7 @@ class SsoIntegrationTest {
         assertEquals("read:user", params["scope"])
         assertTrue(params.getValue("state").length >= 20)
         assertFalse(params.containsKey("nonce"))
+        assertEquals("S256", params["code_challenge_method"])
         assertTrue(params.getValue("redirect_uri").endsWith("/login/oauth2/code/github"))
     }
 

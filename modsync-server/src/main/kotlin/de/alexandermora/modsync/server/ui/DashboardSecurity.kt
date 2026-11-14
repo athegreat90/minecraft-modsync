@@ -2,7 +2,6 @@ package de.alexandermora.modsync.server.ui
 
 import de.alexandermora.modsync.server.auth.UserRepository
 import de.alexandermora.modsync.server.common.AuditService
-import de.alexandermora.modsync.server.sso.GOOGLE
 import de.alexandermora.modsync.server.sso.LINKED_MARKER
 import de.alexandermora.modsync.server.sso.SsoAccounts
 import de.alexandermora.modsync.server.sso.SsoUserServices
@@ -32,7 +31,6 @@ import org.springframework.security.oauth2.client.web.DefaultOAuth2Authorization
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException
-import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.AuthenticationFailureHandler
@@ -164,7 +162,7 @@ class LoginThrottleFilter : OncePerRequestFilter() {
 /**
  * Adds OAuth2 login (Google and GitHub) to the dashboard chain.
  *
- * Authorization-code flow with `state` validation, PKCE for Google and the OpenID Connect `nonce`. The account is always
+ * Authorization-code flow with `state` validation, PKCE for both providers and the OpenID Connect `nonce`. The account is always
  * chosen by [SsoUserServices], so a provider can only ever sign in an account that was explicitly linked.
  *
  * @param http Dashboard security builder.
@@ -176,7 +174,7 @@ private fun configureSso(http: HttpSecurity, repository: ClientRegistrationRepos
     val services = SsoUserServices(accounts)
     http.oauth2Login {
         it.loginPage("/ui/login")
-        it.authorizationEndpoint { endpoint -> endpoint.authorizationRequestResolver(pkceForGoogle(repository)) }
+        it.authorizationEndpoint { endpoint -> endpoint.authorizationRequestResolver(pkceResolver(repository)) }
         it.userInfoEndpoint { user ->
             user.userService { request -> services.loadOAuth2(request) }
             user.oidcUserService { request -> services.loadOidc(request) }
@@ -202,26 +200,18 @@ private fun configureSso(http: HttpSecurity, repository: ClientRegistrationRepos
 }
 
 /**
- * Builds the authorization request resolver; Google requests carry a PKCE challenge, GitHub requests rely on `state`.
+ * Builds the authorization request resolver; every request carries a PKCE challenge (S256) next to `state`.
+ *
+ * Both Google and GitHub accept PKCE for web applications, so the authorization code cannot be redeemed by anyone who only
+ * saw the redirect.
  *
  * @param repository Configured providers.
  * @return The resolver used by the authorization endpoint.
  */
-private fun pkceForGoogle(repository: ClientRegistrationRepository): OAuth2AuthorizationRequestResolver {
-    val plain = DefaultOAuth2AuthorizationRequestResolver(repository, "/oauth2/authorization")
-    val pkce =
-        DefaultOAuth2AuthorizationRequestResolver(repository, "/oauth2/authorization").apply {
-            setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce())
-        }
-    return object : OAuth2AuthorizationRequestResolver {
-        override fun resolve(request: HttpServletRequest): OAuth2AuthorizationRequest? = (if (request.requestURI.endsWith("/$GOOGLE")) pkce else plain).resolve(request)
-
-        override fun resolve(
-            request: HttpServletRequest,
-            clientRegistrationId: String
-        ): OAuth2AuthorizationRequest? = (if (clientRegistrationId == GOOGLE) pkce else plain).resolve(request, clientRegistrationId)
+private fun pkceResolver(repository: ClientRegistrationRepository): OAuth2AuthorizationRequestResolver =
+    DefaultOAuth2AuthorizationRequestResolver(repository, "/oauth2/authorization").apply {
+        setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce())
     }
-}
 
 /**
  * Session-based, CSRF-protected security for the administration dashboard.
