@@ -13,7 +13,7 @@ frontend/src/styles/_tokens.scss   design tokens (colour, type, spacing, motion,
 frontend/src/styles.scss           global building blocks (.ms-card, .ms-table, .ms-button, ...)
 ```
 
-Standalone components, strict TypeScript, signals, `OnPush`, lazy routes, typed reactive forms, functional interceptors and guards. The prefix is `ms`. Components hold presentation state only; the server decides every security and business question.
+Standalone components, strict TypeScript, signals, `OnPush`, lazy routes, typed reactive forms, functional interceptors and guards. The prefix is `ms`. Components hold presentation state only; the server decides every security and business question. Commands that change data (policy, classification, account actions, provider links) go through the shared `runCommand` helper in `core/api/run-command.ts`, which clears the previous messages, shows the success text and reloads, or shows a safe error message; keep new pages on it rather than copying the pattern (SonarQube flags duplicated blocks on new code).
 
 ## Commands
 
@@ -22,7 +22,7 @@ cd frontend
 npm ci
 npm start               # http://localhost:4200/ui/ with a proxy to the server on :8080 (proxy.conf.json)
 npm run lint            # angular-eslint
-npm test                # Vitest through the Angular unit-test builder (43 tests)
+npm test                # Vitest through the Angular unit-test builder (45 tests)
 npm run test:coverage   # also writes coverage/frontend/lcov.info
 npm run build           # production build into frontend/dist
 ```
@@ -35,7 +35,7 @@ Original Norse/Nordic-inspired identity (no third-party assets or fonts): near-b
 
 ## Accessibility and responsiveness checks
 
-`accessibility.spec.ts` runs axe-core on the login page, shell, overview and the account form (colour contrast needs real layout and is not checked there). Not automated yet: browser-level viewport tests (320, 375, 390, 430, 768, 1024, 1440 px, portrait and landscape), contrast measurement and screen-reader testing. These are outstanding and should be added before claiming WCAG 2.2 AA.
+`accessibility.spec.ts` runs axe-core on the login page, shell, overview and the account form (colour contrast needs real layout and is not checked there). Tests must assert something SonarQube can see (`expect(...)`): a test that only calls `http.expectOne(...)` or `http.expectNone(...)` is reported as `typescript:S2699`; assert the request method or body instead. Not automated yet: browser-level viewport tests (320, 375, 390, 430, 768, 1024, 1440 px, portrait and landscape), contrast measurement and screen-reader testing. These are outstanding and should be added before claiming WCAG 2.2 AA.
 
 ## Budgets
 
