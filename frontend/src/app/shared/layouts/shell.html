@@ -12,9 +12,14 @@
   <span class="brand">ModSync</span>
   <span class="grow"></span>
   <span class="user">{{ sessions.session()?.username }}</span>
+  <form method="post" action="/logout">
+    <input type="hidden" name="_csrf" [value]="csrf" />
+    <button class="ms-button secondary" type="submit">Sign out</button>
+  </form>
 </header>
 <nav id="nav" class="nav" [class.open]="drawerOpen()" aria-label="Main">
   <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeDrawer()">Servers</a>
+  <a routerLink="/users" routerLinkActive="active" (click)="closeDrawer()">Users</a>
 </nav>
 <main id="main" class="content">
   <router-outlet />

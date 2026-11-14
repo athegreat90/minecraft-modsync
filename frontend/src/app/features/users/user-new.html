@@ -1,0 +1,26 @@
+<h1>New account</h1>
+@if (error()) {
+  <p class="ms-alert error" role="alert">{{ error() }}</p>
+}
+<form class="ms-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <label>
+    Username
+    <input formControlName="username" autocomplete="off" />
+  </label>
+  @if (form.controls.username.touched && form.controls.username.invalid) {
+    <p class="ms-field-error" role="alert">Use 1 to 100 letters, digits, "_", "." or "-".</p>
+  }
+  <label>
+    Password
+    <input type="password" formControlName="password" autocomplete="new-password" />
+  </label>
+  @if (form.controls.password.touched && form.controls.password.invalid) {
+    <p class="ms-field-error" role="alert">Passwords need 16 to 256 characters.</p>
+  }
+  <label>
+    Confirm password
+    <input type="password" formControlName="confirmation" autocomplete="new-password" />
+  </label>
+  <button class="ms-button" type="submit">Create account</button>
+  <a routerLink="/users">Cancel</a>
+</form>

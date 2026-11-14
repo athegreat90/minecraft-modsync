@@ -1,0 +1,146 @@
+@if (error()) {
+  <p class="ms-alert error" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="ms-alert success" role="status">{{ notice() }}</p>
+}
+@if (page(); as p) {
+  <h1>{{ p.info.name }}</h1>
+  <p class="ms-muted">
+    Minecraft {{ p.info.minecraftVersion }}, {{ p.info.loader }}
+    @if (p.info.loaderVersion) { {{ p.info.loaderVersion }} }
+    · manifest {{ p.manifestRevision !== null ? 'r' + p.manifestRevision : 'unpublished' }}
+    · inventory {{ p.info.inventoryAt ?? 'none' }}
+    @if (p.info.inventoryAt && p.info.inventoryStale) { <span class="ms-badge warn">stale</span> }
+  </p>
+
+  <section class="ms-card" aria-labelledby="publication">
+    <h2 id="publication">Automatic publication</h2>
+    <form class="ms-form" [formGroup]="policyForm" (ngSubmit)="savePolicy()">
+      <label>
+        Policy
+        <select formControlName="policy">
+          @for (option of policies; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+      <button class="ms-button" type="submit">Save</button>
+    </form>
+    <p>
+      <button class="ms-button secondary" type="button" [disabled]="!p.info.inventoryAt" (click)="reevaluate()">
+        Re-evaluate now
+      </button>
+    </p>
+    @if (p.history.length > 0) {
+      <table class="ms-table">
+        <thead><tr><th>When</th><th>Outcome</th><th>Revision</th><th>Detail</th><th>Actor</th></tr></thead>
+        <tbody>
+          @for (h of p.history; track h.id) {
+            <tr>
+              <td data-label="When">{{ h.createdAt }}</td>
+              <td data-label="Outcome"><span class="ms-badge" [class.ok]="h.outcome === 'PUBLISHED'">{{ h.outcome }}</span></td>
+              <td data-label="Revision">{{ h.revision ?? '—' }}</td>
+              <td data-label="Detail" class="wrap">{{ h.detail }}</td>
+              <td data-label="Actor" class="wrap">{{ h.actor }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+
+  <section class="ms-card" aria-labelledby="coverage">
+    <h2 id="coverage">Client coverage</h2>
+    @if (p.coverage === null) {
+      <p class="ms-muted">Publish a manifest to see client coverage.</p>
+    } @else if (p.coverage.rows.length === 0) {
+      <p class="ms-muted">No client instance selected this server yet.</p>
+    } @else {
+      <table class="ms-table">
+        <thead><tr><th>Instance</th><th>Status</th><th>Applied</th><th>Missing</th><th>Verified</th></tr></thead>
+        <tbody>
+          @for (r of p.coverage.rows; track r.instanceId) {
+            <tr>
+              <td data-label="Instance" class="wrap">{{ r.instanceName }}</td>
+              <td data-label="Status"><span class="ms-badge">{{ r.status }}</span></td>
+              <td data-label="Applied">{{ r.appliedRevision ?? '—' }}</td>
+              <td data-label="Missing">{{ r.missingCount }}</td>
+              <td data-label="Verified">{{ r.verifiedAt ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+
+  <section class="ms-card" aria-labelledby="mods">
+    <h2 id="mods">Server mods</h2>
+    <p class="ms-muted">{{ p.unreviewed }} of {{ p.entries.length }} still need review.</p>
+    @if (selected(); as entry) {
+      <form class="ms-form" [formGroup]="classifyForm" (ngSubmit)="saveClassification()">
+        <h3>Classify {{ entry.fileName }}</h3>
+        <label>
+          Classification
+          <select formControlName="classification">
+            @for (option of classifications; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Reason
+          <input formControlName="reason" maxlength="500" />
+        </label>
+        @if (classifyForm.controls.reason.touched && classifyForm.controls.reason.invalid) {
+          <p class="ms-field-error" role="alert">Give a reason for this approval.</p>
+        }
+        <button class="ms-button" type="submit">Approve</button>
+        <button class="ms-button secondary" type="button" (click)="cancel()">Cancel</button>
+      </form>
+    }
+    @if (p.entries.length > 0) {
+      <table class="ms-table">
+        <thead><tr><th>File</th><th>Hash</th><th>Classification</th><th></th></tr></thead>
+        <tbody>
+          @for (e of p.entries; track e.sha512) {
+            <tr>
+              <td data-label="File" class="wrap">{{ e.fileName }}</td>
+              <td data-label="Hash"><code>{{ e.shortHash }}</code></td>
+              <td data-label="Classification">
+                @if (e.classification) { <span class="ms-badge ok">{{ e.classification }}</span> }
+                @else { <span class="ms-badge warn">unreviewed</span> }
+              </td>
+              <td data-label="Action">
+                <button class="ms-button secondary" type="button" (click)="select(e)">Classify</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+
+  <section class="ms-card" aria-labelledby="manifest">
+    <h2 id="manifest">Latest manifest</h2>
+    @if (p.manifest.length === 0) {
+      <p class="ms-muted">Nothing published yet.</p>
+    } @else {
+      <table class="ms-table">
+        <thead><tr><th>File</th><th>Project</th><th>Version</th><th>Classification</th></tr></thead>
+        <tbody>
+          @for (m of p.manifest; track m.fileName) {
+            <tr>
+              <td data-label="File" class="wrap">{{ m.fileName }}</td>
+              <td data-label="Project" class="wrap">{{ m.projectId }}</td>
+              <td data-label="Version" class="wrap">{{ m.versionId }}</td>
+              <td data-label="Classification"><span class="ms-badge">{{ m.classification }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+} @else if (!error()) {
+  <p class="ms-muted" role="status">Loading server…</p>
+}

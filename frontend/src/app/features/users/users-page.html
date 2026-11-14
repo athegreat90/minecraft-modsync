@@ -1,0 +1,52 @@
+<h1>Users</h1>
+<form class="ms-toolbar" [formGroup]="filter" (ngSubmit)="search()" role="search">
+  <label>Username <input type="search" formControlName="q" /></label>
+  <label>
+    Role
+    <select formControlName="role">
+      <option value="">Any</option>
+      <option value="ADMIN">Administrator</option>
+      <option value="CLIENT">Client</option>
+    </select>
+  </label>
+  <label>
+    Status
+    <select formControlName="status">
+      <option value="">Any</option>
+      <option value="enabled">Enabled</option>
+      <option value="disabled">Disabled</option>
+    </select>
+  </label>
+  <button class="ms-button" type="submit">Search</button>
+  <a class="ms-button" routerLink="/users/new">New account</a>
+</form>
+@if (error()) {
+  <p class="ms-alert error" role="alert">{{ error() }}</p>
+}
+@if (result(); as r) {
+  @if (r.users.length === 0) {
+    <p class="ms-muted">No accounts match.</p>
+  } @else {
+    <table class="ms-table">
+      <thead><tr><th>Username</th><th>Role</th><th>Status</th></tr></thead>
+      <tbody>
+        @for (u of r.users; track u.id) {
+          <tr>
+            <td data-label="Username" class="wrap"><a [routerLink]="['/users', u.id]">{{ u.username }}</a></td>
+            <td data-label="Role">{{ u.role }}</td>
+            <td data-label="Status">
+              <span class="ms-badge" [class.ok]="u.enabled" [class.warn]="!u.enabled">{{ u.enabled ? 'enabled' : 'disabled' }}</span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <nav class="ms-toolbar" aria-label="Pages">
+      <button class="ms-button secondary" type="button" [disabled]="r.page === 0" (click)="go(r.page - 1)">Previous</button>
+      <span>Page {{ r.page + 1 }} of {{ r.totalPages }} · {{ r.total }} accounts</span>
+      <button class="ms-button secondary" type="button" [disabled]="r.page + 1 >= r.totalPages" (click)="go(r.page + 1)">Next</button>
+    </nav>
+  }
+} @else if (!error()) {
+  <p class="ms-muted" role="status">Loading users…</p>
+}

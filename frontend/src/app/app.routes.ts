@@ -16,6 +16,22 @@ export const routes: Routes = [
         pathMatch: 'full',
         loadComponent: () => import('./features/dashboard/overview').then((m) => m.Overview),
       },
+      {
+        path: 'servers/:id',
+        loadComponent: () => import('./features/servers/server-page').then((m) => m.ServerPageView),
+      },
+      {
+        path: 'users',
+        loadComponent: () => import('./features/users/users-page').then((m) => m.UsersPage),
+      },
+      {
+        path: 'users/new',
+        loadComponent: () => import('./features/users/user-new').then((m) => m.UserNew),
+      },
+      {
+        path: 'users/:id',
+        loadComponent: () => import('./features/users/user-detail').then((m) => m.UserDetailView),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
-import { Login, readXsrfToken } from './login';
+import { readXsrfToken } from '../../core/auth/csrf';
+import { Login } from './login';
 
 describe('readXsrfToken', () => {
   it('extracts the token from the cookie string', () => {

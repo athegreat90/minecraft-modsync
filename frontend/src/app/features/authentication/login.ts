@@ -1,11 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-
-/** Reads the XSRF token cookie the server issued, or an empty string when absent. */
-export function readXsrfToken(cookies: string): string {
-  const match = /(?:^|;\s*)XSRF-TOKEN=([^;]+)/.exec(cookies);
-  return match ? decodeURIComponent(match[1]) : '';
-}
+import { readXsrfToken } from '../../core/auth/csrf';
 
 /**
  * Local sign-in page.

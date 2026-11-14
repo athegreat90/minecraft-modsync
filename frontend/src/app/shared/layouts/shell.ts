@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { readXsrfToken } from '../../core/auth/csrf';
 import { SessionService } from '../../core/auth/session';
 
 /** Authenticated page frame: top bar, navigation drawer on narrow screens, sidebar on wide ones. */
@@ -12,6 +13,8 @@ import { SessionService } from '../../core/auth/session';
 })
 export class Shell {
   protected readonly sessions = inject(SessionService);
+  /** Value for the sign-out form's hidden `_csrf` field. */
+  protected readonly csrf = readXsrfToken(document.cookie);
   /** Whether the navigation drawer is open (compact screens only). */
   protected readonly drawerOpen = signal(false);
 

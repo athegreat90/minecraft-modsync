@@ -1,0 +1,52 @@
+@if (error()) {
+  <p class="ms-alert error" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="ms-alert success" role="status">{{ notice() }}</p>
+}
+@if (detail(); as d) {
+  <h1>{{ d.user.username }}</h1>
+  <p>
+    <span class="ms-badge">{{ d.user.role }}</span>
+    <span class="ms-badge" [class.ok]="d.user.enabled" [class.warn]="!d.user.enabled">{{ d.user.enabled ? 'enabled' : 'disabled' }}</span>
+    <span class="ms-muted">{{ d.activeDevices }} active devices</span>
+  </p>
+  @if (!d.user.manageable) {
+    <p class="ms-alert">Administrator accounts cannot be changed from here.</p>
+  } @else {
+    <section class="ms-card" aria-labelledby="status">
+      <h2 id="status">Access</h2>
+      @if (d.user.enabled) {
+        <button class="ms-button danger" type="button" (click)="disable()">Disable account</button>
+      } @else {
+        <button class="ms-button" type="button" (click)="enable()">Enable account</button>
+      }
+      <button class="ms-button secondary" type="button" (click)="revokeSessions()">End sessions and tokens</button>
+    </section>
+
+    <section class="ms-card" aria-labelledby="password">
+      <h2 id="password">Reset password</h2>
+      <form class="ms-form" [formGroup]="password" (ngSubmit)="resetPassword()" novalidate>
+        <label>New password <input type="password" formControlName="password" autocomplete="new-password" /></label>
+        @if (password.controls.password.touched && password.controls.password.invalid) {
+          <p class="ms-field-error" role="alert">Passwords need 16 to 256 characters.</p>
+        }
+        <label>Confirm password <input type="password" formControlName="confirmation" autocomplete="new-password" /></label>
+        <button class="ms-button" type="submit">Change password</button>
+      </form>
+    </section>
+
+    <section class="ms-card" aria-labelledby="devices">
+      <h2 id="devices">Devices</h2>
+      <p class="ms-muted">Revoking devices is permanent: clients must register again.</p>
+      <label>
+        <input type="checkbox" [formControl]="confirmDevices" />
+        I understand all devices of this account will be revoked.
+      </label>
+      <button class="ms-button danger" type="button" (click)="revokeDevices()">Revoke all devices</button>
+    </section>
+  }
+  <p><a routerLink="/users">Back to users</a></p>
+} @else if (!error()) {
+  <p class="ms-muted" role="status">Loading account…</p>
+}
