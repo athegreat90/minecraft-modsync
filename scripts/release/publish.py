@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import hashlib, json, os, pathlib, subprocess, tempfile, uuid
-from reconcile import run, version as release_version
+from reconcile import TAG_PATTERN, run, version as release_version
 from state import required_assets, verify_complete, verify_source
 
 
@@ -48,12 +48,22 @@ def preflight(repo):
         run('gh', 'api', '--method', 'DELETE', f'repos/{repo}/git/refs/{ref}')
 
 
+def identifies_source(version, expected):
+    """True when [version] is a well-formed release tag naming the same commit time and SHA as [expected].
+
+    The `vX.Y.Z-dev.` prefix is deliberately not compared: `validate` derives it from the checked-out
+    (possibly historical) source, whereas [expected] comes from the current publication tooling.
+    The `<UTC stamp>.<full sha>` suffix is what binds a version to its source commit.
+    """
+    return bool(TAG_PATTERN.fullmatch(version)) and version.split('-dev.', 1)[1] == expected.split('-dev.', 1)[1]
+
+
 def main():
     version=os.environ["RELEASE_VERSION"]
     sha=run("git","rev-parse","HEAD")
     repo=os.environ["GITHUB_REPOSITORY"]
     expected = release_version(sha, run('git', 'show', '-s', '--format=%ct', 'HEAD'))
-    if version != expected:
+    if not identifies_source(version, expected):
         raise ValueError('Release version does not identify source commit')
     pages = json.loads(run('gh', 'api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'))
     matches = [r for page in pages for r in page if r['tag_name'] == version]
