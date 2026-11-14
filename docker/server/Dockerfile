@@ -6,7 +6,7 @@ RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 FROM --platform=$BUILDPLATFORM gradle:9.9.1-jdk25-ubi AS build
-ARG RELEASE_VERSION=0.4.7-SNAPSHOT
+ARG RELEASE_VERSION=0.5.0-SNAPSHOT
 WORKDIR /workspace
 COPY . .
 COPY --from=frontend /frontend/dist frontend/dist

@@ -273,6 +273,31 @@ working even though GitHub's release-by-tag endpoint does not resolve drafts.
 - IDE build failure (`Unable to delete directory ... plugin-spec-builders`): reproduced from the CLI in the OneDrive checkout; fixed by `gradlew --stop` and deleting `build-logic/build`. Root cause is file locking by OneDrive or a stale daemon. Durable fix is keeping the clone outside OneDrive (documented in `README.md`).
 - Limit: the Sonar gate covers the tip of `main` only. Historical commits released by backfill are not individually gated.
 
+## Angular UI, Google/GitHub sign-in and the Norse design (0.5.0, branch feat/angular-valhalla-ui-sso)
+
+Decisions and why:
+- **One artifact.** `frontend/` is built by npm inside Gradle (`installFrontend`/`buildFrontend`, `-PwithoutFrontend` skips them) and copied into `static/ui` of `modsync-server.jar`. Docker builds the frontend in a Node stage and passes `-x installFrontend -x buildFrontend`; the runtime image is still JRE only. Release workflow runs `setup-node` without a lockfile cache because historical commits have no `frontend/`.
+- **Routes.** `/ui/**` SPA (explicit allow-list in `SpaController`, so it can never capture `/ui/api`), `/ui/api/**` JSON on the existing dashboard chain, `/api/v1/**` untouched. Thymeleaf removed after the parity suites were rewritten to the JSON API.
+- **CSRF/cookies.** `CookieCsrfTokenRepository.withHttpOnlyFalse()` with the plain request handler (token never rendered in HTML) plus `CsrfCookieFilter`; side effect: no anonymous session before login (the rotation test now checks the token rotates). `SameSite=Lax` because Strict drops the cookie holding the OAuth state on the cross-site return. CSP: `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (Angular runtime styles; nonce-based CSP would need dynamic `index.html`).
+- **401 vs redirect.** `DelegatingAuthenticationEntryPoint`: `/ui/api/**` gets 401, browsers go to `/ui/login`. The first attempt (`defaultAuthenticationEntryPointFor`) silently turned every browser redirect into a 401; the integration suite caught it.
+- **SSO model.** `external_identities(provider, subject)` -> user; sign-in only for linked identities; link intent (5 minutes, bound to the signed-in user and provider) stored in the session by a CSRF-protected POST; `SsoUserServices` returns a principal named after the local user id with the stored role, so `SessionRegistry` revocation works (`RegistryUserSessionRevoker` now also matches `AuthenticatedPrincipal`). GitHub scope `read:user` only (email unused); PKCE for both providers (GitHub documents S256 support). Registrations exist only when client ids are set (`@ConditionalOnExpression`), so deployments without credentials are unchanged.
+- **Kotlin placeholders** use the multi-dollar form (`$$"${...}"`) as in the existing code; no escaped `\${`.
+- **Frontend tests.** Vitest via the Angular builder, 43 tests, 94% line coverage; axe-core checks on four pages. A component-level `ASSIGN_LOCATION` token makes the provider redirect testable.
+- **Sonar/CI.** Root Gradle module analyses `frontend/src/app`; the `sonar` job runs `npm run test:coverage` and rewrites LCOV paths; separate `frontend` job; `org.gradle.caching=true`. Docs link check runs in `validate`.
+
+Verification actually executed (Windows, JDK 25, Docker Desktop running):
+- `./gradlew check dokkaGenerate :modsync-server:bootJar` green after the cutover (including every Testcontainers suite, 3m18s); jar contains `static/ui/index.html`.
+- `npm run lint`, `npm test` (43), `npm run test:coverage` (94.2% lines), `npm run build` (initial ~74 kB gzipped).
+- `docker build -f docker/server/Dockerfile .` succeeded; compose smoke with `compose.sso.yaml` and empty provider ids: `/api/v1/info` 200, `/ui/index.html` 200, `/ui` 302 to `/ui/login`, `/ui/api/sso/providers` `{"providers":[]}`, `/ui/api/overview` 401. (Docker Desktop on Windows rejects the `tmpfs: /tmp:...mode=1777` entry of `compose.yaml`; a temporary override was used. Pre-existing.)
+- `scripts/openapi.py --check`, `check-architecture.py`, release/repository/docs unit tests pass; `scripts/backup` tests fail on Windows only (shell paths), unrelated.
+
+Not verified / outstanding:
+- Real Google and GitHub sign-in (needs the maintainer's credentials); the provider consoles were checked only against official documentation.
+- Sonar analysis of the frontend and the quality gate: the scanner cannot bootstrap outside the tailnet; the first CI run on `main` decides. CI wall-clock was **not** measured after the change (baseline before: validate 423-460 s, integration 310-545 s, sonar 712-976 s, critical path = sonar, 12-16 min); the added `frontend` job runs in parallel and Gradle now also runs `npm ci` and `ng build`, so compare the first runs against that baseline before claiming no regression.
+- Browser-level viewport tests (320-1440 px), contrast measurement and screen-reader checks are not automated; mobile and WCAG 2.2 AA are therefore only partly evidenced (stacked tables, touch targets and axe rules are implemented and unit-tested).
+- `docker/server/.env.example` was not updated (the tool session could not read that directory); variables are documented in `compose.sso.yaml` and `docs/security/SSO_SETUP.md`.
+- Known limits: no administrator screen for other administrators' provider links; per-address throttling only; sessions in memory.
+
 ## Historical releases cannot be published by the workflow token (branch fix/reconcile-unreleasable-commits, release 0.4.6)
 
 - Result of re-dispatching `7c29453` and `cd6c32d` after #27: `version`, `validate`, `integration` and the three `native` jobs all passed (so the per-source Gradle fix and the version-prefix fix from #25 work), then `publish` failed in `preflight()`: `POST git/refs` -> `403 Resource not accessible by integration`. Nothing was published and no tag or draft was created.

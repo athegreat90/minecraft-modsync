@@ -6,6 +6,39 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-14
+
+### Added
+- Angular administration interface (`frontend/`, Angular 22, standalone components, signals, `OnPush`, lazy routes, typed forms) served by the server under `/ui` and packaged inside `modsync-server.jar`. It covers sign-in, the server overview, server details (publication policy, re-evaluation, history, client coverage, mod classification, latest manifest) and user management (search and filter, create, disable and enable, password reset, session and device revocation). Layout is responsive: top bar and navigation drawer on narrow screens, sidebar on wide ones, tables stacked into cards, 44 px touch targets, `prefers-reduced-motion` honoured. Original Norse-inspired design tokens live in `frontend/src/styles/_tokens.scss`.
+- JSON administration API under `/ui/api` over the existing services (`ui.api.UiApiController`), documented in `docs/architecture/API.md`; it is separate from the unchanged `/api/v1` client/agent contract.
+- Google (OpenID Connect) and GitHub (OAuth2) sign-in, enabled per provider only when `GOOGLE_CLIENT_ID` / `GITHUB_CLIENT_ID` are set. Accounts are linked by the provider's immutable subject (never by e-mail) from the new Account page; nothing is auto-created and no role is ever granted by a provider. Migration `V6__external_identities.sql`.
+- `docker/server/compose.sso.yaml` (optional override) and entrypoint support for `GOOGLE_CLIENT_SECRET_FILE` / `GITHUB_CLIENT_SECRET_FILE`, so provider secrets stay in files; `MODSYNC_FORWARD_HEADERS` for deployments behind a reverse proxy.
+- `docs/security/SSO_SETUP.md`: step-by-step Google and GitHub setup, Docker and reverse-proxy configuration, account linking, local development, production checklist, troubleshooting matrix and credential rotation. Provider steps were checked against the official documentation on 2026-11-14.
+- `docs/development/FRONTEND.md`, a Markdown link checker (`scripts/docs/check_links.py`, run in CI) and a `frontend` CI job (lint and unit tests, 43 tests, 94% line coverage).
+- Unit and integration tests for the JSON API, the single sign-on mapping rules, provider session revocation and the authorization request sent to each provider.
+
+### Changed
+- The administration UI is no longer rendered by Thymeleaf; the `spring-boot-starter-thymeleaf` dependency, the templates and the HTML controllers were removed. The sign-in page is now `/ui/login` and `/login` redirects to it; form logins that fail return to `/ui/login?error`.
+- Content-Security-Policy now allows scripts from the server's own origin and inline **styles** (Angular injects component styles at runtime); inline scripts remain forbidden.
+- CSRF tokens are issued in the `XSRF-TOKEN` cookie and echoed in `X-XSRF-TOKEN` (no HTML rendering of the token); no anonymous session exists before sign-in.
+- Docker image build compiles the frontend in a Node stage; CI and release workflows set up Node. SonarQube analyses the Angular code through LCOV (`sonar.javascript.lcov.reportPaths`); the Gradle build cache is enabled.
+- `scripts/openapi.py` checks only `/api/v1` routes; the `/ui/api` routes are documented in `docs/architecture/API.md`.
+- Version bumped 0.4.7 -> 0.5.0 (minor; wire protocol 1 and minimum component compatibility are unchanged), including `frontend/package.json`.
+
+### Fixed
+- The shared validation error mapping failed with a 500 for requests served outside the API chain (no correlation id); it now answers 400.
+
+### Security
+- Provider sign-in uses the authorization-code flow with `state`, PKCE (S256) for both providers and an OIDC `nonce` for Google; the callback paths are served by the session chain and cannot reach the stateless API chain (covered by tests). Disabled accounts are refused, and sessions created through a provider are expired together with password sessions when an account is disabled or its password reset.
+- Session cookie `SameSite` is `Lax` instead of `Strict`, required for the cross-site return from the provider; CSRF tokens protect every write.
+
+### Documentation
+- Added `docs/security/SSO_SETUP.md` and `docs/development/FRONTEND.md`; updated `SECURITY.md`, `ARCHITECTURE.md`, `DATABASE.md`, `DOCKER.md`, `README.md`, `docs/USAGE.md`, `docs/architecture/API.md`, `docs/deployment/README.md`, `docs/development/SONARQUBE.md` and `.github/copilot-instructions.md`.
+
+### Breaking Changes
+- Server-rendered pages and their form posts (`/ui/servers/{id}/...`, `/ui/users/...`) no longer exist; use the Angular interface or `/ui/api`. Bookmarks to `/login` are redirected to `/ui/login`.
+- Deployments that terminate TLS in a proxy and want provider sign-in must set `MODSYNC_FORWARD_HEADERS=framework`; clients and agents need no change.
+
 ## [0.4.7] - 2026-11-14
 
 ### Fixed
