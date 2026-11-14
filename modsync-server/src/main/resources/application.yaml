@@ -13,6 +13,11 @@ server:
         same-site: lax
         secure: ${MODSYNC_SESSION_COOKIE_SECURE:true}
 spring:
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true
   http:
     converters:
       preferred-json-mapper: kotlinx-serialization

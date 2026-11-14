@@ -62,4 +62,13 @@ class SupportTest {
         assertEquals("Invalid request payload", failure.message)
         assertEquals("corr-1", failure.correlationId)
     }
+
+    /** Requests served outside the API chain carry no correlation id; the error mapping must still answer 400 instead of failing. */
+    @Test
+    fun invalidMappingToleratesMissingCorrelationId() {
+        val failure = Errors().invalid(MockHttpServletRequest())
+
+        assertEquals("INVALID_REQUEST", failure.code)
+        assertEquals("", failure.correlationId)
+    }
 }

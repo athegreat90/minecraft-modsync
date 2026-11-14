@@ -48,17 +48,27 @@ internal class TestBrowser(
         return http.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
-    /** Extracts the CSRF token rendered in a page. */
-    fun csrf(page: String): String = Regex("name=\"_csrf\" value=\"([^\"]+)\"").find(page)?.groupValues?.get(1) ?: error("No CSRF token in page")
-
-    /** Fetches [path] and returns the CSRF token of the rendered page. */
-    fun csrfOf(path: String): String = csrf(get(path).body())
+    /** Fetches [path] and returns the XSRF token cookie the server issued with it. */
+    fun csrfOf(path: String): String {
+        get(path)
+        return cookie("XSRF-TOKEN") ?: error("No XSRF-TOKEN cookie")
+    }
 
     /** Submits the login form and returns the response. */
     fun signIn(
         user: String,
         password: String
-    ): HttpResponse<String> = post("/login", mapOf("username" to user, "password" to password), csrfOf("/login"))
+    ): HttpResponse<String> = post("/login", mapOf("username" to user, "password" to password), csrfOf("/ui/login"))
+
+    /** Sends a JSON request that carries the current XSRF token, the way the Angular client does. */
+    fun call(
+        method: String,
+        path: String,
+        body: String = ""
+    ): HttpResponse<String> {
+        if (cookie("XSRF-TOKEN") == null) get("/ui/api/session")
+        return json(method, path, body, cookie("XSRF-TOKEN"))
+    }
 
     /** Returns the value of a cookie in the jar, or null when it is absent. */
     fun cookie(name: String): String? =

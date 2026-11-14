@@ -12,6 +12,7 @@ def controller_routes():
         text=file.read_text()
         if '@RestController' not in text: continue  # server-rendered dashboard pages are not part of the API contract
         prefix=re.search(r'@RequestMapping\("([^"]*)"\)',text).group(1)
+        if not prefix.startswith('/api/v1'): continue  # the session-protected /ui/api used by the Angular UI is documented in docs/architecture/API.md, not in this client/agent contract
         for method,route in re.findall(r'@(Get|Post|Put)Mapping(?:\("([^"]*)"\))?',text):
             routes.add((method.lower(),prefix+route))
     return routes

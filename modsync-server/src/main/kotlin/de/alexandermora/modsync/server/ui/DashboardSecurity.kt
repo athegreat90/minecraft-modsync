@@ -175,7 +175,7 @@ class LoginThrottleFilter : OncePerRequestFilter() {
 private fun configureSso(http: HttpSecurity, repository: ClientRegistrationRepository, accounts: SsoAccounts, audit: AuditService) {
     val services = SsoUserServices(accounts)
     http.oauth2Login {
-        it.loginPage("/login")
+        it.loginPage("/ui/login")
         it.authorizationEndpoint { endpoint -> endpoint.authorizationRequestResolver(pkceForGoogle(repository)) }
         it.userInfoEndpoint { user ->
             user.userService { request -> services.loadOAuth2(request) }
@@ -195,7 +195,7 @@ private fun configureSso(http: HttpSecurity, repository: ClientRegistrationRepos
             AuthenticationFailureHandler { request, response, exception ->
                 val code = (exception as? OAuth2AuthenticationException)?.error?.errorCode ?: "sso_failed"
                 audit.record("anonymous", "sso-denied:" + code.take(MAX_AUDITED_CODE), "-")
-                response.sendRedirect(request.contextPath + "/login?sso=denied")
+                response.sendRedirect(request.contextPath + "/ui/login?sso=denied")
             }
         )
     }
@@ -269,22 +269,23 @@ class DashboardSecurityConfiguration {
                 it
                     .dispatcherTypeMatchers(DispatcherType.ERROR)
                     .permitAll()
-                    .requestMatchers("/login", "/ui/assets/**", "/ui/api/sso/providers", "/oauth2/**", "/login/oauth2/**")
+                    .requestMatchers("/login", "/ui/login", "/ui/index.html", "/ui/*.js", "/ui/*.css", "/ui/*.ico", "/ui/*.txt", "/ui/api/sso/providers", "/oauth2/**", "/login/oauth2/**")
                     .permitAll()
                     .anyRequest()
                     .hasRole("ADMIN")
             }.formLogin {
                 it
-                    .loginPage("/login")
+                    .loginPage("/ui/login")
                     .loginProcessingUrl("/login")
+                    .failureUrl("/ui/login?error")
                     .defaultSuccessUrl("/ui", true)
                     .permitAll()
-            }.logout { it.logoutUrl("/logout").logoutSuccessUrl("/login?logout") }
+            }.logout { it.logoutUrl("/logout").logoutSuccessUrl("/ui/login?logout") }
             .exceptionHandling {
                 // Script clients get a plain 401; browsers are sent to the login page.
                 val api = RequestMatcher { request -> request.requestURI.startsWith(API_PREFIX) }
                 val entryPoint = DelegatingAuthenticationEntryPoint(linkedMapOf<RequestMatcher, AuthenticationEntryPoint>(api to HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                entryPoint.setDefaultEntryPoint(LoginUrlAuthenticationEntryPoint("/login"))
+                entryPoint.setDefaultEntryPoint(LoginUrlAuthenticationEntryPoint("/ui/login"))
                 it.authenticationEntryPoint(entryPoint)
             }.csrf {
                 // The Angular client reads the token from the XSRF-TOKEN cookie and echoes it in X-XSRF-TOKEN. The token is never
@@ -294,7 +295,7 @@ class DashboardSecurityConfiguration {
             }.addFilterAfter(CsrfCookieFilter(), BasicAuthenticationFilter::class.java)
             .sessionManagement {
                 it.sessionFixation { fixation -> fixation.migrateSession() }
-                it.sessionConcurrency { concurrency -> concurrency.maximumSessions(SessionLimit.UNLIMITED).sessionRegistry(sessionRegistry).expiredUrl("/login?expired") }
+                it.sessionConcurrency { concurrency -> concurrency.maximumSessions(SessionLimit.UNLIMITED).sessionRegistry(sessionRegistry).expiredUrl("/ui/login?expired") }
             }.headers { headers ->
                 headers.contentSecurityPolicy { it.policyDirectives(CONTENT_SECURITY_POLICY) }
                 headers.frameOptions { it.deny() }

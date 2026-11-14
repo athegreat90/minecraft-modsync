@@ -122,7 +122,7 @@ class SsoIntegrationTest {
         val callback = browser.get("/login/oauth2/code/google?code=invented&state=invented")
 
         assertEquals(302, callback.statusCode())
-        assertEquals("/login?sso=denied", callback.location())
+        assertEquals("/ui/login?sso=denied", callback.location())
         assertEquals(401, browser.json("GET", "/ui/api/session").statusCode())
     }
 
