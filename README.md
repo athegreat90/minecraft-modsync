@@ -40,6 +40,8 @@ python3 scripts/integration/distributed.py
 
 `gradlew` currently uses a Python bootstrap with a pinned Gradle distribution checksum. It is **not** the official wrapper JAR; generating and checking in the official wrapper remains a release gate. Windows can use `gradlew.bat`. Do not disable certificate verification to obtain dependencies.
 
+**Windows + OneDrive:** keep the clone outside OneDrive (or exclude it from sync). OneDrive and a stale daemon can lock `build-logic/build`, which fails IDE sync with `Unable to delete directory ... plugin-spec-builders`; fix it with `gradlew --stop`, then delete `build-logic/build`.
+
 Native build: use GraalVM Community 25 and `./gradlew :modsync-client:nativeCompile :modsync-agent:nativeCompile`. Native execution and reflection configuration still need runner verification. JVM distributions provide a fallback.
 
 ## Deployment and first sync

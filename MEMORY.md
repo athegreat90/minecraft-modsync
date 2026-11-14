@@ -37,7 +37,7 @@ At the initial local-only checkpoint, no Kotlin test, migration, container, TLS 
 4. Complete Windows state ACL handling, crash/power-loss fault injection, exhaustive authorization tests and security review.
 5. Verify generated OpenAPI against live endpoints; implement bounded catalog persistence, upload/backup retention, pagination and configurable freshness thresholds.
 6. Embedded providers and opt-in optional mods are implemented but unverified. Automatic compatible dependency expansion remains conservative: missing exact pins block plans.
-7. `modsync interactive --tui-home DIR` launches the separate JVM TUI without adding JLine to the standard CLI; runtime verification remains outstanding.
+7. `modsync interactive --tui-home DIR` launches the separate JVM TUI without adding JLine to the standard CLI; verified on Windows in 0.4.7 (banner shown, clean exit), earlier releases failed with `InvalidPathException` and a wrong main class.
 8. No Crafty API adapter is implemented; official v2 documentation was located, but filesystem scanning remains the supported integration.
 9. Representative CPU/RSS/throughput/sync benchmarks are not measured. Hashes are recomputed each scheduled scan.
 10. Configure GitHub branch protections/registry. Development prereleases publish automatically on main after all workflow gates; stable releases and deployment remain separate. No application release is claimed until a visible prerelease and its assets/digests are verified.

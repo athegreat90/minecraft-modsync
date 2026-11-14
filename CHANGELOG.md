@@ -6,6 +6,17 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-11-14
+
+### Fixed
+- `modsync interactive` failed with `InvalidPathException` on Windows and launched a non-existent main class. The class path wildcard is now built as a plain string (`*` is illegal in a Windows `Path`) and the child JVM starts `de.alexandermora.modsync.client.tui.InteractiveKt`; `interactiveCommand` is covered by tests, including a guard that keeps the class name equal to the `mainClass` of `modsync-client-tui`. The child JVM also passes `--enable-native-access=ALL-UNNAMED` to silence the JLine restricted-method warning on Java 25.
+
+### Changed
+- Release reconciliation (`reconcile.yaml`) now starts from the `validate` workflow (`workflow_run`) and only when it succeeded, including the SonarQube quality gate, instead of from the push itself. Hourly and manual runs first require a successful `validate` run for the tip of `main`.
+- `gradle.properties` enables `org.gradle.tooling.parallel=true` (parallel IDE sync, Gradle 9.4+).
+- `modsync-client-tui` gained its first unit tests: the prompt loop is extracted into `runSession` (behavior unchanged) and covered for the banner, `quit`, end of input, Ctrl+C, blank lines, quoted arguments and failing commands.
+- Version bumped 0.4.6 -> 0.4.7 (patch; wire protocol 1 and minimum component compatibility are unchanged). Updated in the same files as the previous bump.
+
 ## [0.4.6] - 2026-11-14
 
 ### Fixed

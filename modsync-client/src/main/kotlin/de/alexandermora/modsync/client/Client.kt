@@ -11,11 +11,26 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.Serializable
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.io.File
 import java.nio.file.Path
 import java.nio.file.Files
 import java.time.Instant
 import java.util.UUID
 import kotlin.system.exitProcess
+/** Main class of the separately distributed `modsync-client-tui`; a test keeps it equal to that module's `mainClass`. */
+internal const val TUI_MAIN_CLASS="de.alexandermora.modsync.client.tui.InteractiveKt"
+
+/**
+ * Builds the child JVM command that starts the terminal UI.
+ *
+ * The class path wildcard is a plain string: `*` is not a legal Windows path character, so it must never go through [Path].
+ *
+ * @param java Java executable to start.
+ * @param library The distribution `lib` directory whose JARs form the class path.
+ */
+internal fun interactiveCommand(java: String, library: Path): List<String> =
+    listOf(java,"--enable-native-access=ALL-UNNAMED","-cp",library.toString()+File.separator+"*",TUI_MAIN_CLASS)
+
 private val logger = run {
     System.setProperty("kotlin-logging.logStartupMessage", "false") // keep CLI stderr free of the library banner
     KotlinLogging.logger {}
@@ -130,7 +145,7 @@ class Client: Runnable {
         require(Files.isDirectory(library)) { "TUI distribution lib directory is missing" }
         val javaHome=System.getenv("JAVA_HOME")
         val java=if (javaHome == null) "java" else Path.of(javaHome,"bin",if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java").toString()
-        val process=ProcessBuilder(java,"-cp",library.resolve("*").toString(),"de.alexandermora.modsync.InteractiveKt").inheritIO()
+        val process=ProcessBuilder(interactiveCommand(java,library)).inheritIO()
         process.environment()["MODSYNC_STATE_DIR"]=stateDir.toAbsolutePath().toString()
         check(process.start().waitFor()==0) { "Interactive terminal exited unsuccessfully" }
     }
