@@ -52,6 +52,9 @@ jobs:
         with: {ref: '${{ inputs.sha }}', fetch-depth: 0}
       - uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '25'}
+      # Commits before the Angular UI have no frontend/, so this step must not require its lockfile.
+      - uses: actions/setup-node@v6
+        with: {node-version: '24'}
       - uses: gradle/actions/setup-gradle@v6
         with: {gradle-version: '${{ needs.version.outputs.gradle }}'}
       - run: gradle --no-daemon -PreleaseVersion=${{ needs.version.outputs.version }} -Pspotless.ratchetFrom=HEAD check dokkaGenerate :modsync-server:bootJar :modsync-agent:distZip :modsync-client:distZip :modsync-client-tui:distZip

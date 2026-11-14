@@ -26,3 +26,29 @@ tasks.jar { enabled = false }
 dependencies { testImplementation(project(":modsync-test-fixtures")) }
 tasks.bootJar { archiveFileName.set("modsync-server.jar") }
 tasks.processResources { from(rootProject.file("docs/architecture/openapi.json")) }
+
+// The Angular administration UI is built once by npm and packaged under /ui in the server jar (no Node at runtime).
+// Pass -PwithoutFrontend to skip it, for example when only Kotlin is being compiled.
+val frontendDir = rootProject.layout.projectDirectory.dir("frontend")
+val npm = if (System.getProperty("os.name").lowercase().contains("win")) "npm.cmd" else "npm"
+val installFrontend by tasks.registering(Exec::class) {
+    workingDir = frontendDir.asFile
+    commandLine(npm, "ci", "--no-audit", "--no-fund")
+    inputs.file(frontendDir.file("package-lock.json"))
+    outputs.dir(frontendDir.dir("node_modules"))
+}
+val buildFrontend by tasks.registering(Exec::class) {
+    dependsOn(installFrontend)
+    workingDir = frontendDir.asFile
+    commandLine(npm, "run", "build")
+    inputs.files(frontendDir.file("package.json"), frontendDir.file("angular.json"), frontendDir.file("tsconfig.json"), frontendDir.file("tsconfig.app.json"))
+    inputs.dir(frontendDir.dir("src"))
+    inputs.dir(frontendDir.dir("public"))
+    outputs.dir(frontendDir.dir("dist"))
+}
+if (!project.hasProperty("withoutFrontend")) {
+    tasks.processResources {
+        dependsOn(buildFrontend)
+        from(frontendDir.dir("dist")) { into("static/ui") }
+    }
+}

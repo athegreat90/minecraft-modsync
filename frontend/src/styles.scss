@@ -1,0 +1,38 @@
+@use 'styles/tokens';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #12201d 0%, var(--ms-bg) 55%);
+  color: var(--ms-text);
+  font-family: var(--ms-font-body);
+  line-height: 1.5;
+}
+
+h1, h2, h3 { font-family: var(--ms-font-display); font-weight: 600; letter-spacing: 0.02em; }
+
+a { color: var(--ms-emerald); }
+
+:focus-visible { outline: 3px solid var(--ms-focus); outline-offset: 2px; }
+
+.ms-visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+.ms-button {
+  min-height: var(--ms-touch);
+  padding: 0 var(--ms-space-3);
+  border: 1px solid var(--ms-gold);
+  border-radius: var(--ms-radius);
+  background: var(--ms-forest);
+  color: var(--ms-text);
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--ms-motion-fast);
+}
+.ms-button:hover { background: var(--ms-teal); }
+.ms-button:disabled { opacity: 0.5; cursor: not-allowed; }

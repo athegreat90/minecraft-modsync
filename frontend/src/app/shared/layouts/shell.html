@@ -1,0 +1,21 @@
+<a class="ms-visually-hidden" href="#main">Skip to content</a>
+<header class="bar">
+  <button
+    class="ms-button menu"
+    type="button"
+    [attr.aria-expanded]="drawerOpen()"
+    aria-controls="nav"
+    (click)="toggleDrawer()"
+  >
+    Menu
+  </button>
+  <span class="brand">ModSync</span>
+  <span class="grow"></span>
+  <span class="user">{{ sessions.session()?.username }}</span>
+</header>
+<nav id="nav" class="nav" [class.open]="drawerOpen()" aria-label="Main">
+  <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeDrawer()">Servers</a>
+</nav>
+<main id="main" class="content">
+  <router-outlet />
+</main>
