@@ -17,4 +17,4 @@ sonar {
         property("sonar.typescript.tsconfigPaths", "frontend/tsconfig.json,frontend/tsconfig.app.json,frontend/tsconfig.spec.json")
     }
 }
-dependencies { subprojects.forEach { dokka(it) } }
+dependencies { subprojects.forEach { dokka(project(it.path)) } }

@@ -31,13 +31,13 @@ tasks.processResources { from(rootProject.file("docs/architecture/openapi.json")
 // Pass -PwithoutFrontend to skip it, for example when only Kotlin is being compiled.
 val frontendDir = rootProject.layout.projectDirectory.dir("frontend")
 val npm = if (System.getProperty("os.name").lowercase().contains("win")) "npm.cmd" else "npm"
-val installFrontend by tasks.registering(Exec::class) {
+val installFrontend = tasks.register<Exec>("installFrontend") {
     workingDir = frontendDir.asFile
     commandLine(npm, "ci", "--no-audit", "--no-fund")
     inputs.file(frontendDir.file("package-lock.json"))
     outputs.dir(frontendDir.dir("node_modules"))
 }
-val buildFrontend by tasks.registering(Exec::class) {
+val buildFrontend = tasks.register<Exec>("buildFrontend") {
     dependsOn(installFrontend)
     workingDir = frontendDir.asFile
     commandLine(npm, "run", "build")

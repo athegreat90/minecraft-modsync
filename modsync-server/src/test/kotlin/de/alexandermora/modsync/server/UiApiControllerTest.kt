@@ -152,7 +152,7 @@ class UiApiControllerTest {
     fun revokingDevicesNeedsConfirmation() {
         mvc()
             .perform(post("/ui/api/users/target/revoke-devices").contentType(MediaType.APPLICATION_JSON).content("""{"confirm":false}"""))
-            .andExpect(status().isUnprocessableEntity)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.code").value("CONFIRMATION_REQUIRED"))
 
         verify(management, never()).revokeDevices(admin, "target")
