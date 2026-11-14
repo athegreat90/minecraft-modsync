@@ -490,7 +490,7 @@ Notes:
 
 ## Administration dashboard
 
-Host B serves a server-rendered dashboard at `https://<host-b>/ui` (sign in with an `ADMIN` account such as the bootstrap admin). It shows servers, inventory freshness, scanned mods and their approval state, the latest manifest, the client coverage matrix and publication history. Administrators can change a server's publication policy, approve a mod's classification with a reason, and request re-evaluation of automatic publication. Manifest preview and publish remain API operations. The dashboard runs no commands and needs no JavaScript.
+Host B serves the Angular administration interface at `https://<host-b>/ui` (sign in at `/ui/login` with an `ADMIN` account such as the bootstrap admin, or with Google/GitHub after linking the provider on the Account page; see [SSO setup](security/SSO_SETUP.md)). It works on phones as well as desktops. It shows servers, inventory freshness, scanned mods and their approval state, the latest manifest, the client coverage matrix and publication history. Administrators can change a server's publication policy, approve a mod's classification with a reason, and request re-evaluation of automatic publication. Manifest preview and publish remain API operations. The interface runs no commands.
 
 ### Managing users
 

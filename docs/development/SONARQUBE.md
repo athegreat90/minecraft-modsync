@@ -52,3 +52,9 @@ Put the runner host itself on Tailscale (`tailscale up`), set `runs-on` to its l
 ## Release gate
 
 The release reconciler (`.github/workflows/reconcile.yaml`) is triggered by the `validate` workflow run, which contains the `sonar` job with `sonar.qualitygate.wait=true`. A failed quality gate therefore fails `validate` and no development prerelease is dispatched for that push; scheduled and manual reconciliations also require a successful `validate` run for the tip of `main`.
+
+## Frontend (Angular)
+
+The same analysis covers the Angular code. The root Gradle module sets `sonar.sources=frontend/src/app`, treats `*.spec.ts` as tests and reads `frontend/coverage/frontend/lcov.info` through `sonar.javascript.lcov.reportPaths`; `sonar.typescript.tsconfigPaths` points at the three tsconfig files. In CI the `sonar` job first runs `npm run test:coverage` (Vitest with the v8 provider, which writes the LCOV file) and rewrites the report paths to be repository-relative (`sed 's#^SF:#SF:frontend/#'`); the existing JaCoCo reports are reused, so tests are not run twice for Sonar. ESLint, unit tests and the production build also run in the separate `frontend` CI job so they stay off the critical path.
+
+Locally: `cd frontend && npm ci && npm run test:coverage`, then run the scan as described above. The first CI run on `main` after this change is what verifies the frontend analysis against the quality gate; the SonarQube server's gate conditions (new code coverage and duplication thresholds) are configured on the server, not in this repository.

@@ -14,6 +14,7 @@ python3 scripts/check-architecture.py       # module boundary check
 python3 scripts/openapi.py --check          # docs/architecture/openapi.json must match DTOs + controllers (run without --check to regenerate)
 python3 -m unittest discover -s scripts/release -p 'test_*.py'     # also scripts/repository and scripts/backup
 python3 scripts/integration/distributed.py  # three-host HTTPS/migration/restore fixture
+(cd frontend && npm ci && npm run lint && npm test)   # Angular admin UI; Gradle also builds it into the server jar (-PwithoutFrontend skips it)
 ```
 
 There is no separate linter; CI (`.github/workflows/ci.yaml`) runs the commands above plus a Trivy scan. Gradle dependency locking is enabled (`lockAllConfigurations()`).
@@ -39,3 +40,7 @@ Big-picture flow: agent uploads a snapshot (invisible until `commit`) → admin 
 - Client instance names (`instances add`) must match `[A-Za-z0-9_-]{1,80}`; the instance's Minecraft/loader metadata in `<instance>/.modsync/instance.json` must equal the manifest's or planning stops.
 - Native-image reflection config lives in `src/main/resources/META-INF/native-image/` of `agent` and `client`; update it when adding reflectively-accessed types.
 - Docs are extensive (`docs/GUIDE.md`, `ARCHITECTURE.md`, `docs/USAGE.md`, `docs/architecture/API.md`); update the relevant one when changing commands, API or deployment behavior.
+
+## Frontend
+
+The administration UI is Angular (`frontend/`), served under `/ui` from the server jar; admin JSON lives under `/ui/api`. Keep components presentation-only (the server decides authorization), use signals, `OnPush`, typed forms and the design tokens in `frontend/src/styles/_tokens.scss`. Spring placeholders in Kotlin strings use the multi-dollar form (`$$"${modsync.x}"`). Provider sign-in links accounts by immutable subject, never by e-mail. See `docs/development/FRONTEND.md` and `docs/security/SSO_SETUP.md`.

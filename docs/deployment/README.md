@@ -13,7 +13,7 @@ workflow token cannot create refs for them. Reconciliation starts at
 `RELEASE_FLOOR` (`7c29453`); older commits are not rebuilt. The reconciliation log reports failures,
 invalid releases, dispatched commits and the remaining backlog.
 
-Release jobs run in parallel after a fast `version` gate (which also reads the Gradle version pinned by the source being released) (`validate`, `integration` for the distributed TLS fixture, and the native builds), and `publish` waits for all of them. Each immutable `v0.4.7-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
+Release jobs run in parallel after a fast `version` gate (which also reads the Gradle version pinned by the source being released) (`validate`, `integration` for the distributed TLS fixture, and the native builds), and `publish` waits for all of them. Each immutable `v0.5.0-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
 checks, architecture and API checks, source security scanning, distributed TLS
 integration, Linux x64/ARM64 and Windows x64 native builds, native smoke tests and
 benchmarks. JVM distributions, native binaries and multi-platform images all use
@@ -36,3 +36,7 @@ Stable releases and deployment remain separate actions. Automatic development
 publication does not close the production-readiness items in
 [MVP_CHECKLIST.md](MVP_CHECKLIST.md), including real native synchronization tests,
 wrapper/dependency verification, platform/security review and restore drills.
+
+## Administration interface and single sign-on
+
+The server image serves the Angular administration interface under `/ui`; deployment needs no extra service. To enable Google or GitHub sign-in add the Compose override and the provider variables documented in the [SSO setup guide](../security/SSO_SETUP.md): `docker compose -f compose.yaml -f compose.sso.yaml up -d`. Behind a reverse proxy set `MODSYNC_FORWARD_HEADERS=framework` and keep the server bound to loopback. Rollback: recreate the container without `compose.sso.yaml`; password sign-in keeps working, and the V6 `external_identities` table stays unused. The image build compiles the frontend in a Node stage, so the first build downloads npm packages.

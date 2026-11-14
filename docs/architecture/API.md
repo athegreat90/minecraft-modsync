@@ -44,3 +44,26 @@ Snapshots allow at most 10,000 entries and 6 MiB staged encoded batches. Request
 Publication requires every accepted inventory hash to have an explicit classification override. Submit `PublishRequest` with the latest scan UUID and complete pinned `Artifact` set. Official URLs/versions are reconstructed from Modrinth hashes; caller-supplied download URLs are not trusted. Additional exact dependencies must be included; unresolved requirements block publication. Manual artifacts use `url: null` and must match a scanned hash/size. No automatic publication occurs after a scan.
 
 Use `scripts/admin.py --config CONFIG --method POST --data REQUEST.json --out RESPONSE.json admin/servers` after an administrator CLI login. It writes protected responses rather than printing enrollment tokens. `--secret-field token` can export an enrollment token alone to an explicitly selected protected output file. Transfer it securely to Host A, then remove it after enrollment. Do not store credentials in example requests or tracked files.
+
+## Administration API (`/ui/api`)
+
+Used only by the Angular administration interface; it is **not** part of the client/agent contract in `openapi.json`. Every route needs an administrator session cookie; writes also need the `X-XSRF-TOKEN` header (the value of the `XSRF-TOKEN` cookie). Anonymous calls answer `401`, non-administrators `403`, maintenance mode answers `409` for writes, and malformed bodies answer `400`. Refusals of account commands return `{"code","message"}`.
+
+| Route | Purpose |
+|---|---|
+| GET `/ui/api/session` | Username and role of the signed-in administrator |
+| GET `/ui/api/overview` | Servers with publication policy |
+| GET `/ui/api/servers/{id}` | One server: inventory, manifest, coverage, history |
+| PUT `/ui/api/servers/{id}/publication-policy` | `{"policy"}` |
+| PUT `/ui/api/servers/{id}/classification` | `{"sha512","classification","reason"}` |
+| POST `/ui/api/servers/{id}/reevaluate` | Re-run automatic publication |
+| GET `/ui/api/users?q&role&status&page` | Search accounts (25 per page) |
+| GET `/ui/api/users/{id}` | One account |
+| POST `/ui/api/users` | Create a CLIENT account (201) |
+| POST `/ui/api/users/{id}/disable`, `/enable`, `/revoke-sessions` | Account lifecycle |
+| POST `/ui/api/users/{id}/password` | `{"password","confirmation"}` |
+| POST `/ui/api/users/{id}/revoke-devices` | `{"confirm": true}` (required) |
+| GET `/ui/api/sso/providers` | Public: configured providers (`{"providers":["github","google"]}`) |
+| GET `/ui/api/me/identities` | Linked and available providers of the signed-in account |
+| POST `/ui/api/me/identities/{provider}/link` | Prepare linking; returns `{"authorizationUrl"}` |
+| DELETE `/ui/api/me/identities/{provider}` | Unlink (204) |

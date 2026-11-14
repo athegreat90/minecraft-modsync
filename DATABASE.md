@@ -22,6 +22,11 @@ Restoration validation must check Flyway history, control-plane UUID, user login
 
 Keep major-version upgrades separate from relocation. Roll back by stopping destination writers before restoring routing to the original database/application pair. If destination writes occurred, reconcile or restore those changes first; never let two unfenced control planes accept writes independently.
 
+## External identities (V6)
+
+- `external_identities(id, user_id, provider, subject, linked_at)` links a local account to a Google or GitHub identity. `UNIQUE(provider, subject)` means one provider identity belongs to one account; `UNIQUE(user_id, provider)` limits an account to one identity per provider. `subject` is the provider's immutable id (Google `sub`, GitHub numeric id); e-mail addresses are never stored. `user_id` references `users(id)`.
+- The migration is additive and empty after the upgrade, so nobody can sign in with a provider until an administrator links an identity. Flyway Community has no undo: restore the pre-upgrade backup, or `DROP TABLE external_identities` (it only disables provider sign-in; password sign-in is unaffected). To unlink in an emergency: `DELETE FROM external_identities WHERE user_id = '<uuid>' AND provider = 'google';`.
+
 ## User status (V5)
 
 - `users.enabled BOOLEAN NOT NULL DEFAULT TRUE`: disabled accounts keep their rows and every reference but cannot log in, refresh or use tokens. The migration is additive; existing accounts stay enabled.
