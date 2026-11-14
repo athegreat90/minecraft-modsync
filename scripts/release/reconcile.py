@@ -16,7 +16,7 @@ def version(sha, timestamp):
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Expected full commit SHA")
     stamp = dt.datetime.fromtimestamp(int(timestamp),dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    return f"v0.4.2-dev.{stamp}.{sha}"
+    return f"v0.4.3-dev.{stamp}.{sha}"
 
 def cooldown(failures):
     """Seconds to wait after the last attempt: 6 hours, doubled for every further failure, capped at 7 days."""
