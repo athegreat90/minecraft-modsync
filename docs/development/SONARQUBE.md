@@ -48,3 +48,7 @@ Put the runner host itself on Tailscale (`tailscale up`), set `runs-on` to its l
 - "analysis has failed" with `Invalid value of sonar.tests`: a module lacks `src/test/kotlin`; the root build only sets `sonar.tests` when the directory exists.
 - Coverage missing: run `check` first, then confirm the XML reports exist.
 - 403 on API reads: the token lacks Browse/administer permissions for that endpoint.
+
+## Release gate
+
+The release reconciler (`.github/workflows/reconcile.yaml`) is triggered by the `validate` workflow run, which contains the `sonar` job with `sonar.qualitygate.wait=true`. A failed quality gate therefore fails `validate` and no development prerelease is dispatched for that push; scheduled and manual reconciliations also require a successful `validate` run for the tip of `main`.
