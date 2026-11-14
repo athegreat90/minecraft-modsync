@@ -12,7 +12,7 @@ exponentially (6h, 12h, 24h, ... up to 7 days). Reconciliation starts at
 `RELEASE_FLOOR` (`7c29453`); older commits are not rebuilt. The reconciliation log reports failures,
 invalid releases, dispatched commits and the remaining backlog.
 
-Each immutable `v0.4.2-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
+Release jobs run in parallel after a fast `version` gate (`validate`, `integration` for the distributed TLS fixture, and the native builds), and `publish` waits for all of them. Each immutable `v0.4.3-dev.<UTC timestamp>.<full SHA>` release must pass JVM/database
 checks, architecture and API checks, source security scanning, distributed TLS
 integration, Linux x64/ARM64 and Windows x64 native builds, native smoke tests and
 benchmarks. JVM distributions, native binaries and multi-platform images all use
