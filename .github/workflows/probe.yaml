@@ -1,0 +1,26 @@
+name: probe-ref-permissions
+on: pull_request
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Try creating refs at different commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAIN: 6448785924e5b82ee6a376cb16e35c86f5c6bde5
+          HIST: 7c2945334787ca9f28d15bde513de55134fdf4ed
+          CD: cd6c32dbb75a71e9f95d28da5fb6d5194bd21fe7
+        run: |
+          set +e
+          for kind in heads tags; do
+            for pair in main:$MAIN hist:$HIST cd:$CD; do
+              label=${pair%%:*}; sha=${pair#*:}
+              ref="refs/$kind/zz-probe-$label-$RANDOM"
+              out=$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=$ref" -f "sha=$sha" 2>&1); rc=$?
+              echo "RESULT $kind $label rc=$rc $(echo "$out" | head -c 160 | tr '
+' ' ')"
+              if [ $rc -eq 0 ]; then gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/$ref" > /dev/null 2>&1; fi
+            done
+          done
