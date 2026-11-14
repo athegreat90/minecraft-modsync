@@ -15,6 +15,7 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 - A commit that keeps failing is no longer retried at a fixed 6 hour interval: the cooldown doubles for each failed or timed-out attempt (6h, 12h, 24h, ...) up to 7 days. Cancelled runs do not count, and the reported `failed` list is unchanged.
 
 ### Changed
+- Trivy is pinned to the latest release, v0.76.2 (previously the `trivy-action` default v0.70.0 for the source scan and `aquasec/trivy:0.67.2` for the image scan) in `ci.yaml`, `release.yaml` and `scripts/release/publish.py`. `aquasecurity/trivy-action` was already at its latest release, v0.36.0, pinned by commit SHA.
 - Version bumped 0.4.1 -> 0.4.2 (patch: release tooling fix only; wire protocol 1 and minimum component compatibility are unchanged). Updated in `build.gradle.kts`, both Dockerfiles, `scripts/openapi.py` (and the regenerated `docs/architecture/openapi.json`), `scripts/release/reconcile.py` and its test, the User-Agent strings (`Installer.kt`, `Modrinth.kt` and their tests), `RELEASES.md`, `docs/deployment/README.md` and `docs/GUIDE.md`.
 
 ## [0.4.1] - 2026-11-14

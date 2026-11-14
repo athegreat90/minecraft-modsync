@@ -103,7 +103,7 @@ def main():
             subprocess.run(["docker","buildx","build","--platform","linux/amd64,linux/arm64","--file",f"docker/{component}/Dockerfile","--tag",image,"--build-arg",f"RELEASE_VERSION={version}","--label",f"org.opencontainers.image.revision={sha}","--provenance=true","--sbom=true","--metadata-file",str(metadata),"--push","."],check=True)
             digest=json.loads(metadata.read_text())["containerimage.digest"]
             # Scan the pushed immutable digest; no release is finalized on failure.
-            subprocess.run(["docker","run","--rm","-e","TRIVY_USERNAME","-e","TRIVY_PASSWORD","aquasec/trivy:0.67.2","image","--exit-code","1","--severity","HIGH,CRITICAL",image.split(':')[0]+"@"+digest],check=True,env={**os.environ,"TRIVY_USERNAME":os.environ["GITHUB_ACTOR"],"TRIVY_PASSWORD":os.environ["GH_TOKEN"]})
+            subprocess.run(["docker","run","--rm","-e","TRIVY_USERNAME","-e","TRIVY_PASSWORD","aquasec/trivy:0.76.2","image","--exit-code","1","--severity","HIGH,CRITICAL",image.split(':')[0]+"@"+digest],check=True,env={**os.environ,"TRIVY_USERNAME":os.environ["GITHUB_ACTOR"],"TRIVY_PASSWORD":os.environ["GH_TOKEN"]})
             digests[component]={"image":image,"digest":digest}
     checksums={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
     manifest={"version":version,"sourceCommit":sha,"apiProtocol":1,"agentProtocol":1,"minimumClient":"0.1.0","minimumAgent":"0.1.0","images":digests,"artifactChecksums":checksums,"migrationRequirements":"Apply Flyway migrations; retain database, agent/client state and configured CA trust."}
