@@ -3,6 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { AccountPage } from './account/account-page';
+import { Login } from './authentication/login';
 import { Overview } from './dashboard/overview';
 import { ServerPageView } from './servers/server-page';
 import { UserDetailView } from './users/user-detail';
@@ -139,5 +141,62 @@ describe('ServerPageView', () => {
 
     http.expectNone('/ui/api/servers/s1/classification');
     expect(text(fixture)).toContain('Give a reason');
+  });
+});
+
+describe('Login', () => {
+  let http: HttpTestingController;
+  beforeEach(() => (http = setup()));
+
+  it('offers a link per configured provider', async () => {
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    http.expectOne('/ui/api/sso/providers').flush({ providers: ['github', 'google'] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(links).toEqual(['/oauth2/authorization/github', '/oauth2/authorization/google']);
+  });
+
+  it('shows only the password form when no provider is configured', async () => {
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    http.expectOne('/ui/api/sso/providers').flush({ providers: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('a').length).toBe(0);
+  });
+});
+
+describe('AccountPage', () => {
+  let http: HttpTestingController;
+  beforeEach(() => (http = setup()));
+
+  it('shows link state per provider and unlinks on request', async () => {
+    const fixture = TestBed.createComponent(AccountPage);
+    fixture.detectChanges();
+    http.expectOne('/ui/api/me/identities').flush({ linked: ['github'], available: ['github', 'google'] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('Unlink GitHub');
+    expect(text(fixture)).toContain('Link Google');
+
+    const unlink = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Unlink GitHub'))!;
+    unlink.click();
+
+    expect(http.expectOne('/ui/api/me/identities/github').request.method).toBe('DELETE');
+  });
+
+  it('says so when no provider is configured', async () => {
+    const fixture = TestBed.createComponent(AccountPage);
+    fixture.detectChanges();
+    http.expectOne('/ui/api/me/identities').flush({ linked: [], available: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('No provider is configured');
   });
 });

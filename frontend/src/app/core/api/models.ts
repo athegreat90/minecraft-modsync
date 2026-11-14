@@ -118,3 +118,16 @@ export const CLASSIFICATIONS: readonly Exclude<Classification, 'UNKNOWN'>[] = [
   'CLIENT_ONLY',
   'BOTH_REQUIRED',
 ];
+
+export interface ProvidersView {
+  readonly providers: readonly string[];
+}
+
+export interface IdentitiesView {
+  readonly linked: readonly string[];
+  readonly available: readonly string[];
+}
+
+export interface LinkStart {
+  readonly authorizationUrl: string;
+}

@@ -21,6 +21,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/servers/server-page').then((m) => m.ServerPageView),
       },
       {
+        path: 'account',
+        loadComponent: () => import('./features/account/account-page').then((m) => m.AccountPage),
+      },
+      {
         path: 'users',
         loadComponent: () => import('./features/users/users-page').then((m) => m.UsersPage),
       },

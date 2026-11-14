@@ -3,7 +3,10 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   Classification,
+  IdentitiesView,
+  LinkStart,
   Problem,
+  ProvidersView,
   PublicationPolicy,
   ServerPage,
   ServerRow,
@@ -100,6 +103,26 @@ export class AdminApi {
     return this.http.post<CommandDone>(`${BASE}/users/${encodeURIComponent(id)}/revoke-devices`, {
       confirm: true,
     });
+  }
+
+  /** Lists the sign-in providers the server has configured; public, used by the login page. */
+  providers(): Observable<ProvidersView> {
+    return this.http.get<ProvidersView>(`${BASE}/sso/providers`);
+  }
+
+  /** Lists the providers linked to the signed-in account and those that can be linked. */
+  identities(): Observable<IdentitiesView> {
+    return this.http.get<IdentitiesView>(`${BASE}/me/identities`);
+  }
+
+  /** Prepares linking a provider; the caller then opens the returned authorization path. */
+  startLink(provider: string): Observable<LinkStart> {
+    return this.http.post<LinkStart>(`${BASE}/me/identities/${encodeURIComponent(provider)}/link`, {});
+  }
+
+  /** Removes a provider link from the signed-in account. */
+  unlink(provider: string): Observable<unknown> {
+    return this.http.delete(`${BASE}/me/identities/${encodeURIComponent(provider)}`);
   }
 }
 

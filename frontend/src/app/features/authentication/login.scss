@@ -24,3 +24,7 @@ input {
   font: inherit;
 }
 button { margin-top: var(--ms-space-2); }
+
+.divider { text-align: center; margin: var(--ms-space-3) 0 var(--ms-space-2); }
+.providers { display: grid; gap: var(--ms-space-2); }
+.providers a { display: flex; align-items: center; justify-content: center; text-decoration: none; }
