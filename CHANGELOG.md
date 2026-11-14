@@ -6,6 +6,18 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-15
+
+### Fixed
+- Clicking **Classify** on the server page appeared to do nothing on long mod lists: the form opened at the top of the section, far from the clicked row. The form now scrolls into view and focuses the reason field.
+- Signing in behind a TLS reverse proxy could appear to do nothing. Without `MODSYNC_FORWARD_HEADERS` the server builds redirects from its own plain-HTTP connection, so the post-login redirect pointed at `http://<host>/ui`, which does not carry the `Secure` session cookie; opening `https://<host>/ui` by hand worked. Tests now prove that `MODSYNC_FORWARD_HEADERS=framework` makes redirects use the public `https` address and that the headers are ignored by default. The setting was already documented for single sign-on; the docs now list this symptom explicitly.
+
+### Changed
+- Version bumped 0.5.1 -> 0.5.2 (patch: bug fixes and documentation; wire protocol 1 and minimum component compatibility are unchanged).
+
+### Documentation
+- `docs/security/SSO_SETUP.md`, `DOCKER.md` and `docs/deployment/README.md` state that password sign-in, not only SSO, needs `MODSYNC_FORWARD_HEADERS=framework` behind a TLS proxy, with the symptom and a one-line check. `MEMORY.md` records the diagnosis.
+
 ## [0.5.1] - 2026-11-14
 
 ### Fixed

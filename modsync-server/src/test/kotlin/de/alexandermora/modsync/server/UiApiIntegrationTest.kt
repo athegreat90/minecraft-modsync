@@ -27,6 +27,7 @@ class UiApiIntegrationTest {
 
     private val state: Path = Files.createTempDirectory("modsync-uiapi-test")
     private lateinit var context: ConfigurableApplicationContext
+    private lateinit var proxied: ConfigurableApplicationContext
     private lateinit var base: String
     private val adminPassword = "fixture-only-bootstrap-password"
 
@@ -45,11 +46,22 @@ class UiApiIntegrationTest {
                 "--modsync.maintenance=false"
             )
         base = "http://127.0.0.1:${requireNotNull((context as WebServerApplicationContext).webServer).port}"
+        proxied =
+            SpringApplicationBuilder(ServerApplication::class.java).run(
+                "--server.port=0",
+                "--server.forward-headers-strategy=framework",
+                "--spring.datasource.url=${database.jdbcUrl}",
+                "--spring.datasource.username=${database.username}",
+                "--spring.datasource.password=${database.password}",
+                "--modsync.bootstrap-password-file=$passwordFile",
+                "--modsync.maintenance=false"
+            )
     }
 
     /** Stops the application. */
     @AfterAll fun stop() {
         context.close()
+        proxied.close()
         state.toFile().deleteRecursively()
     }
 
@@ -86,5 +98,37 @@ class UiApiIntegrationTest {
         val response = TestBrowser(base).json("GET", "/api/v1/info")
 
         assertEquals(200, response.statusCode())
+    }
+
+    /** Returns the Location of an anonymous request to `/ui` that carries the headers a TLS proxy would add. */
+    private fun locationBehindProxy(app: ConfigurableApplicationContext): String {
+        val url = "http://127.0.0.1:${requireNotNull((app as WebServerApplicationContext).webServer).port}/ui"
+        val request =
+            java.net.http.HttpRequest
+                .newBuilder(java.net.URI(url))
+                .header("X-Forwarded-Proto", "https")
+                .header("X-Forwarded-Host", "modsync.example.test")
+                .build()
+        val response =
+            java.net.http.HttpClient
+                .newBuilder()
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER)
+                .build()
+                .send(
+                    request,
+                    java.net.http.HttpResponse.BodyHandlers
+                        .ofString()
+                )
+        return response.headers().firstValue("Location").orElse("")
+    }
+
+    /** With forwarded-header handling on, redirects use the public https address, so a login behind a TLS proxy ends on the dashboard. */
+    @Test fun redirectsUseThePublicAddressBehindAProxy() {
+        assertEquals("https://modsync.example.test/ui/login", locationBehindProxy(proxied))
+    }
+
+    /** By default the headers are ignored, so a client that reaches the port directly cannot steer redirects. */
+    @Test fun forwardedHeadersAreIgnoredByDefault() {
+        assertTrue(locationBehindProxy(context).startsWith("http://127.0.0.1:"), locationBehindProxy(context))
     }
 }

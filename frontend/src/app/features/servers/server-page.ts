@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, OnInit, afterNextRender, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { AdminApi, describeError } from '../../core/api/admin-api';
@@ -21,6 +21,8 @@ import {
 })
 export class ServerPageView implements OnInit {
   private readonly api = inject(AdminApi);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   /** Server id taken from the route (`/servers/:id`). */
   readonly id = input.required<string>();
@@ -56,13 +58,21 @@ export class ServerPageView implements OnInit {
     this.run(this.api.reevaluate(this.id()), 'Re-evaluation requested.');
   }
 
-  /** Opens the classification form for one mod. */
+  /** Opens the classification form for one mod and brings it into view, because it sits far from long mod lists. */
   protected select(entry: EntryRow): void {
     this.selected.set(entry);
     this.classifyForm.reset({
       classification: entry.classification && entry.classification !== 'UNKNOWN' ? entry.classification : 'CLIENT_REQUIRED',
       reason: '',
     });
+    afterNextRender(
+      () => {
+        const form = this.host.nativeElement.querySelector<HTMLElement>('#classify-form');
+        form?.scrollIntoView({ block: 'center' });
+        form?.querySelector<HTMLInputElement>('input[formcontrolname="reason"]')?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   /** Closes the classification form. */

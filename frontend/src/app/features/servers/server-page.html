@@ -78,7 +78,7 @@
     <h2 id="mods">Server mods</h2>
     <p class="ms-muted">{{ p.unreviewed }} of {{ p.entries.length }} still need review.</p>
     @if (selected(); as entry) {
-      <form class="ms-form" [formGroup]="classifyForm" (ngSubmit)="saveClassification()">
+      <form id="classify-form" class="ms-form" [formGroup]="classifyForm" (ngSubmit)="saveClassification()">
         <h3>Classify {{ entry.fileName }}</h3>
         <label>
           Classification
