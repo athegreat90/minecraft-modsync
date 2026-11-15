@@ -6,6 +6,10 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+### Documentation
+- Deployment docs cover a reverse proxy on another machine: bind `MODSYNC_BIND_ADDRESS` to the single LAN or Tailscale address the proxy reaches (never `0.0.0.0`), restrict port 8080, and define the variable once in `.env` because Compose uses the last duplicate line. `docs/USAGE.md` troubleshooting gained the `502 Bad Gateway` after a recreate row.
+- `docs/review/WEB_UI_UX_AUDIT.md` records the live re-test after 0.6.0: the redirect, SSO callback, cookie and HSTS findings are fixed on the deployment once forwarded headers were honoured.
+
 ## [0.6.0] - 2026-11-15
 
 ### Added
