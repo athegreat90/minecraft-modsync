@@ -1,6 +1,7 @@
 package de.alexandermora.modsync.server.ui
 
 import de.alexandermora.modsync.server.auth.UserRepository
+import de.alexandermora.modsync.server.auth.hardenResponseHeaders
 import de.alexandermora.modsync.server.common.AuditService
 import de.alexandermora.modsync.server.sso.LINKED_MARKER
 import de.alexandermora.modsync.server.sso.SsoAccounts
@@ -313,7 +314,11 @@ class DashboardSecurityConfiguration {
             }.csrf {
                 // The Angular client reads the token from the XSRF-TOKEN cookie and echoes it in X-XSRF-TOKEN. The token is never
                 // rendered into HTML bodies, so the plain handler is safe here and also serves the form-based login page.
-                it.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                // The cookie is SameSite=Lax. Secure is left to Spring, which sets it for requests it sees as HTTPS (behind a proxy once
+                // MODSYNC_FORWARD_HEADERS=framework works); forcing it would break plain-HTTP development and tests.
+                val csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse()
+                csrfTokens.setCookieCustomizer { cookie -> cookie.sameSite("Lax") }
+                it.csrfTokenRepository(csrfTokens)
                 it.csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
             }.addFilterAfter(CsrfCookieFilter(), BasicAuthenticationFilter::class.java)
             .sessionManagement {
@@ -322,6 +327,7 @@ class DashboardSecurityConfiguration {
             }.headers { headers ->
                 headers.contentSecurityPolicy { it.policyDirectives(CONTENT_SECURITY_POLICY) }
                 headers.frameOptions { it.deny() }
+                hardenResponseHeaders(headers)
             }.addFilterBefore(LoginThrottleFilter(), UsernamePasswordAuthenticationFilter::class.java)
         registrations.ifAvailable?.let { configureSso(http, it, ssoAccounts, audit) }
         return http.build()
