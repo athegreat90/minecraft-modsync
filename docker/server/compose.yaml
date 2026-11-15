@@ -20,6 +20,8 @@ services:
       MODSYNC_MAINTENANCE: ${MODSYNC_MAINTENANCE:-false}
       # Set to "framework" only behind a reverse proxy you control, so redirects and cookies use the public https address.
       MODSYNC_FORWARD_HEADERS: ${MODSYNC_FORWARD_HEADERS:-none}
+      # Compresses the UI text files and JSON; set to "false" when the reverse proxy already compresses.
+      MODSYNC_COMPRESSION: ${MODSYNC_COMPRESSION:-true}
     secrets: [db_password, bootstrap_password]
     networks: [api, database]
     depends_on:

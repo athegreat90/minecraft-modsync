@@ -15,8 +15,10 @@ import org.springframework.core.annotation.Order
 import org.springframework.context.annotation.Configuration
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -31,6 +33,21 @@ import jakarta.servlet.http.HttpServletRequestWrapper
 import java.util.concurrent.ConcurrentHashMap
 
 private val logger = KotlinLogging.logger {}
+
+private const val PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()"
+
+/**
+ * Adds the response headers shared by both security chains.
+ *
+ * Sends `Referrer-Policy: same-origin` and a `Permissions-Policy` that turns off camera, microphone and geolocation.
+ * `Strict-Transport-Security` stays with Spring Security's default, which sends it only for requests it sees as HTTPS.
+ *
+ * @param headers Header configuration of a chain.
+ */
+fun hardenResponseHeaders(headers: HeadersConfigurer<HttpSecurity>) {
+    headers.referrerPolicy { it.policy(ReferrerPolicy.SAME_ORIGIN) }
+    headers.permissionsPolicyHeader { it.policy(PERMISSIONS_POLICY) }
+}
 
 /**
  * Wires the stateless API security chain.
@@ -54,6 +71,7 @@ class SecurityConfiguration {
      */
     @Bean @Order(Ordered.LOWEST_PRECEDENCE) fun chain(http: HttpSecurity, db: JdbcTemplate, @Value($$"${modsync.maintenance}") maintenance: Boolean): SecurityFilterChain {
         http.csrf { it.disable() }.cors { it.disable() }.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .headers { hardenResponseHeaders(it) }
             .authorizeHttpRequests {
                 it.dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll() // keep real error statuses (404, 409...) instead of re-authorizing /error
                     .requestMatchers("/", "/favicon.ico", "/api/v1/info", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/enroll", "/actuator/health", "/actuator/health/**").permitAll()
