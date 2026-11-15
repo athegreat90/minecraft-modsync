@@ -12,6 +12,7 @@ import de.alexandermora.modsync.protocol.ServerCoverage
 import de.alexandermora.modsync.protocol.UserRegistration
 import de.alexandermora.modsync.protocol.wire
 import de.alexandermora.modsync.server.auth.AuthService
+import de.alexandermora.modsync.server.common.ForwardedHeadersWarningFilter
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import org.junit.jupiter.api.AfterAll
@@ -269,6 +270,11 @@ class DashboardIntegrationTest {
         assertEquals("/ui/login?csrf", stale.headers().firstValue("Location").get())
         assertEquals("/ui/login?csrf", TestBrowser(base).post("/login", credentials, null).location())
         assertEquals("/ui/login", browser.get("/ui").location())
+    }
+
+    /** The forwarded-headers warning is wired into the running application. */
+    @Test fun forwardedHeadersWarningIsRegistered() {
+        assertEquals(1, context.getBeansOfType(ForwardedHeadersWarningFilter::class.java).size)
     }
 
     /** A sign-out form with a stale token is sent to the login page with a reason and does not end the session. */
