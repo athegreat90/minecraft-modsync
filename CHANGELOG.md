@@ -7,6 +7,7 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 ## [Unreleased]
 
 ### Changed
+- `modsync auto schedule --platform windows` now prints a `Register-ScheduledTask` command with the S4U logon type, so the scheduled run no longer flashes an empty console window (the old `schtasks /TR` form opened one every interval). Re-register the task to pick this up.
 - The server page shows timestamps in local time to the second (not ISO text with microseconds) and writes policy, outcome, coverage status and classification names in sentence case (`Server only`, `Up to date`, `Unreviewed`). Values sent to the server are unchanged.
 - The sign-in card sits a fixed distance from the top of the page instead of being centred, so the Google and GitHub buttons that arrive after the form no longer move it (layout shift).
 

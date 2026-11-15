@@ -169,10 +169,14 @@ object SchedulerTemplates {
      *
      * @param executable Absolute path of the modsync executable.
      * @param intervalMinutes Check interval in minutes.
-     * @return A `schtasks` command line creating a per-user task.
+     * @return A PowerShell command creating a per-user task. The S4U logon type runs it non-interactively, so the
+     * console executable never opens a visible window (plain `schtasks /TR` flashes one on every run).
      */
     fun windows(executable: String, intervalMinutes: Int): String {
-        require(intervalMinutes in 5..1439 && executable.none { it == '\n' || it == '"' })
-        return "schtasks /Create /TN \"ModSync Auto\" /SC MINUTE /MO $intervalMinutes /TR \"\\\"$executable\\\" auto run --once\" /F"
+        require(intervalMinutes in 5..1439 && executable.none { it == '\n' || it == '"' || it == '\'' })
+        return "Register-ScheduledTask -TaskName 'ModSync Auto' -Force " +
+            "-Action (New-ScheduledTaskAction -Execute '$executable' -Argument 'auto run --once') " +
+            "-Trigger (New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes $intervalMinutes)) " +
+            "-Principal (New-ScheduledTaskPrincipal -UserId \"\$env:USERDOMAIN\\\$env:USERNAME\" -LogonType S4U)"
     }
 }

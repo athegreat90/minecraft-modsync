@@ -225,7 +225,8 @@ class AutoSyncTest {
         val unit = SchedulerTemplates.systemd("/opt/modsync/bin/modsync", 30)
         assertTrue(unit.contains("ExecStart=\"/opt/modsync/bin/modsync\" auto run --once"))
         assertTrue(unit.contains("OnUnitActiveSec=30min"))
-        assertTrue(SchedulerTemplates.windows("C:\\modsync\\modsync.exe", 30).contains("/MO 30"))
+        val task = SchedulerTemplates.windows("C:\\modsync\\modsync.exe", 30)
+        assertTrue(task.contains("-Minutes 30") && task.contains("-LogonType S4U") && task.contains("'C:\\modsync\\modsync.exe'"))
         assertFailsWith<IllegalArgumentException> { SchedulerTemplates.systemd("/bin/x\"; rm", 30) }
         assertFailsWith<IllegalArgumentException> { SchedulerTemplates.windows("a", 1) }
     }
