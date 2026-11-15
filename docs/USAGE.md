@@ -398,6 +398,7 @@ On Windows use `.\gradlew.bat` and `python` instead of `python3`.
 | `auto status` shows `lastOutcome=FAILED` (no reason is stored); `sync verify` throws `IllegalArgumentException` | The published manifest pins older versions of mods you already have in a newer, unmanaged version, so the installer refuses ("Installation would leave several files for the same mod") and nothing was ever applied | Run `sync plan` and compare the INSTALL lines with your mods folder. Fix it at the source: update the Minecraft server's mods to the versions you run, approve the new hashes and publish a new revision (§3.4); or move your newer copies away |
 | Dashboard: Classify seems to do nothing | Before 0.5.2 the form opened at the top of the section, far from a long mod list | Update the server to 0.5.2 or later |
 | Dashboard: after signing in nothing happens until you type `https://<host>/ui` | The server sits behind a TLS proxy without `MODSYNC_FORWARD_HEADERS=framework`, so redirects point to `http://` and the `Secure` session cookie is not sent | Set `MODSYNC_FORWARD_HEADERS=framework` on Host B and recreate the container ([SSO guide](security/SSO_SETUP.md#12-troubleshooting)) |
+| The site answers `502 Bad Gateway` right after the server container was recreated | The port is bound to `127.0.0.1` again, usually because `.env` holds a second `MODSYNC_BIND_ADDRESS` line (Compose uses the last one), so a proxy on another machine cannot reach it | `docker compose config \| grep host_ip` and `grep MODSYNC_BIND_ADDRESS .env`; the server log shows only health checks | Keep one `MODSYNC_BIND_ADDRESS` line with the address the proxy reaches, then `docker compose up -d --no-deps --force-recreate <server>` with the same `-f` files |
 | Dashboard sign-in ends on "This account is not an administrator" | The account has the CLIENT role; only ADMIN accounts can use the dashboard | Sign in with an administrator account (the Users page lists every role) |
 | Dashboard sign-in ends on "The page was out of date" | The login form was loaded before the CSRF token changed, usually because the login page was open in a second tab | Sign in again from the fresh page and keep one tab on the login page |
 | Windows: replacing `modsync.exe` or the TUI folder fails with "Permission denied" / "Device or resource busy" | The program or its JVM is still running (the TUI runs as a separate `java.exe` from `tui\lib`) | Rename a running `modsync.exe` first (Windows allows it), then copy the new file; end the TUI's `java.exe` before swapping its folder. Check downloads against `SHA256SUMS` of the release |
@@ -408,7 +409,7 @@ On Windows use `.\gradlew.bat` and `python` instead of `python3`.
 | Variable | Used by | Meaning |
 |---|---|---|
 | `MODSYNC_SECRETS_DIR` | server compose | Absolute path to secrets |
-| `MODSYNC_BIND_ADDRESS` | server compose | Listen address (default `127.0.0.1`) |
+| `MODSYNC_BIND_ADDRESS` | server compose | Listen address (default `127.0.0.1`, for a proxy on the same host). With the proxy on another machine, set the one LAN or Tailscale IP it reaches, never `0.0.0.0`. Define it once in `.env`: Compose uses the last duplicate line |
 | `MODSYNC_MAINTENANCE` | server compose | Maintenance mode |
 | `MODSYNC_SERVER_IMAGE` | server compose | Image override |
 | `MODSYNC_STATE_PATH` / `MODSYNC_STATE_DIR` | agent | State directory |

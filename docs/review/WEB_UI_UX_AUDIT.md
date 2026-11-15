@@ -337,15 +337,37 @@ Status of each finding after the remediation branch. "Fixed in code" means the c
 
 | Finding | Status |
 |---|---|
-| F-01, F-02 | **Needs the host.** Set `MODSYNC_FORWARD_HEADERS=framework` and make the proxy send `X-Forwarded-Proto` and `X-Forwarded-Host`. In code: a start-up `WARN` now names the setting. |
+| F-01, F-02 | **Fixed on the host** (verified live, section 19): `MODSYNC_FORWARD_HEADERS=framework` is set. In code: a start-up `WARN` names the setting; on the live deployment it showed that the proxy was already sending `X-Forwarded-Proto`, so only the variable was missing. |
 | F-03, F-04, F-16 | Fixed in code (denied, root and stale-token redirects, with relative `Location` targets). |
 | F-05, F-06 | Fixed in code (`MODSYNC_COMPRESSION`, immutable cache for fingerprinted files). |
-| F-07 | Needs the host (HTTP/2 at `openresty`). |
+| F-07 | Needs the host (HTTP/2 on the proxy; nginx-proxy-manager has an HTTP/2 switch on the proxy host's SSL tab). Not re-checked. |
 | F-08 | Open (reserve space for the SSO buttons). |
 | F-09, F-12, F-18, F-19, F-21 | Fixed in code and checked in a real browser against a local mock API. |
-| F-10, F-11 | Fixed in code for Referrer-Policy, Permissions-Policy and `SameSite`; HSTS and `Secure` return once F-01 is fixed on the host (see the corrections in section 13). |
+| F-10, F-11 | Fixed in code for Referrer-Policy, Permissions-Policy and `SameSite`; HSTS and `Secure` returned once F-01 was fixed on the host (verified live, section 19). |
 | F-13 | Fixed in code (`noindex` and description meta). |
 | F-14 | **Open.** Profile first: database slow-query log or per-call timing, plus the round-trip time from the app host to the database. |
 | F-15, F-17, F-22 | Fixed in code; on identical data the server page is about 2,800 px tall instead of 11,700. |
 | F-20 | Open (readable timestamps and enum labels). |
 | F-23 | Withdrawn. |
+
+## 19. Re-test on the live site after 0.6.0 (2026-11-15)
+
+Same deployment, after 0.6.0 was installed and `MODSYNC_FORWARD_HEADERS=framework` was in effect. Read-only apart from signing in and out; the admin and `test` accounts were used as in the first passes.
+
+| Finding | Result |
+|---|---|
+| F-01 sign-in and sign-out | Fixed. The browser follows `POST /login → /ui → /ui/login?denied` itself, all over `https`, with no CSP error. `POST /logout` answers `Location: https://modsync.alexandermora.de/ui/login?logout` and the session is 401 afterwards. |
+| F-02 SSO callback | Fixed. The `redirect_uri` is `https://modsync.alexandermora.de` for GitHub and Google. The real provider round trip was not run. |
+| F-03, F-16 | Fixed. The `test` account lands on `/ui/login?denied` with the alert "This account is not an administrator…"; a logout without a token gives `/ui/login?csrf`. |
+| F-04 | Fixed. `/` answers `302` to `/ui/`. |
+| F-05, F-06 | Fixed. gzip on the login page and on the hashed bundle; `Cache-Control: max-age=31536000, public, immutable` on `main-*.js`; `index.html` stays `no-cache`. |
+| F-09, F-13 | Fixed. The login card is centred (111 px above and below at 1366×768) and the page is no taller than the viewport; `noindex` and the description are present. |
+| F-10, F-11 | Fixed. `Referrer-Policy: same-origin`, the `Permissions-Policy`, `Strict-Transport-Security: max-age=31536000 ; includeSubDomains` exactly once (the proxy adds no second one), and `Secure; SameSite=Lax` on both cookies. |
+| F-15, F-17, F-22 | Fixed. The server page is 3,074 px tall (was 11,675) with 892 DOM nodes (was 1,430); at 375 px it is 7,918 px (was 40,394). The filter `SOPHISTICATED` shows "Showing 2 of 94 mods", Needs review shows 10 of 94, paging runs 1 to 4, and Cancel returns focus to the same Classify button. |
+| F-18, F-19 | Fixed. Filters load from `?q=te&role=CLIENT` ("1 account"), the fields have `id` and `name`, and the earlier console issue is gone. Disable and End sessions show a confirmation and Cancel returns focus; the network log holds only GET requests. |
+| F-14 | **Unchanged.** `GET /ui/api/servers/{id}` took 8.1 s on two runs and `/ui/api/session` 1.1 s. Still waiting for the profiling numbers. |
+| Lighthouse (login page, desktop) | Accessibility 100, Best Practices 100, Agentic Browsing 100 (the layout-shift audit no longer fails). SEO 60 only because the `noindex` meta is intentional. |
+
+What went wrong on the way, kept as a deployment lesson: the first attempt at the host change left the site at `502 Bad Gateway`. The proxy (nginx-proxy-manager) runs on another machine and reaches the server over the LAN, but the server's `.env` ended up with two `MODSYNC_BIND_ADDRESS` lines (the server's LAN address, then `127.0.0.1`). Compose uses the last one, so the port bound to loopback and the proxy could not connect. The server log showed only health checks, never a proxied request. Keeping one line with the LAN address fixed it. The deployment docs now describe a proxy on another machine and this symptom.
+
+Not tested: the real Google or GitHub sign-in round trip, admin sign-out through the UI button on this deployment (tested for the `test` account over HTTP), and HTTP/2 on the proxy (F-07). F-08 and F-20 remain open.
