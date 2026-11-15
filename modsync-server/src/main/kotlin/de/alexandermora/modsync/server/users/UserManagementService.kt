@@ -53,11 +53,12 @@ class UserManagementService(
      * Lists accounts matching the filter, one page at a time.
      *
      * Unknown role or status values are ignored and the text filter is matched literally and case-insensitively.
+     * It deliberately opens no transaction: the search is a plain read of unrelated rows, and a read-only transaction
+     * would add several round trips around it.
      *
      * @param filter Search and paging criteria.
      * @return The requested page, ordered by username.
      */
-    @Transactional(readOnly = true)
     fun list(filter: UserFilter): UserPage {
         val role = filter.role?.takeIf { it == CLIENT_ROLE || it == ADMIN_ROLE }
         val enabled =

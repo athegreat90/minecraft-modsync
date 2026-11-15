@@ -8,12 +8,12 @@ import de.alexandermora.modsync.protocol.PublicationRecord
 import de.alexandermora.modsync.protocol.ServerCoverage
 import de.alexandermora.modsync.protocol.ServerInfo
 import de.alexandermora.modsync.server.clientinventory.CoverageService
-import de.alexandermora.modsync.server.common.notFound
 import de.alexandermora.modsync.server.inventory.InventoryService
 import de.alexandermora.modsync.server.publication.ManifestGateway
 import de.alexandermora.modsync.server.publication.PublicationPersistence
 import kotlinx.serialization.Serializable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 private const val HISTORY_LIMIT = 20
 private const val SHORT_HASH = 12
@@ -103,31 +103,33 @@ class DashboardService(
      *
      * Servers without an accepted inventory or published manifest yield empty sections instead of errors.
      *
+     * Every read runs in one read-only transaction, so the database sees a single begin and commit instead of one per
+     * repository call. Nothing under it writes: the services only read servers, inventory, overrides, manifests,
+     * coverage and history.
+     *
      * @param serverId Server UUID.
      * @return The page model.
      * @throws org.springframework.web.server.ResponseStatusException with 404 when the server does not exist.
      */
+    @Transactional(readOnly = true)
     fun server(serverId: String): ServerPage {
         val id = uuid(serverId)
-        val row = inventory.listServers().firstOrNull { it.id == id } ?: notFound()
+        val server = inventory.server(id)
         val approvals = inventory.overridesFor(id)
         val entries =
-            if (inventory.server(id).snapshotId == null) {
-                emptyList()
-            } else {
-                inventory.inventory(id).entries.map {
-                    EntryRow(it.fileName, it.sha512, it.sha512.take(SHORT_HASH), approvals[it.sha512]?.classification)
-                }
-            }
+            server.snapshotId
+                ?.let { scan -> inventory.entries(scan) }
+                .orEmpty()
+                .map { EntryRow(it.fileName, it.sha512, it.sha512.take(SHORT_HASH), approvals[it.sha512]?.classification) }
         val manifest: Manifest? = manifests.latest(id)
         return ServerPage(
-            row,
+            inventory.info(server),
             persistence.policy(id) ?: PublicationPolicy.MANUAL,
             entries,
             entries.count { it.classification == null },
             manifest?.revision,
             manifest?.artifacts.orEmpty().map { ManifestRow(it.fileName, it.projectId, it.versionId, it.classification) },
-            manifest?.let { coverage.forServer(id) },
+            manifest?.let { coverage.forManifest(id, it) },
             persistence.history(id, HISTORY_LIMIT)
         )
     }
