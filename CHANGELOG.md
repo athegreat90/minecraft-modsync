@@ -6,6 +6,26 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-15
+
+### Added
+- Server page: the Server mods table has a file-name filter, a **Needs review** toggle, paging of 25 and a live match count, and the Latest manifest section is collapsed by default. On the same data the page is about 2,800 px tall instead of 11,700.
+- Users page: the search, role, status and page are kept in the URL, the count reads "1 account" / "N accounts" in a live region, and the filter fields have an id and name.
+- Start-up diagnostics: the server logs one `WARN` the first time a request carries `X-Forwarded-Proto` while `MODSYNC_FORWARD_HEADERS` is not set.
+- `MODSYNC_COMPRESSION` (default `true`) compresses the UI text files and JSON; set it to `false` when the reverse proxy already compresses. The fingerprinted UI files (`main-*.js`, `chunk-*.js`, `styles-*.css`) are cached for a year as immutable.
+- Both security chains send `Referrer-Policy: same-origin` and a `Permissions-Policy` that turns off camera, microphone and geolocation. The `XSRF-TOKEN` cookie is `SameSite=Lax`, and the UI shell asks search engines not to index it.
+
+### Fixed
+- A signed-in account without the ADMIN role is sent to `/ui/login?denied` with a message instead of a raw 403 page, a login form with a stale CSRF token is sent to `/ui/login?csrf`, and the bare host and `/favicon.ico` redirect to the dashboard instead of answering 401. The `/ui/api/*` calls keep their plain 403 and 401.
+- Closing the Classify form returns focus to the row's **Classify** button, **Disable account** and **End sessions and tokens** ask for confirmation before anything is sent, sign-in failures are announced as alerts, the login card is centred without a scrollbar, and the server list no longer shows a stray bullet.
+
+### Changed
+- Version bumped 0.5.2 -> 0.6.0 (minor: new UI features; wire protocol 1 and minimum component compatibility are unchanged).
+
+### Documentation
+- `docs/review/WEB_UI_UX_AUDIT.md` records the real-browser audit of the live administration UI with 22 findings, their evidence and the remediation status. Not addressed in this release: the server page API takes about 7.5 s on the live deployment (cause not yet profiled), HTTP/2 at the reverse proxy, the layout shift when the single sign-on buttons appear (F-08) and readable timestamps and enum labels (F-20).
+- `DOCKER.md`, `docs/deployment/README.md` and `SECURITY.md` describe `MODSYNC_COMPRESSION`, asset caching and the new response headers; `docs/security/SSO_SETUP.md` mentions the start-up warning; `docs/USAGE.md` troubleshooting gained the denied and stale-page sign-in messages.
+
 ## [0.5.2] - 2026-11-15
 
 ### Fixed

@@ -144,7 +144,7 @@ Server list, server detail, account and login pages loaded cleanly produced **ze
 - **F-17:** closing the Classify form with **Cancel** leaves focus on `BODY` instead of returning to the **Classify** button.
 - **F-18:** filtered user results are not announced (no live region); search and select fields lack `id`/`name`.
 - Tables have no `<caption>`; `<th>` has no `scope` (not flagged by Lighthouse).
-- **F-23 (suspected, not yet confirmed):** below 48rem `styles.scss:83` sets `display: block` on `table`, `tbody`, `tr` and `td`. In Chromium that usually removes the table meaning (rows, columns, headers) that screen readers use. Lighthouse cannot detect this. Confirm with the accessibility tree at 375 px before fixing.
+- **F-23 (withdrawn):** below 48rem `styles.scss:83` sets `display: block` on `table`, `tbody`, `tr` and `td`, which I suspected would remove the table meaning for screen readers. I tested a fixture with the same CSS in Chrome 157: at 375 px the accessibility tree still has `table`, `row`, `columnheader` and `cell`, and each cell includes its `data-label` text (for example "File alpha.jar"). Not a defect in this browser. Other browsers and screen readers were not tested.
 - Not covered: real screen-reader testing, forced-colors mode.
 
 ## 10. Responsive design findings
@@ -204,8 +204,8 @@ No memory growth or repeated subscriptions were seen in a short three-route navi
 | F-07 | Low | Reverse proxy | HTTP/1.1 only | Confirmed |
 | F-08 | Low | `login` component | CLS 0.07 to 0.10 when SSO buttons appear after `/ui/api/sso/providers` | Probable |
 | F-09 | Low | `login.scss:3` | Margin collapse: card not centred, spurious scrollbar | Confirmed |
-| F-10 | Low | Security headers | No HSTS, Referrer-Policy or Permissions-Policy observed | Confirmed |
-| F-11 | Low | CSRF cookie | `XSRF-TOKEN` has no `Secure` or `SameSite` attribute | Confirmed |
+| F-10 | Low | Security headers | No Referrer-Policy or Permissions-Policy. HSTS looked missing only because the server did not see HTTPS (same root cause as F-01); Spring sends it for requests it sees as HTTPS | Confirmed (HSTS part corrected) |
+| F-11 | Low | CSRF cookie | `XSRF-TOKEN` has no `SameSite`; `Secure` is missing only while the server does not see HTTPS (same root cause as F-01) | Confirmed (Secure part corrected) |
 | F-12 | Low | Login notice | Error notice is `role="status"`, not `alert` | Confirmed |
 | F-13 | Low | `index.html` | No meta description or `noindex` for an admin console | Confirmed |
 | F-16 | Low | Login CSRF | Stale `_csrf` token (second tab) gives a bare 403 with no message | Confirmed |
@@ -215,7 +215,7 @@ No memory growth or repeated subscriptions were seen in a short three-route navi
 | F-20 | Low | Server page | Raw ISO timestamps, enum names, opaque ids shown to admins | Confirmed |
 | F-21 | Low | Server list | Stray list bullet outside the card | Confirmed |
 | F-22 | Low | Server page | Only text "Loading server…" during a 7.5 s wait; LCP understates real wait | Confirmed |
-| F-23 | Low | `styles.scss:83` | Mobile card CSS (`display: block` on table parts) probably drops table semantics for screen readers | Suspected, to confirm |
+| F-23 | n/a | `styles.scss:83` | Mobile card CSS (`display: block` on table parts) was suspected to drop table semantics for screen readers | **Withdrawn**: not reproduced (see section 9) |
 
 ### F-01 — Redirects use `http://`; sign-in and sign-out appear to do nothing (High)
 
@@ -274,8 +274,8 @@ No memory growth or repeated subscriptions were seen in a short three-route navi
 
 ### F-10 to F-13 — Hardening and polish (Low)
 
-- **F-10:** add `Strict-Transport-Security`, `Referrer-Policy: same-origin` and a restrictive `Permissions-Policy`. Do it *after* F-01, because HSTS with the current `http://` redirects would worsen the symptom.
-- **F-11:** the Angular client must read the cookie, so `HttpOnly=false` is intentional; `Secure` and `SameSite=Lax` can still be set.
+- **F-10:** add `Referrer-Policy: same-origin` and a restrictive `Permissions-Policy`. Correction found during remediation: Spring Security already sends `Strict-Transport-Security: max-age=31536000 ; includeSubDomains` for any request it sees as HTTPS, so HSTS looked missing only because the server did not see HTTPS (F-01). Fixing F-01 restores it; no code change.
+- **F-11:** the Angular client must read the cookie, so `HttpOnly=false` is intentional. Add `SameSite=Lax`. Correction: Spring sets `Secure` from `request.isSecure()`, so it also appears once the server sees HTTPS (F-01); forcing it in code would break plain-HTTP development.
 - **F-12:** use `role="alert"` for the failed-sign-in notice.
 - **F-13:** add `<meta name="robots" content="noindex">` and a short description.
 
@@ -288,7 +288,7 @@ No memory growth or repeated subscriptions were seen in a short three-route navi
 - **F-20:** format timestamps for humans (local time, seconds), map enums to readable labels, show `unreviewed` in the same style, and show mod names instead of raw Modrinth ids where known.
 - **F-21:** remove the list marker (`list-style: none`) from the server list.
 - **F-22:** add a skeleton or spinner and, for waits over about 3 s, a "still loading" message. After F-14, re-measure; LCP will then reflect the real content.
-- **F-23:** if the accessibility tree at 375 px confirms the loss, restore `role="table"`, `row`, `cell` and `columnheader` on the card-styled table parts. **Test:** an accessibility spec at the mobile breakpoint.
+- **F-23:** withdrawn, see section 9.
 
 ## 14. Recommended solutions, in order
 
@@ -298,7 +298,7 @@ See the roadmap below. All fixes use existing Spring Boot and Angular facilities
 
 1. **Now (ops, no release):** set `MODSYNC_FORWARD_HEADERS=framework` and confirm the proxy forwards `X-Forwarded-Proto` and `X-Forwarded-Host`. Verify with `curl -si -X POST …/login` that `Location` is `https://`. Clears F-01 and F-02.
 2. **Next:** profile the admin API latency (F-14): database slow-query log or a timing log per repository call, plus the app-to-database round-trip time. Change queries only after the numbers show where the time goes.
-3. **Next patch (UI):** F-15 (filter and paging), F-03 (denied handler), F-04 (root redirect and favicon), F-16, F-17, F-18, F-19, F-09, F-12, F-21, F-23 (if confirmed), plus a startup warning for the forwarded-headers misconfiguration.
+3. **Next patch (UI):** F-15 (filter and paging), F-03 (denied handler), F-04 (root redirect and favicon), F-16, F-17, F-18, F-19, F-09, F-12, F-21, plus a startup warning for the forwarded-headers misconfiguration.
 4. **Delivery pass:** F-05, F-06, F-07 together at the proxy or static handler.
 5. **Hardening pass:** F-10, F-11, F-13 (after step 1).
 6. **Polish:** F-08, F-20, F-22.
@@ -320,13 +320,32 @@ See the roadmap below. All fixes use existing Spring Boot and Angular facilities
 |---|---|
 | Pages / routes tested | 9 (plus 3 login notice states) |
 | Workflows executed | 19 (plus 5 viewports, 3 Lighthouse runs, 2 traces) |
-| Confirmed defects | 20 confirmed, 1 probable (F-08), 1 header-confirmed with suspected consequence (F-02), 1 suspected (F-23) |
+| Confirmed defects | 20 confirmed, 1 probable (F-08), 1 header-confirmed with suspected consequence (F-02); F-23 was withdrawn after testing |
 | Browser console errors | 7 error-level messages across 3 types (CSP `form-action` ×4: 3 login, 1 logout; 401 resource ×2; stale-CSRF 403 ×1), plus 3 distinct issue-level messages |
 | Unexpected failed network requests | 7 (4 aborted `POST` login/logout, 1 stale-CSRF 403, 2 root-URL 401s) |
 | UX/UI problems | 11 (F-01, F-03, F-04, F-09, F-15, F-16, F-18, F-19, F-20, F-21, F-22) |
-| Accessibility problems | 3 confirmed (F-12, F-17, F-18) plus 1 suspected (F-23); Lighthouse a11y score 100 on both audited pages |
+| Accessibility problems | 3 confirmed (F-12, F-17, F-18); Lighthouse a11y score 100 on both audited pages |
 | Performance findings | 6 (F-05, F-06, F-07, F-08, F-14, F-22) |
 | Security-hardening findings | 2 (F-10, F-11) |
 | Blocked or untested scenarios | 10 (see section 16) |
 
 **Top five to fix first:** F-01 (`http://` redirects), F-02 (SSO `redirect_uri`, same switch), F-14 (7.5 s admin API), F-15 (unfiltered 94-row tables), F-03 (non-admin Whitelabel 403).
+
+## 18. Remediation status (release 0.6.0)
+
+Status of each finding after the remediation branch. "Fixed in code" means the change is merged into the 0.6.0 release and covered by tests; items marked "needs the host" cannot be fixed by a release.
+
+| Finding | Status |
+|---|---|
+| F-01, F-02 | **Needs the host.** Set `MODSYNC_FORWARD_HEADERS=framework` and make the proxy send `X-Forwarded-Proto` and `X-Forwarded-Host`. In code: a start-up `WARN` now names the setting. |
+| F-03, F-04, F-16 | Fixed in code (denied, root and stale-token redirects, with relative `Location` targets). |
+| F-05, F-06 | Fixed in code (`MODSYNC_COMPRESSION`, immutable cache for fingerprinted files). |
+| F-07 | Needs the host (HTTP/2 at `openresty`). |
+| F-08 | Open (reserve space for the SSO buttons). |
+| F-09, F-12, F-18, F-19, F-21 | Fixed in code and checked in a real browser against a local mock API. |
+| F-10, F-11 | Fixed in code for Referrer-Policy, Permissions-Policy and `SameSite`; HSTS and `Secure` return once F-01 is fixed on the host (see the corrections in section 13). |
+| F-13 | Fixed in code (`noindex` and description meta). |
+| F-14 | **Open.** Profile first: database slow-query log or per-call timing, plus the round-trip time from the app host to the database. |
+| F-15, F-17, F-22 | Fixed in code; on identical data the server page is about 2,800 px tall instead of 11,700. |
+| F-20 | Open (readable timestamps and enum labels). |
+| F-23 | Withdrawn. |
