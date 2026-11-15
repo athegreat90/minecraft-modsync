@@ -11,6 +11,7 @@ import {
   PublicationPolicy,
   ServerPage,
 } from '../../core/api/models';
+import { LabelPipe, TimestampPipe } from '../../shared/format/format';
 
 /** Rows per page in the mods table. */
 const MODS_PAGE_SIZE = 25;
@@ -18,7 +19,7 @@ const MODS_PAGE_SIZE = 25;
 /** One server: publication policy, history, client coverage, scanned mods with classification and the latest manifest. */
 @Component({
   selector: 'ms-server-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TimestampPipe, LabelPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './server-page.html',
 })

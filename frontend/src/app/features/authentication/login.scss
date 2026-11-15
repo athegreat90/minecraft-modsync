@@ -1,8 +1,9 @@
-// Centre the card in the viewport. The host fills exactly one viewport, so no margin can collapse and add a scrollbar.
-:host { display: grid; place-items: center; min-height: 100dvh; }
+// Place the card a fixed distance from the top. Centring would move it up when the provider buttons arrive after the
+// form, which is a layout shift. The host fills one viewport, so the margin never adds a scrollbar.
+:host { display: grid; justify-items: center; align-content: start; min-height: 100dvh; }
 .login {
   width: min(100%, 24rem);
-  margin: 0;
+  margin: 12dvh 0 0;
   padding: var(--ms-space-4);
   background: var(--ms-surface);
   border: 1px solid var(--ms-border);
