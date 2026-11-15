@@ -6,8 +6,11 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-15
+
 ### Changed
 - The administration server page sends 14 database statements instead of 49 and the users page 1 instead of 6, because the page now reads in one read-only transaction, looks the server up by id and loads the manifest once. On a database host that answers slowly (the live one adds about 153 ms per exchange) the server page drops from about 7.5 s to about 2.1 s. Results are unchanged. A statement budget test per endpoint guards against regressions. The session and overview calls are unchanged.
+- Version bumped 0.6.0 -> 0.6.1 (patch: performance of two administration calls and documentation; wire protocol 1 and minimum component compatibility are unchanged).
 
 ### Documentation
 - Deployment docs cover a reverse proxy on another machine: bind `MODSYNC_BIND_ADDRESS` to the single LAN or Tailscale address the proxy reaches (never `0.0.0.0`), restrict port 8080, and define the variable once in `.env` because Compose uses the last duplicate line. `docs/USAGE.md` troubleshooting gained the `502 Bad Gateway` after a recreate row.
