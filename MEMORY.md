@@ -376,3 +376,12 @@ Not verified / outstanding:
 - Environment: the repo lives under OneDrive, which locks `build/` directories ("Unable to delete directory"). Run Gradle from a copy outside OneDrive; spotless also needs a real git checkout (use a scratch `git worktree`, not a copy without `.git`). Deleting a scratch worktree can fail with "Filename too long" under the scratchpad path.
 - Security note: a device `refreshToken` from `~/.modsync/config.json` was printed in the session log by a redaction that missed it; the user may want to revoke that device's credentials.
 - User instruction: always record my choices in this file.
+
+## Session 2026-11-15 (cont.): 0.6.4 released and deployed (PR #50)
+
+- Process followed: merged #50 after PR checks passed (squash `208f67a`, branch deleted), waited for `validate`, `reconcile-main-releases` and `development-release` on `main` (all success), then deployed `v0.6.4-dev.20261115212145.208f67a` using the same digest-pinning steps as 0.6.3 (backups `.env.bak-deploy-064` in `server/` and `agent/`).
+- Verified: server and agent containers healthy on the new digests, `/api/v1/info` answers protocol 1 with the same control-plane id; Windows `modsync.exe` replaced from the checksum-verified release asset (previous kept as `modsync-prev-backup.exe`), `doctor` and `connection test` pass.
+- Verified (the #50 fix on the real host): `auto run --once` now prints `Pending(reason=Installation would leave several files for the same mod: ...)` and exits 0 instead of `Failed(reason=IllegalArgumentException)` and exit 1.
+- Not verified: the `ModSync Auto` task showed `LastTaskResult` 1 for the 22:36 run, which used the 0.6.3 exe; the next scheduled run should report 0. The absence of the console window was not confirmed by the user yet.
+- Still open: the server manifest (revision 4) is older than the client's mods, so the sync stays pending until it is republished; the 0.6.3 scheduler template still prints `DOMAIN\user` and the docs do not say `S4U` needs elevation.
+- TUI upgraded on the Windows host to 0.6.4 (checksum-verified zip) in `%LOCALAPPDATA%\ModSyncDeploy\tui` after confirming no TUI process was running (a running `java.exe` held the folder; the user closed it first). The previous TUI is kept in `ModSyncDeploy\tui-prev`; `MODSYNC_TUI_HOME` already pointed to `tui`. Smoke test through `modsync interactive` passed.
