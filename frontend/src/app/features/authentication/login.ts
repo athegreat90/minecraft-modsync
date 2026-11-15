@@ -6,6 +6,12 @@ import { readXsrfToken } from '../../core/auth/csrf';
 /** Display names of the sign-in providers the server may offer. */
 const PROVIDER_NAMES: Readonly<Record<string, string>> = { google: 'Google', github: 'GitHub' };
 
+/** A message above the form; failures are announced assertively, informational messages politely. */
+interface Notice {
+  readonly text: string;
+  readonly role: 'alert' | 'status';
+}
+
 /**
  * Sign-in page.
  *
@@ -25,7 +31,7 @@ export class Login implements OnInit {
   /** Value for the hidden `_csrf` form field. */
   protected readonly csrf = signal(readXsrfToken(document.cookie));
   /** Message derived from the `error`, `logout`, `expired`, `denied`, `csrf` and `sso` markers the server sets. */
-  protected readonly notice = signal(this.describe());
+  protected readonly notice = signal<Notice | null>(this.describe());
   /** Providers offered next to the password form. */
   protected readonly providers = signal<readonly { id: string; name: string }[]>([]);
 
@@ -36,26 +42,26 @@ export class Login implements OnInit {
     });
   }
 
-  private describe(): string {
+  private describe(): Notice | null {
     const params = this.route.snapshot.queryParamMap;
     if (params.has('sso')) {
-      return 'That account could not be signed in. Sign in with your password, then link Google or GitHub from your account page.';
+      return { text: 'That account could not be signed in. Sign in with your password, then link Google or GitHub from your account page.', role: 'alert' };
     }
     if (params.has('error')) {
-      return 'Sign-in failed. Check your username and password.';
+      return { text: 'Sign-in failed. Check your username and password.', role: 'alert' };
     }
     if (params.has('denied')) {
-      return 'This account is not an administrator. Sign in with an administrator account.';
+      return { text: 'This account is not an administrator. Sign in with an administrator account.', role: 'alert' };
     }
     if (params.has('csrf')) {
-      return 'The page was out of date. Please sign in again.';
+      return { text: 'The page was out of date. Please sign in again.', role: 'alert' };
     }
     if (params.has('expired')) {
-      return 'Your session expired. Please sign in again.';
+      return { text: 'Your session expired. Please sign in again.', role: 'status' };
     }
     if (params.has('logout')) {
-      return 'You have been signed out.';
+      return { text: 'You have been signed out.', role: 'status' };
     }
-    return '';
+    return null;
   }
 }

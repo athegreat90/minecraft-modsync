@@ -1,9 +1,9 @@
 <h1>Users</h1>
 <form class="ms-toolbar" [formGroup]="filter" (ngSubmit)="search()" role="search">
-  <label>Username <input type="search" formControlName="q" /></label>
+  <label>Username <input id="user-q" name="q" type="search" autocomplete="off" formControlName="q" /></label>
   <label>
     Role
-    <select formControlName="role">
+    <select id="user-role" name="role" formControlName="role">
       <option value="">Any</option>
       <option value="ADMIN">Administrator</option>
       <option value="CLIENT">Client</option>
@@ -11,7 +11,7 @@
   </label>
   <label>
     Status
-    <select formControlName="status">
+    <select id="user-status" name="status" formControlName="status">
       <option value="">Any</option>
       <option value="enabled">Enabled</option>
       <option value="disabled">Disabled</option>
@@ -23,6 +23,7 @@
 @if (error()) {
   <p class="ms-alert error" role="alert">{{ error() }}</p>
 }
+<p class="ms-muted" role="status">{{ count() }}</p>
 @if (result(); as r) {
   @if (r.users.length === 0) {
     <p class="ms-muted">No accounts match.</p>
@@ -43,7 +44,7 @@
     </table>
     <nav class="ms-toolbar" aria-label="Pages">
       <button class="ms-button secondary" type="button" [disabled]="r.page === 0" (click)="go(r.page - 1)">Previous</button>
-      <span>Page {{ r.page + 1 }} of {{ r.totalPages }} · {{ r.total }} accounts</span>
+      <span>Page {{ r.page + 1 }} of {{ r.totalPages }}</span>
       <button class="ms-button secondary" type="button" [disabled]="r.page + 1 >= r.totalPages" (click)="go(r.page + 1)">Next</button>
     </nav>
   }
