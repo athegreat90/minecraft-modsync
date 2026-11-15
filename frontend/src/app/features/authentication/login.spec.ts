@@ -1,5 +1,7 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 import { readXsrfToken } from '../../core/auth/csrf';
 import { Login } from './login';
@@ -26,5 +28,28 @@ describe('Login', () => {
     expect(form.method).toBe('post');
     expect(form.querySelector('input[name="username"]')).not.toBeNull();
     expect(form.querySelector('input[name="password"]')).not.toBeNull();
+  });
+});
+
+describe('Login notices', () => {
+  it.each([
+    ['error', 'Sign-in failed. Check your username and password.'],
+    ['denied', 'This account is not an administrator. Sign in with an administrator account.'],
+    ['csrf', 'The page was out of date. Please sign in again.'],
+  ])('shows the message for the %s marker', (marker, message) => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ [marker]: '' }) } } },
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    http.expectOne('/ui/api/sso/providers').flush({ providers: [] });
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.notice')?.textContent).toContain(message);
   });
 });
