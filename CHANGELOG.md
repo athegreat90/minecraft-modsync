@@ -6,6 +6,10 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+### Changed
+- The server page shows timestamps in local time to the second (not ISO text with microseconds) and writes policy, outcome, coverage status and classification names in sentence case (`Server only`, `Up to date`, `Unreviewed`). Values sent to the server are unchanged.
+- The sign-in card sits a fixed distance from the top of the page instead of being centred, so the Google and GitHub buttons that arrive after the form no longer move it (layout shift).
+
 ## [0.6.2] - 2026-11-15
 
 ### Changed

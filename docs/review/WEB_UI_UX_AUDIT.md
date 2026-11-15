@@ -341,13 +341,13 @@ Status of each finding after the remediation branch. "Fixed in code" means the c
 | F-03, F-04, F-16 | Fixed in code (denied, root and stale-token redirects, with relative `Location` targets). |
 | F-05, F-06 | Fixed in code (`MODSYNC_COMPRESSION`, immutable cache for fingerprinted files). |
 | F-07 | Needs the host (HTTP/2 on the proxy; nginx-proxy-manager has an HTTP/2 switch on the proxy host's SSL tab). Not re-checked. |
-| F-08 | Open (reserve space for the SSO buttons). |
+| F-08 | Fixed in code: the login card is anchored a fixed distance from the top instead of being centred, so provider buttons that arrive after the form cannot move it. Not yet measured live. |
 | F-09, F-12, F-18, F-19, F-21 | Fixed in code and checked in a real browser against a local mock API. |
 | F-10, F-11 | Fixed in code for Referrer-Policy, Permissions-Policy and `SameSite`; HSTS and `Secure` returned once F-01 was fixed on the host (verified live, section 19). |
 | F-13 | Fixed in code (`noindex` and description meta). |
 | F-14 | **Cause found, code part fixed, host part open.** The database host adds about 153 ms to every request/response exchange (profiled read-only over SSH). Code: server page 49 to 14 statements, users page 6 to 1. The remaining fix is on the database host or its address. |
 | F-15, F-17, F-22 | Fixed in code; on identical data the server page is about 2,800 px tall instead of 11,700. |
-| F-20 | Open (readable timestamps and enum labels). |
+| F-20 | Fixed in code on the server page: timestamps in local time to the second, enum names in sentence case (`Server only`, `Up to date`, `Unreviewed`). Raw ids stay, because the API carries no mod names to show instead. |
 | F-23 | Withdrawn. |
 
 ## 19. Re-test on the live site after 0.6.0 (2026-11-15)
@@ -370,4 +370,4 @@ Same deployment, after 0.6.0 was installed and `MODSYNC_FORWARD_HEADERS=framewor
 
 What went wrong on the way, kept as a deployment lesson: the first attempt at the host change left the site at `502 Bad Gateway`. The proxy (nginx-proxy-manager) runs on another machine and reaches the server over the LAN, but the server's `.env` ended up with two `MODSYNC_BIND_ADDRESS` lines (the server's LAN address, then `127.0.0.1`). Compose uses the last one, so the port bound to loopback and the proxy could not connect. The server log showed only health checks, never a proxied request. Keeping one line with the LAN address fixed it. The deployment docs now describe a proxy on another machine and this symptom.
 
-Not tested: the real Google or GitHub sign-in round trip, admin sign-out through the UI button on this deployment (tested for the `test` account over HTTP), and HTTP/2 on the proxy (F-07). F-08 and F-20 remain open.
+Not tested: the real Google or GitHub sign-in round trip, admin sign-out through the UI button on this deployment (tested for the `test` account over HTTP), and HTTP/2 on the proxy (F-07). F-08 and F-20 are fixed in code after 0.6.2 and not yet measured live.

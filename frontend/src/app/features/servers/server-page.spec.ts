@@ -111,6 +111,16 @@ describe('ServerPageView mods table', () => {
     expect(root(fixture).querySelector('label[for="mods-filter"]')?.textContent).toContain('Filter mods');
   });
 
+  it('shows classifications and review state as readable labels', async () => {
+    const fixture = await open([entry(1, null), entry(2, 'SERVER_ONLY')]);
+
+    const badges = Array.from(root(fixture).querySelectorAll('#mods-table .ms-badge')).map((b) => b.textContent?.trim());
+    expect(badges).toEqual(['Unreviewed', 'Server only']);
+    const options = Array.from(root(fixture).querySelectorAll('select option')).map((o) => o.textContent?.trim());
+    expect(options).toContain('Trusted auto');
+    expect(options).not.toContain('TRUSTED_AUTO');
+  });
+
   it('shows only unreviewed mods when Needs review is ticked', async () => {
     const fixture = await open([entry(1, null), entry(2), entry(3, null)]);
 

@@ -188,8 +188,8 @@ describe('ServerPageView actions', () => {
   it('renders history, coverage and manifest sections', async () => {
     const text = ((await open()).nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('PUBLISHED');
-    expect(text).toContain('UP_TO_DATE');
+    expect(text).toContain('Published');
+    expect(text).toContain('Up to date');
     expect(text).toContain('m.jar');
     expect(text).toContain('stale');
   });
