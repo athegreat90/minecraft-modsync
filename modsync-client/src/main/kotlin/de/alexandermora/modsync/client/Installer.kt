@@ -53,6 +53,10 @@ import java.util.zip.CRC32
  * @property complete True once the apply finished and was verified.
  */
 @Serializable data class InstallJournal(val id: String, val entries: List<JournalEntry>, val previous: ManagedState, val complete: Boolean = false)
+
+/** An installation was refused because it would leave two files for one mod; nothing was changed, the user must resolve it. */
+class DuplicateModsException(message: String) : IllegalArgumentException(message)
+
 /**
  * Applies sync plans to one instance directory atomically, with backups, a journal and rollback.
  *
@@ -207,7 +211,7 @@ class Installer(
             .groupBy({ it.first }, { it.second })
             .filterValues { it.distinct().size > 1 }
         val listing = result.entries.joinToString("; ") { "${it.key} in ${it.value.joinToString()}" }
-        require(result.isEmpty()) { "Installation would leave several files for the same mod: $listing; resolve the duplicates first" }
+        if (result.isNotEmpty()) throw DuplicateModsException("Installation would leave several files for the same mod: $listing; resolve the duplicates first")
     }
 /**
  * Lists mod ids that more than one installed file provides.
