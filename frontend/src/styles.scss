@@ -70,8 +70,18 @@ a { color: var(--ms-emerald); }
 .ms-field-error { color: var(--ms-danger); font-size: 0.9rem; }
 
 .ms-toolbar { display: flex; flex-wrap: wrap; gap: var(--ms-space-2); align-items: end; margin-bottom: var(--ms-space-3); }
+.ms-filter label { display: grid; gap: var(--ms-space-1); }
+.ms-filter .ms-check { display: flex; align-items: center; min-height: var(--ms-touch); }
+.ms-filter .ms-check input { min-height: 0; width: 1.25rem; height: 1.25rem; }
 .ms-button.danger { border-color: var(--ms-danger); }
 .ms-button.secondary { background: transparent; }
+
+details > summary { cursor: pointer; }
+details > summary h2 { display: inline; }
+
+.ms-skeleton { height: 8rem; border-radius: var(--ms-radius); background: var(--ms-surface-raised); animation: ms-pulse 1.2s ease-in-out infinite; }
+@keyframes ms-pulse { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .ms-skeleton { animation: none; } }
 
 .ms-table { width: 100%; border-collapse: collapse; }
 .ms-table th, .ms-table td { padding: var(--ms-space-2); text-align: left; border-bottom: 1px solid var(--ms-border); vertical-align: top; }

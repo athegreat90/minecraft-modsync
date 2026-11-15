@@ -100,47 +100,73 @@
       </form>
     }
     @if (p.entries.length > 0) {
-      <table class="ms-table">
-        <thead><tr><th>File</th><th>Hash</th><th>Classification</th><th></th></tr></thead>
-        <tbody>
-          @for (e of p.entries; track e.sha512) {
-            <tr>
-              <td data-label="File" class="wrap">{{ e.fileName }}</td>
-              <td data-label="Hash"><code>{{ e.shortHash }}</code></td>
-              <td data-label="Classification">
-                @if (e.classification) { <span class="ms-badge ok">{{ e.classification }}</span> }
-                @else { <span class="ms-badge warn">unreviewed</span> }
-              </td>
-              <td data-label="Action">
-                <button class="ms-button secondary" type="button" (click)="select(e)">Classify</button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <div class="ms-toolbar ms-filter" role="search">
+        <label for="mods-filter">
+          Filter mods by file name
+          <input id="mods-filter" name="filter" type="search" [value]="filterText()" (input)="setFilter($event)" />
+        </label>
+        <label class="ms-check" for="mods-needs-review">
+          <input id="mods-needs-review" name="needsReview" type="checkbox" [checked]="needsReview()" (change)="setNeedsReview($event)" />
+          Needs review
+        </label>
+      </div>
+      <p id="mods-count" class="ms-muted" role="status">Showing {{ filtered().length }} of {{ p.entries.length }} mods</p>
+      @if (filtered().length === 0) {
+        <p class="ms-muted">No mods match.</p>
+      } @else {
+        <table id="mods-table" class="ms-table">
+          <thead><tr><th>File</th><th>Hash</th><th>Classification</th><th></th></tr></thead>
+          <tbody>
+            @for (e of visibleMods(); track e.sha512) {
+              <tr>
+                <td data-label="File" class="wrap">{{ e.fileName }}</td>
+                <td data-label="Hash"><code>{{ e.shortHash }}</code></td>
+                <td data-label="Classification">
+                  @if (e.classification) { <span class="ms-badge ok">{{ e.classification }}</span> }
+                  @else { <span class="ms-badge warn">unreviewed</span> }
+                </td>
+                <td data-label="Action">
+                  <button class="ms-button secondary" type="button" [attr.data-sha]="e.sha512" (click)="select(e)">Classify</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (pageCount() > 1) {
+          <nav class="ms-toolbar" aria-label="Pages">
+            <button class="ms-button secondary" type="button" [disabled]="pageIndex() === 0" (click)="go(pageIndex() - 1)">Previous</button>
+            <span>Page {{ pageIndex() + 1 }} of {{ pageCount() }}</span>
+            <button class="ms-button secondary" type="button" [disabled]="pageIndex() + 1 >= pageCount()" (click)="go(pageIndex() + 1)">Next</button>
+          </nav>
+        }
+      }
     }
   </section>
 
   <section class="ms-card" aria-labelledby="manifest">
-    <h2 id="manifest">Latest manifest</h2>
     @if (p.manifest.length === 0) {
+      <h2 id="manifest">Latest manifest</h2>
       <p class="ms-muted">Nothing published yet.</p>
     } @else {
-      <table class="ms-table">
-        <thead><tr><th>File</th><th>Project</th><th>Version</th><th>Classification</th></tr></thead>
-        <tbody>
-          @for (m of p.manifest; track m.fileName) {
-            <tr>
-              <td data-label="File" class="wrap">{{ m.fileName }}</td>
-              <td data-label="Project" class="wrap">{{ m.projectId }}</td>
-              <td data-label="Version" class="wrap">{{ m.versionId }}</td>
-              <td data-label="Classification"><span class="ms-badge">{{ m.classification }}</span></td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <details>
+        <summary><h2 id="manifest">Latest manifest ({{ p.manifest.length }} {{ p.manifest.length === 1 ? 'artifact' : 'artifacts' }})</h2></summary>
+        <table class="ms-table">
+          <thead><tr><th>File</th><th>Project</th><th>Version</th><th>Classification</th></tr></thead>
+          <tbody>
+            @for (m of p.manifest; track m.fileName) {
+              <tr>
+                <td data-label="File" class="wrap">{{ m.fileName }}</td>
+                <td data-label="Project" class="wrap">{{ m.projectId }}</td>
+                <td data-label="Version" class="wrap">{{ m.versionId }}</td>
+                <td data-label="Classification"><span class="ms-badge">{{ m.classification }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </details>
     }
   </section>
 } @else if (!error()) {
   <p class="ms-muted" role="status">Loading server…</p>
+  <div class="ms-skeleton" aria-hidden="true"></div>
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Injector, OnInit, afterNextRender, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, OnInit, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { AdminApi, describeError } from '../../core/api/admin-api';
@@ -11,6 +11,9 @@ import {
   PublicationPolicy,
   ServerPage,
 } from '../../core/api/models';
+
+/** Rows per page in the mods table. */
+const MODS_PAGE_SIZE = 25;
 
 /** One server: publication policy, history, client coverage, scanned mods with classification and the latest manifest. */
 @Component({
@@ -35,6 +38,28 @@ export class ServerPageView implements OnInit {
   protected readonly notice = signal('');
   /** The mod currently being classified. */
   protected readonly selected = signal<EntryRow | null>(null);
+
+  /** Case-insensitive file name filter of the mods table. */
+  protected readonly filterText = signal('');
+  /** When set, the mods table lists only mods nobody classified yet. */
+  protected readonly needsReview = signal(false);
+  private readonly requestedPage = signal(0);
+
+  /** Mods matching the filter and the "Needs review" toggle. */
+  protected readonly filtered = computed(() => {
+    const needle = this.filterText().trim().toLowerCase();
+    const onlyUnreviewed = this.needsReview();
+    return (this.page()?.entries ?? []).filter(
+      (e) => (!onlyUnreviewed || e.classification === null) && e.fileName.toLowerCase().includes(needle),
+    );
+  });
+  protected readonly pageCount = computed(() => Math.max(1, Math.ceil(this.filtered().length / MODS_PAGE_SIZE)));
+  /** Zero-based page shown; clamped because a reload can shrink the list. */
+  protected readonly pageIndex = computed(() => Math.min(this.requestedPage(), this.pageCount() - 1));
+  protected readonly visibleMods = computed(() => {
+    const start = this.pageIndex() * MODS_PAGE_SIZE;
+    return this.filtered().slice(start, start + MODS_PAGE_SIZE);
+  });
 
   protected readonly policyForm = new FormGroup({
     policy: new FormControl<PublicationPolicy>('MANUAL', { nonNullable: true }),
@@ -75,9 +100,26 @@ export class ServerPageView implements OnInit {
     );
   }
 
-  /** Closes the classification form. */
+  /** Closes the classification form and returns focus to the button that opened it. */
   protected cancel(): void {
-    this.selected.set(null);
+    this.closeClassify();
+  }
+
+  /** Applies a new file name filter and goes back to the first page. */
+  protected setFilter(event: Event): void {
+    this.filterText.set((event.target as HTMLInputElement).value);
+    this.requestedPage.set(0);
+  }
+
+  /** Switches the "Needs review" toggle and goes back to the first page. */
+  protected setNeedsReview(event: Event): void {
+    this.needsReview.set((event.target as HTMLInputElement).checked);
+    this.requestedPage.set(0);
+  }
+
+  /** Shows another page of the mods table. */
+  protected go(index: number): void {
+    this.requestedPage.set(index);
   }
 
   /** Approves the classification of the selected mod. */
@@ -89,7 +131,19 @@ export class ServerPageView implements OnInit {
     }
     const { classification, reason } = this.classifyForm.getRawValue();
     this.run(this.api.classify(this.id(), entry.sha512, classification, reason.trim()), 'Classification saved.', () =>
-      this.selected.set(null),
+      this.closeClassify(),
+    );
+  }
+
+  private closeClassify(): void {
+    const sha = this.selected()?.sha512;
+    this.selected.set(null);
+    afterNextRender(
+      () => {
+        const buttons = Array.from(this.host.nativeElement.querySelectorAll<HTMLButtonElement>('button[data-sha]'));
+        buttons.find((b) => b.dataset['sha'] === sha)?.focus();
+      },
+      { injector: this.injector },
     );
   }
 
