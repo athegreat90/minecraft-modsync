@@ -165,6 +165,16 @@ class AutoSyncTest {
         assertEquals(null, settings.lastRevision)
     }
 
+    /** A refused duplicate is pending with its message, is not reported as a failed sync and leaves the revision unrecorded. */
+    @Test fun duplicateModRefusalIsPendingNotFailed() {
+        val gateway = FakeGateway(manifest(2, artifact("new.jar", "a".repeat(128))))
+        val (outcome, settings) = runner(gateway) { throw DuplicateModsException("several files for the same mod: a in a-1.jar, a-2.jar") }.runOnce()
+        assertEquals(AutoOutcome.Pending("several files for the same mod: a in a-1.jar, a-2.jar"), outcome)
+        assertTrue(gateway.syncs.isEmpty())
+        assertEquals(ClientActivity.SYNC_PENDING, gateway.inventories.single().activity)
+        assertEquals(null, settings.lastRevision)
+    }
+
     /** An update exceeds the install-only policy and stays pending. */
     @Test fun updateExceedsInstallPolicy() {
         val old = Fixtures.jar(installer.mods.resolve("m.jar"), "m")

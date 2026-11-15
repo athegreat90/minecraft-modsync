@@ -228,6 +228,8 @@ class AutoSyncRunner(
             runCatching { gateway.reportSync(SyncReport(manifest.serverId, manifest.revision, "SUCCESS")) }
             finish(AutoOutcome.Applied(manifest.revision), manifest, ClientActivity.IDLE, now, applied = manifest.revision)
         }.getOrElse { error ->
+            // A refused duplicate is the user's to resolve and changed nothing, so it is pending, not a failed sync.
+            if (error is DuplicateModsException) return finish(AutoOutcome.Pending(error.message.orEmpty()), manifest, ClientActivity.SYNC_PENDING, now)
             runCatching { gateway.reportSync(SyncReport(manifest.serverId, manifest.revision, "FAILED")) }
             finish(AutoOutcome.Failed(error.javaClass.simpleName), manifest, ClientActivity.SYNC_FAILED, now)
         }

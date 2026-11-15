@@ -53,6 +53,10 @@ import java.util.zip.CRC32
  * @property complete True once the apply finished and was verified.
  */
 @Serializable data class InstallJournal(val id: String, val entries: List<JournalEntry>, val previous: ManagedState, val complete: Boolean = false)
+
+/** An installation was refused because it would leave two files for one mod; nothing was changed, the user must resolve it. */
+class DuplicateModsException(message: String) : IllegalArgumentException(message)
+
 /**
  * Applies sync plans to one instance directory atomically, with backups, a journal and rollback.
  *
@@ -207,7 +211,7 @@ class Installer(
             .groupBy({ it.first }, { it.second })
             .filterValues { it.distinct().size > 1 }
         val listing = result.entries.joinToString("; ") { "${it.key} in ${it.value.joinToString()}" }
-        require(result.isEmpty()) { "Installation would leave several files for the same mod: $listing; resolve the duplicates first" }
+        if (result.isNotEmpty()) throw DuplicateModsException("Installation would leave several files for the same mod: $listing; resolve the duplicates first")
     }
 /**
  * Lists mod ids that more than one installed file provides.
@@ -270,7 +274,7 @@ class Installer(
         require(uri.scheme == "https" && uri.host == "cdn.modrinth.com" && uri.userInfo == null && uri.port in setOf(-1,443) && uri.path.startsWith("/data/")) { "Download must use official HTTPS Modrinth CDN" }
         require(artifact.size in 1..536870912 && validHash(artifact.sha512))
         val client=newHttp()
-        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.6.3").build(), HttpResponse.BodyHandlers.ofInputStream())
+        val response=client.send(HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","Minecraft-ModSync/0.6.4").build(), HttpResponse.BodyHandlers.ofInputStream())
         response.body().use { input ->
             require(response.statusCode() == 200) { "Download failed: HTTP ${response.statusCode()}" }
             Files.newOutputStream(target, CREATE_NEW, WRITE).use { output ->

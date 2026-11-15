@@ -6,6 +6,11 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-15
+
+### Fixed
+- Automatic synchronization reports an install refused because it would leave two files for the same mod as pending, with the mod and file names, instead of `Failed(reason=IllegalArgumentException)`. The pass no longer exits 1 or reports a FAILED sync for it; the refusal still changes nothing on disk.
+
 ## [0.6.3] - 2026-11-15
 
 ### Changed
