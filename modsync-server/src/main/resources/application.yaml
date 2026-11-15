@@ -3,6 +3,11 @@ server:
   # Set MODSYNC_FORWARD_HEADERS=framework only behind a reverse proxy you control, so redirects use the public https address.
   forward-headers-strategy: ${MODSYNC_FORWARD_HEADERS:none}
   max-http-request-header-size: 16KB
+  # Compresses the UI text files and JSON. Set MODSYNC_COMPRESSION=false when the reverse proxy already compresses.
+  compression:
+    enabled: ${MODSYNC_COMPRESSION:true}
+    mime-types: text/html,text/css,text/javascript,application/javascript,application/json,image/svg+xml
+    min-response-size: 1024
   tomcat:
     max-http-form-post-size: 2MB
   servlet:
