@@ -83,7 +83,7 @@ class AutoCommandsTest {
     fun runAndSchedule() {
         assertEquals(0, cli("auto", "run", "--once").first)
         assertTrue(cli("auto", "schedule", "--platform", "systemd", "--executable", "/opt/modsync").second.contains("OnUnitActiveSec=30min"))
-        assertTrue(cli("auto", "schedule", "--platform", "windows", "--executable", "C:\\modsync.exe", "--interval-minutes", "60").second.contains("/MO 60"))
+        assertTrue(cli("auto", "schedule", "--platform", "windows", "--executable", "C:\\modsync.exe", "--interval-minutes", "60").second.contains("-Minutes 60"))
         assertEquals(1, cli("auto", "schedule", "--platform", "cron", "--executable", "x").first)
     }
 }
