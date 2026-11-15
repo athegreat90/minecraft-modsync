@@ -6,6 +6,9 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+### Changed
+- The administration session call (`GET /ui/api/session`, made on every page load) sends 1 database statement instead of 7, because it reads only the account's name and role in a single query instead of loading the full user detail with its device count inside a transaction. On a database host that answers slowly (the live one adds about 153 ms per exchange) this saves about 0.9 s on every page load. Results are unchanged, and a session whose account was deleted still answers 404. The user detail page keeps its device count.
+
 ## [0.6.1] - 2026-11-15
 
 ### Changed

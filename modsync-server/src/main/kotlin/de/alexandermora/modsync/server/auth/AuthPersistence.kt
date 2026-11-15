@@ -83,6 +83,17 @@ interface UserRepository : JpaRepository<UserAccount, String> {
     fun findByUsername(username: String): UserAccount?
 
     /**
+     * Finds the account with this id in a single statement.
+     *
+     * Unlike `findById`, a derived query has no transaction of its own, so it does not add the five transaction-control
+     * statements `findById` sends around its select.
+     *
+     * @param id Account UUID.
+     * @return The account, or null.
+     */
+    fun findFirstById(id: String): UserAccount?
+
+    /**
      * Checks whether a username is already taken.
      *
      * @param username Login name.

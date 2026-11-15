@@ -63,14 +63,10 @@ class UiApiControllerTest {
     @Test
     fun sessionNamesTheSignedInAccount() {
         Mockito
-            .`when`(management.detail(admin))
+            .`when`(management.session(admin))
             .thenReturn(
                 de.alexandermora.modsync.server.users
-                    .UserDetail(
-                        de.alexandermora.modsync.server.users
-                            .UserSummary(admin, "root", "ADMIN", true, false),
-                        0
-                    )
+                    .UserSummary(admin, "root", "ADMIN", true, false)
             )
 
         mvc()
@@ -78,6 +74,14 @@ class UiApiControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.username").value("root"))
             .andExpect(jsonPath("$.role").value("ADMIN"))
+    }
+
+    /** A session whose account was deleted answers 404, as before. */
+    @Test
+    fun sessionIsNotFoundWhenTheAccountIsGone() {
+        Mockito.`when`(management.session(admin)).thenReturn(null)
+
+        mvc().perform(get("/ui/api/session")).andExpect(status().isNotFound)
     }
 
     /** An empty installation yields an empty JSON list, not an error. */
