@@ -17,11 +17,24 @@
     <section class="ms-card" aria-labelledby="status">
       <h2 id="status">Access</h2>
       @if (d.user.enabled) {
-        <button class="ms-button danger" type="button" (click)="disable()">Disable account</button>
+        <button id="ask-disable" class="ms-button danger" type="button" (click)="askDisable()">Disable account</button>
       } @else {
         <button class="ms-button" type="button" (click)="enable()">Enable account</button>
       }
-      <button class="ms-button secondary" type="button" (click)="revokeSessions()">End sessions and tokens</button>
+      <button id="ask-revoke-sessions" class="ms-button secondary" type="button" (click)="askRevokeSessions()">End sessions and tokens</button>
+      @if (pending(); as action) {
+        <div role="alert">
+          <p>
+            @if (action === 'disable') {
+              Disable this account? Its sessions end immediately.
+            } @else {
+              End all sessions and tokens of this account? Clients must sign in again.
+            }
+          </p>
+          <button id="confirm-action" class="ms-button danger" type="button" (click)="confirm()">Confirm</button>
+          <button class="ms-button secondary" type="button" (click)="cancel()">Cancel</button>
+        </div>
+      }
     </section>
 
     <section class="ms-card" aria-labelledby="password">

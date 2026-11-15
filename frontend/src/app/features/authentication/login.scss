@@ -1,6 +1,8 @@
+// Centre the card in the viewport. The host fills exactly one viewport, so no margin can collapse and add a scrollbar.
+:host { display: grid; place-items: center; min-height: 100dvh; }
 .login {
-  max-width: 24rem;
-  margin: 10vh auto 0;
+  width: min(100%, 24rem);
+  margin: 0;
   padding: var(--ms-space-4);
   background: var(--ms-surface);
   border: 1px solid var(--ms-border);

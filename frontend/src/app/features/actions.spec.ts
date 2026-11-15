@@ -59,6 +59,8 @@ describe('UserDetailView actions', () => {
   it('disables the account and reloads it', async () => {
     const fixture = await open();
     button(fixture, 'Disable account').click();
+    await settle(fixture);
+    button(fixture, 'Confirm').click();
 
     http.expectOne('/ui/api/users/u1/disable').flush({ userId: 'u1' });
     http.expectOne('/ui/api/users/u1').flush({ ...client, user: { ...client.user, enabled: false } });
@@ -66,6 +68,50 @@ describe('UserDetailView actions', () => {
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Account disabled.');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Enable account');
+  });
+
+  it('asks before disabling and sends nothing until Confirm', async () => {
+    const fixture = await open();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[role="alert"]')).toBeNull();
+
+    button(fixture, 'Disable account').click();
+    await settle(fixture);
+
+    expect(http.match('/ui/api/users/u1/disable')).toEqual([]);
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('Disable this account? Its sessions end immediately.');
+    expect(document.activeElement).toBe(button(fixture, 'Confirm'));
+  });
+
+  it('cancels the disable confirmation, sends nothing and returns focus to the button', async () => {
+    const fixture = await open();
+    button(fixture, 'Disable account').click();
+    await settle(fixture);
+
+    button(fixture, 'Cancel').click();
+    await settle(fixture);
+
+    expect(http.match('/ui/api/users/u1/disable')).toEqual([]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')).toBeNull();
+    expect(document.activeElement).toBe(button(fixture, 'Disable account'));
+  });
+
+  it('asks before ending sessions and returns focus to the button after Cancel', async () => {
+    const fixture = await open();
+    button(fixture, 'End sessions and tokens').click();
+    await settle(fixture);
+
+    expect(http.match('/ui/api/users/u1/revoke-sessions')).toEqual([]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent).toContain(
+      'End all sessions and tokens of this account? Clients must sign in again.',
+    );
+    expect(document.activeElement).toBe(button(fixture, 'Confirm'));
+
+    button(fixture, 'Cancel').click();
+    await settle(fixture);
+
+    expect(http.match('/ui/api/users/u1/revoke-sessions')).toEqual([]);
+    expect(document.activeElement).toBe(button(fixture, 'End sessions and tokens'));
   });
 
   it('enables a disabled account', async () => {
@@ -84,6 +130,8 @@ describe('UserDetailView actions', () => {
   it('ends sessions', async () => {
     const fixture = await open();
     button(fixture, 'End sessions and tokens').click();
+    await settle(fixture);
+    button(fixture, 'Confirm').click();
 
     const revoke = http.expectOne('/ui/api/users/u1/revoke-sessions');
     expect(revoke.request.method).toBe('POST');
@@ -243,6 +291,94 @@ describe('UsersPage', () => {
     await settle(fixture);
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Page 2 of 2');
+  });
+
+  it('shows the filter from the URL and loads that page', async () => {
+    await TestBed.inject(Router).navigateByUrl('/?q=an&role=CLIENT&status=enabled&page=1');
+    const fixture = await render(UsersPage);
+
+    const request = http.expectOne((r) => r.url === '/ui/api/users');
+    expect(request.request.params.get('q')).toBe('an');
+    expect(request.request.params.get('role')).toBe('CLIENT');
+    expect(request.request.params.get('status')).toBe('enabled');
+    expect(request.request.params.get('page')).toBe('1');
+    request.flush({ ...result, page: 1 });
+    await settle(fixture);
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector<HTMLInputElement>('#user-q')?.value).toBe('an');
+    expect(root.querySelector<HTMLSelectElement>('#user-role')?.value).toBe('CLIENT');
+    expect(root.querySelector<HTMLSelectElement>('#user-status')?.value).toBe('enabled');
+  });
+
+  it('loads the unfiltered first page when the URL has no filter', async () => {
+    const fixture = await render(UsersPage);
+
+    const request = http.expectOne((r) => r.url === '/ui/api/users');
+    expect(request.request.params.keys()).toEqual(['page']);
+    expect(request.request.params.get('page')).toBe('0');
+    request.flush(result);
+    await settle(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('ann');
+  });
+
+  it('writes the filter and the page to the URL, replacing the history entry', async () => {
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate');
+    const fixture = await render(UsersPage);
+    http.expectOne((r) => r.url === '/ui/api/users').flush(result);
+    await settle(fixture);
+
+    type(fixture, 'input[type="search"]', 'an');
+    button(fixture, 'Search').click();
+    http.expectOne((r) => r.url === '/ui/api/users').flush(result);
+    await settle(fixture);
+
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: { q: 'an', role: null, status: null, page: null }, replaceUrl: true }));
+    expect(router.url).toBe('/?q=an');
+
+    button(fixture, 'Next').click();
+    http.expectOne((r) => r.url === '/ui/api/users').flush({ ...result, page: 1 });
+    await settle(fixture);
+
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: { q: 'an', role: null, status: null, page: 1 }, replaceUrl: true }));
+    expect(router.url).toBe('/?q=an&page=1');
+  });
+
+  it('counts accounts with the right plural and announces the count politely', async () => {
+    const fixture = await render(UsersPage);
+    http.expectOne((r) => r.url === '/ui/api/users').flush({ ...result, totalPages: 1, total: 1 });
+    await settle(fixture);
+
+    const root = fixture.nativeElement as HTMLElement;
+    const live = () => Array.from(root.querySelectorAll('[role="status"]')).map((e) => e.textContent?.trim());
+    expect(live()).toContain('1 account');
+    expect(root.textContent).not.toContain('1 accounts');
+
+    button(fixture, 'Search').click();
+    http.expectOne((r) => r.url === '/ui/api/users').flush(result);
+    await settle(fixture);
+    expect(live()).toContain('30 accounts');
+
+    button(fixture, 'Search').click();
+    http.expectOne((r) => r.url === '/ui/api/users').flush({ users: [], page: 0, totalPages: 0, total: 0 });
+    await settle(fixture);
+    expect(live()).toContain('0 accounts');
+  });
+
+  it('gives the three filter fields an id and a name', async () => {
+    const fixture = await render(UsersPage);
+    http.expectOne((r) => r.url === '/ui/api/users').flush(result);
+    await settle(fixture);
+
+    const root = fixture.nativeElement as HTMLElement;
+    const search = root.querySelector<HTMLInputElement>('input[type="search"]')!;
+    expect([search.id, search.name, search.autocomplete]).toEqual(['user-q', 'q', 'off']);
+    const role = root.querySelector<HTMLSelectElement>('select[formcontrolname="role"]')!;
+    expect([role.id, role.name]).toEqual(['user-role', 'role']);
+    const status = root.querySelector<HTMLSelectElement>('select[formcontrolname="status"]')!;
+    expect([status.id, status.name]).toEqual(['user-status', 'status']);
   });
 
   it('says so when nothing matches', async () => {

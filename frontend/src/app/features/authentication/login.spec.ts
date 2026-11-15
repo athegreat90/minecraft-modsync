@@ -31,6 +31,32 @@ describe('Login', () => {
   });
 });
 
+describe('Login notice roles', () => {
+  it.each([
+    ['error', 'alert'],
+    ['denied', 'alert'],
+    ['csrf', 'alert'],
+    ['sso', 'alert'],
+    ['logout', 'status'],
+    ['expired', 'status'],
+  ])('announces the %s marker with role="%s"', (marker, role) => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ [marker]: '' }) } } },
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    http.expectOne('/ui/api/sso/providers').flush({ providers: [] });
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.notice')?.getAttribute('role')).toBe(role);
+  });
+});
+
 describe('Login notices', () => {
   it.each([
     ['error', 'Sign-in failed. Check your username and password.'],

@@ -46,7 +46,10 @@ a { color: var(--ms-emerald); }
   border-radius: var(--ms-radius);
 }
 
-.ms-grid { display: grid; gap: var(--ms-space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); }
+.ms-grid {
+  display: grid; gap: var(--ms-space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  padding: 0; list-style: none;
+}
 
 .ms-muted { color: var(--ms-text-muted); }
 
