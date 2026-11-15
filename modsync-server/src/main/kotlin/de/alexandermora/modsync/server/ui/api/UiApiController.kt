@@ -68,7 +68,7 @@ class UiApiController(
      */
     @GetMapping("/session")
     fun session(): SessionView {
-        val account = management.detail(actor())?.user ?: notFound()
+        val account = management.session(actor()) ?: notFound()
         return SessionView(account.username, account.role)
     }
 

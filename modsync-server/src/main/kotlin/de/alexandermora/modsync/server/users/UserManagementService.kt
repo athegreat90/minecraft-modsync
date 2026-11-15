@@ -90,6 +90,16 @@ class UserManagementService(
     fun detail(id: String): UserDetail? = users.findById(id).map { UserDetail(summary(it), devices.countByUserIdAndRevokedFalse(it.id)) }.orElse(null)
 
     /**
+     * Loads the account behind a signed-in session: its name and role, without the device count [detail] adds.
+     *
+     * The dashboard asks for this on every page load, so it is one statement with no transaction around it.
+     *
+     * @param id User UUID.
+     * @return The account summary, or null when the account no longer exists.
+     */
+    fun session(id: String): UserSummary? = users.findFirstById(id)?.let(::summary)
+
+    /**
      * Creates a CLIENT account.
      *
      * Not transactional itself: [AuthService.createUser] commits in its own transaction, so a concurrent duplicate

@@ -19,7 +19,7 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-private const val SESSION_BUDGET = 7
+private const val SESSION_BUDGET = 1
 private const val OVERVIEW_BUDGET = 2
 private const val USERS_BUDGET = 2
 private const val SERVER_PAGE_BUDGET = 15
