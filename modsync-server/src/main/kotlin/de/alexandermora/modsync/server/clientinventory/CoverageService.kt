@@ -68,10 +68,21 @@ class CoverageService(
      */
     fun forServer(serverId: String, now: Instant = Instant.now()): ServerCoverage {
         val id = uuid(serverId)
-        val manifest = manifests.latest(id)
-        val mods = persistence.modsForServer(id)
+        return forManifest(id, manifests.latest(id), now)
+    }
+
+    /**
+     * Builds the compatibility matrix against a manifest the caller already loaded, so it is not read again.
+     *
+     * @param serverId Server UUID, already validated.
+     * @param manifest Latest manifest of that server.
+     * @param now Current time, injectable for deterministic tests.
+     * @return Coverage of every instance that selected the server against [manifest].
+     */
+    fun forManifest(serverId: String, manifest: Manifest, now: Instant = Instant.now()): ServerCoverage {
+        val mods = persistence.modsForServer(serverId)
         val rows =
-            persistence.instancesForServer(id).map { instance ->
+            persistence.instancesForServer(serverId).map { instance ->
                 val installed = mods[instance.instanceId].orEmpty()
                 val view =
                     ClientInventoryView(
@@ -93,6 +104,6 @@ class CoverageService(
                     missingClientArtifacts(manifest, view).size
                 )
             }
-        return ServerCoverage(id, manifest.revision, rows)
+        return ServerCoverage(serverId, manifest.revision, rows)
     }
 }

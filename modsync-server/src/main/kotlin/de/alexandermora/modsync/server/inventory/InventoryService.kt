@@ -75,20 +75,29 @@ class InventoryService(
      *
      * @return Server summaries.
      */
-    fun listServers(): List<ServerInfo> =
-        servers.findAllByOrderByName().map { server ->
-            val at = server.inventoryAt
-            ServerInfo(
-                server.id,
-                server.name,
-                server.minecraftVersion,
-                server.loader,
-                server.loaderVersion,
-                at?.toString(),
-                server.revision.takeIf { it > 0 },
-                inventoryStale = at == null || at.isBefore(Instant.now().minusSeconds(STALE_AFTER_SECONDS))
-            )
-        }
+    fun listServers(): List<ServerInfo> = servers.findAllByOrderByName().map(::info)
+
+    /**
+     * Summarizes one server.
+     *
+     * Inventory is flagged stale when it is older than 15 minutes or was never committed.
+     *
+     * @param server Persisted server.
+     * @return The summary, identical to the matching row of [listServers].
+     */
+    fun info(server: MinecraftServer): ServerInfo {
+        val at = server.inventoryAt
+        return ServerInfo(
+            server.id,
+            server.name,
+            server.minecraftVersion,
+            server.loader,
+            server.loaderVersion,
+            at?.toString(),
+            server.revision.takeIf { it > 0 },
+            inventoryStale = at == null || at.isBefore(Instant.now().minusSeconds(STALE_AFTER_SECONDS))
+        )
+    }
 
     /**
      * Loads a server by id.
