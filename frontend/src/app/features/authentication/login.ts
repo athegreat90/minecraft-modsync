@@ -24,7 +24,7 @@ export class Login implements OnInit {
 
   /** Value for the hidden `_csrf` form field. */
   protected readonly csrf = signal(readXsrfToken(document.cookie));
-  /** Message derived from the `error`, `logout`, `expired` and `sso` markers the server sets. */
+  /** Message derived from the `error`, `logout`, `expired`, `denied`, `csrf` and `sso` markers the server sets. */
   protected readonly notice = signal(this.describe());
   /** Providers offered next to the password form. */
   protected readonly providers = signal<readonly { id: string; name: string }[]>([]);
@@ -43,6 +43,12 @@ export class Login implements OnInit {
     }
     if (params.has('error')) {
       return 'Sign-in failed. Check your username and password.';
+    }
+    if (params.has('denied')) {
+      return 'This account is not an administrator. Sign in with an administrator account.';
+    }
+    if (params.has('csrf')) {
+      return 'The page was out of date. Please sign in again.';
     }
     if (params.has('expired')) {
       return 'Your session expired. Please sign in again.';

@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.DisabledException
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -33,6 +34,8 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.access.AccessDeniedHandler
+import org.springframework.security.web.access.AccessDeniedHandlerImpl
 import org.springframework.security.web.authentication.AuthenticationFailureHandler
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint
@@ -42,6 +45,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.session.SessionLimit
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import org.springframework.security.web.csrf.CsrfException
 import org.springframework.security.web.csrf.CsrfToken
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 import org.springframework.security.web.session.HttpSessionEventPublisher
@@ -67,6 +71,34 @@ private const val CONTENT_SECURITY_POLICY = "default-src 'self'; style-src 'self
 fun isDashboardRequest(request: HttpServletRequest): Boolean {
     val path = if (request.dispatcherType == DispatcherType.ERROR) request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI) as? String ?: "" else request.requestURI
     return path == "/login" || path == "/logout" || path == "/ui" || path.startsWith("/ui/") || path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")
+}
+
+/**
+ * Answers a denied dashboard request.
+ *
+ * Calls below `/ui/api/` keep the plain 403 that script clients expect. Browsers are sent back to the login page with a reason
+ * (`csrf` for a missing or stale CSRF token, `denied` for a signed-in account without the ADMIN role) so they see a message
+ * instead of an error page. The target is relative on purpose, so it stays on the public scheme and host behind a reverse proxy.
+ */
+class DashboardAccessDeniedHandler : AccessDeniedHandler {
+    private val plain = AccessDeniedHandlerImpl()
+
+    /**
+     * Rejects the request with 403 for the API, or redirects the browser to the login page with the reason.
+     *
+     * @param request Denied request.
+     * @param response Response that receives the status and the `Location` header.
+     * @param accessDeniedException Why the request was denied.
+     */
+    override fun handle(request: HttpServletRequest, response: HttpServletResponse, accessDeniedException: AccessDeniedException) {
+        if (request.requestURI.startsWith(API_PREFIX)) {
+            plain.handle(request, response, accessDeniedException)
+            return
+        }
+        val reason = if (accessDeniedException is CsrfException) "csrf" else "denied"
+        response.status = HttpServletResponse.SC_FOUND
+        response.setHeader("Location", "/ui/login?$reason")
+    }
 }
 
 /**
@@ -277,6 +309,7 @@ class DashboardSecurityConfiguration {
                 val entryPoint = DelegatingAuthenticationEntryPoint(linkedMapOf<RequestMatcher, AuthenticationEntryPoint>(api to HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 entryPoint.setDefaultEntryPoint(LoginUrlAuthenticationEntryPoint("/ui/login"))
                 it.authenticationEntryPoint(entryPoint)
+                it.accessDeniedHandler(DashboardAccessDeniedHandler())
             }.csrf {
                 // The Angular client reads the token from the XSRF-TOKEN cookie and echoes it in X-XSRF-TOKEN. The token is never
                 // rendered into HTML bodies, so the plain handler is safe here and also serves the form-based login page.

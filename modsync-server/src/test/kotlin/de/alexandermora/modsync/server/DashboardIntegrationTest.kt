@@ -243,4 +243,50 @@ class DashboardIntegrationTest {
         browser.signIn(name, password)
         assertEquals(403, browser.json("GET", "/ui/api/overview").statusCode())
     }
+
+    /** A signed-in non-administrator is sent to the login page with a reason instead of a raw 403 page, while the API keeps its plain 403. */
+    @Test fun clientPageRequestIsRedirectedWithAReason() {
+        val name = "player" + UUID.randomUUID().toString().take(8)
+        val password = "a-sufficiently-long-password"
+        context.getBean(AuthService::class.java).createUser("test", UserRegistration(name, password))
+        val browser = TestBrowser(base)
+        browser.signIn(name, password)
+        val page = browser.get("/ui")
+        assertEquals(302, page.statusCode())
+        assertEquals("/ui/login?denied", page.headers().firstValue("Location").get())
+        assertEquals("/ui/login?denied", browser.get("/ui/servers/$serverId").location())
+        assertEquals(403, browser.json("GET", "/ui/api/overview").statusCode())
+        assertEquals(200, browser.get("/ui/login").statusCode())
+    }
+
+    /** A login form with a stale or missing CSRF token goes back to the login page with a reason instead of a bare 403, and signs nobody in. */
+    @Test fun staleCsrfTokenOnLoginIsRedirected() {
+        val browser = TestBrowser(base)
+        browser.csrfOf("/ui/login")
+        val credentials = mapOf("username" to "admin", "password" to adminPassword)
+        val stale = browser.post("/login", credentials, "stale-token")
+        assertEquals(302, stale.statusCode())
+        assertEquals("/ui/login?csrf", stale.headers().firstValue("Location").get())
+        assertEquals("/ui/login?csrf", TestBrowser(base).post("/login", credentials, null).location())
+        assertEquals("/ui/login", browser.get("/ui").location())
+    }
+
+    /** A sign-out form with a stale token is sent to the login page with a reason and does not end the session. */
+    @Test fun staleCsrfTokenOnLogoutKeepsTheSession() {
+        val browser = admin()
+        assertEquals("/ui/login?csrf", browser.post("/logout", emptyMap(), "stale-token").location())
+        assertEquals(200, browser.get("/ui").statusCode())
+    }
+
+    /** The bare host and the root favicon redirect to the dashboard with relative targets, and every other unknown root path stays denied. */
+    @Test fun rootRedirectsToTheDashboard() {
+        val browser = TestBrowser(base)
+        val root = browser.get("/")
+        assertEquals(302, root.statusCode())
+        assertEquals("/ui/", root.headers().firstValue("Location").get())
+        val favicon = browser.get("/favicon.ico")
+        assertEquals(302, favicon.statusCode())
+        assertEquals("/ui/favicon.ico", favicon.headers().firstValue("Location").get())
+        assertEquals(401, browser.get("/not-a-route").statusCode())
+    }
 }
