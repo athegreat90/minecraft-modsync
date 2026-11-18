@@ -207,7 +207,8 @@ class AutoPublicationService(
             return outcome(REVIEW_REQUIRED, "Needs review: " + decision.files.joinToString(", "))
         }
         decision as PublicationDecision.Ready
-        logger.info { "Decision ready: ${decision.artifacts.size} artifacts, ${decision.approvals.size} new approvals (${decision.approvals.count { it.reason.contains("carried over") }} carried over from the latest manifest)" }
+        val carried = decision.approvals.count { it.reason.contains("carried over") }
+        logger.info { "Decision ready: ${decision.artifacts.size} artifacts, ${decision.approvals.size} new approvals ($carried carried over from the latest manifest)" }
         return try {
             decision.approvals.forEach { inventory.classify(SYSTEM_ACTOR, serverId, OverrideRequest(it.sha512, it.classification, it.reason)) }
             val candidate = manifests.preview(serverId, PublishRequest(scanId, decision.artifacts))
