@@ -15,9 +15,11 @@ import de.alexandermora.modsync.resolver.Resolver
 import de.alexandermora.modsync.scanner.Scanner
 import de.alexandermora.modsync.scanner.directoryFingerprint
 import de.alexandermora.modsync.scanner.duplicateMods
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Clock
 import java.time.Duration
 
+private val logger = KotlinLogging.logger {}
 private val MUTATING = setOf(OperationKind.INSTALL, OperationKind.UPDATE, OperationKind.REMOVE_MANAGED, OperationKind.QUARANTINE_DUPLICATE)
 private val FULL_CHECK_INTERVAL: Duration = Duration.ofHours(24)
 private const val MAX_REPORTED_MODS = 2000
@@ -178,7 +180,10 @@ class AutoSyncRunner(
                 ?: return AutoOutcome.Failed("No manifest published") to settings
         if (canSkipFullPass(published, now)) return AutoOutcome.UpToDate(published) to settings
         return runCatching { synchronize(gateway.manifest(settings.serverId), now) }
-            .getOrElse { AutoOutcome.Failed(it.javaClass.simpleName) to settings.copy(lastOutcome = FAILED) }
+            .getOrElse {
+                logger.warn(it) { "Automatic pass for $instanceName failed against published revision $published" }
+                AutoOutcome.Failed(it.javaClass.simpleName) to settings.copy(lastOutcome = FAILED)
+            }
     }
 
     /**
@@ -280,6 +285,7 @@ class AutoSyncRunner(
      */
     private fun finish(outcome: AutoOutcome, manifest: Manifest, activity: ClientActivity, now: Long, applied: Long? = null): Pair<AutoOutcome, AutoSettings> {
         val sequence = maxOf(settings.lastSequence + 1, clock.millis())
+        logger.info { "Automatic pass for $instanceName against manifest r${manifest.revision}: $outcome (activity $activity)" }
         val success = outcome is AutoOutcome.UpToDate || outcome is AutoOutcome.Applied
         val updated =
             settings.copy(

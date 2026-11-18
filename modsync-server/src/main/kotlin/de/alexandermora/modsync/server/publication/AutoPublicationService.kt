@@ -182,9 +182,12 @@ class AutoPublicationService(
          */
         fun outcome(name: String, detail: String, revision: Long? = null): String {
             persistence.record(serverId, scanId, policy, name, revision, detail, SYSTEM_ACTOR)
+            logger.info { "Automatic publication of server $serverId (snapshot $scanId, policy $policy): $name${revision?.let { " r$it" }.orEmpty()} - $detail" }
             return name
         }
         val latest = manifests.latest(serverId)
+        val entries = inventory.entries(scanId)
+        logger.info { "Evaluating snapshot $scanId of server $serverId under $policy: ${entries.size} scanned artifacts, latest manifest ${latest?.let { "r${it.revision}" } ?: "none"}" }
         val approved = inventory.overridesFor(serverId).mapValues { Classification.valueOf(it.value.classification) }
         val trusted =
             latest
@@ -192,9 +195,19 @@ class AutoPublicationService(
                 .orEmpty()
                 .filter { it.classification != Classification.UNKNOWN }
                 .associate { it.projectId to it.classification }
-        val decision = decidePublication(policy, inventory.entries(scanId), approved, trusted, resolver::resolve)
-        if (decision is PublicationDecision.ReviewRequired) return outcome(REVIEW_REQUIRED, "Needs review: " + decision.files.joinToString(", "))
+        val published =
+            latest
+                ?.artifacts
+                .orEmpty()
+                .filter { it.url == null }
+                .associateBy { it.sha512 }
+        val decision = decidePublication(policy, entries, approved, trusted, resolver::resolve, published)
+        if (decision is PublicationDecision.ReviewRequired) {
+            decision.reasons.forEach { (file, reason) -> logger.warn { "Needs review: $file - $reason" } }
+            return outcome(REVIEW_REQUIRED, "Needs review: " + decision.files.joinToString(", "))
+        }
         decision as PublicationDecision.Ready
+        logger.info { "Decision ready: ${decision.artifacts.size} artifacts, ${decision.approvals.size} new approvals (${decision.approvals.count { it.reason.contains("carried over") }} carried over from the latest manifest)" }
         return try {
             decision.approvals.forEach { inventory.classify(SYSTEM_ACTOR, serverId, OverrideRequest(it.sha512, it.classification, it.reason)) }
             val candidate = manifests.preview(serverId, PublishRequest(scanId, decision.artifacts))

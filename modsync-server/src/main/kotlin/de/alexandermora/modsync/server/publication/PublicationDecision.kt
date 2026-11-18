@@ -30,9 +30,13 @@ sealed interface PublicationDecision {
      * Some artifacts cannot be classified trustworthily; an administrator must review them.
      *
      * @property files File names needing review.
+     * @property reasons Why each file needs review, keyed by file name; empty when the policy is MANUAL.
      */
-    data class ReviewRequired(val files: List<String>) : PublicationDecision
+    data class ReviewRequired(val files: List<String>, val reasons: Map<String, String> = emptyMap()) : PublicationDecision
 }
+
+private const val NOT_IDENTIFIED = "Modrinth cannot identify this file and the latest manifest does not list its exact hash"
+private const val NO_CLASSIFICATION = "No approved classification, and no trusted project to inherit one from"
 
 private val CLIENT_RELEVANT = setOf(Classification.CLIENT_REQUIRED, Classification.BOTH_REQUIRED, Classification.CLIENT_OPTIONAL)
 
@@ -45,13 +49,17 @@ private val CLIENT_RELEVANT = setOf(Classification.CLIENT_REQUIRED, Classificati
  *   published manifest already classified inherits that classification, recorded as an approval.
  * - [PublicationPolicy.MANUAL]: never automatic; always requires review.
  *
- * Artifacts that Modrinth cannot identify, or whose classification is UNKNOWN, always require review.
+ * An artifact that Modrinth cannot identify (a private or local build) is accepted only when the latest published
+ * manifest already lists that exact hash as a manual artifact (no download URL) with a classification other than
+ * UNKNOWN; the same bytes an administrator already approved are carried over unchanged. Under [PublicationPolicy.REVIEW_UNKNOWN]
+ * that also requires an approval of the hash. A new unidentifiable file, or one whose classification is UNKNOWN, always requires review.
  *
  * @param policy Server publication policy.
  * @param entries Scanned artifacts.
  * @param approved Existing approvals by exact hash.
  * @param trustedProjects Classifications of projects present in the latest published manifest.
  * @param resolve Identifies an artifact by hash, or returns null when it cannot be identified.
+ * @param published Manual artifacts (no download URL) of the latest published manifest by exact hash.
  * @return [PublicationDecision.Ready] or [PublicationDecision.ReviewRequired].
  */
 fun decidePublication(
@@ -59,25 +67,31 @@ fun decidePublication(
     entries: List<ModEntry>,
     approved: Map<String, Classification>,
     trustedProjects: Map<String, Classification>,
-    resolve: (String) -> Artifact?
+    resolve: (String) -> Artifact?,
+    published: Map<String, Artifact> = emptyMap()
 ): PublicationDecision {
     if (policy == PublicationPolicy.MANUAL) return PublicationDecision.ReviewRequired(entries.map { it.fileName })
     val artifacts = mutableListOf<Artifact>()
     val approvals = mutableListOf<Approval>()
-    val review = mutableListOf<String>()
+    val review = linkedMapOf<String, String>()
     entries.forEach { entry ->
         val identified = resolve(entry.sha512)
+        val carried = if (identified == null) published[entry.sha512]?.takeIf { it.classification != Classification.UNKNOWN } else null
         val existing = approved[entry.sha512]?.takeIf { it != Classification.UNKNOWN }
         val inherited = identified?.let { trustedProjects[it.projectId] }?.takeIf { it != Classification.UNKNOWN && policy == PublicationPolicy.TRUSTED_AUTO }
-        val classification = existing ?: inherited
-        if (identified == null || classification == null) {
-            review += entry.fileName
+        val classification = existing ?: inherited ?: carried?.classification?.takeIf { policy == PublicationPolicy.TRUSTED_AUTO }
+        val base = identified ?: carried
+        if (base == null || classification == null) {
+            review[entry.fileName] = if (base == null) NOT_IDENTIFIED else NO_CLASSIFICATION
             return@forEach
         }
-        if (existing == null) approvals += Approval(entry.sha512, classification, "Automatically inherited from trusted project ${identified.projectId}")
-        artifacts += identified.copy(classification = classification, evidence = listOf(Evidence("auto-publish", "Policy $policy")))
+        if (existing == null) {
+            val reason = if (inherited != null) "Automatically inherited from trusted project ${base.projectId}" else "Automatically carried over from the latest published manifest"
+            approvals += Approval(entry.sha512, classification, reason)
+        }
+        artifacts += base.copy(classification = classification, evidence = listOf(Evidence("auto-publish", "Policy $policy")))
     }
-    return if (review.isEmpty()) PublicationDecision.Ready(artifacts, approvals) else PublicationDecision.ReviewRequired(review)
+    return if (review.isEmpty()) PublicationDecision.Ready(artifacts, approvals) else PublicationDecision.ReviewRequired(review.keys.toList(), review)
 }
 
 /**

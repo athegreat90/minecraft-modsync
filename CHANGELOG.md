@@ -6,6 +6,15 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-18
+
+### Fixed
+- Automatic publication no longer stalls on files Modrinth cannot identify. One unidentifiable jar (a private or `-local` build such as `immersive_aircraft`, `sethome`) made the whole snapshot `REVIEW_REQUIRED` on every evaluation, so no new revision was ever published and clients stayed `Sync pending` against a manifest older than the server's mods (revision 4 vs the updated jars). Such a file is now carried over unchanged when the latest manifest already lists its exact hash as a manual artifact (no download URL) with a classification other than `UNKNOWN`; under `REVIEW_UNKNOWN` it also needs an approval of that hash. A new unidentifiable file, or one classified `UNKNOWN`, still requires review.
+
+### Added
+- Diagnostic logs: the server logs each automatic evaluation (snapshot, policy, scanned artifact count, latest revision), the reason every file needs review, the decision summary and every recorded outcome; the client logs each automatic pass outcome with the manifest revision, and the exception behind a failed pass instead of only its class name.
+- Version bumped 0.6.4 -> 0.6.5 (patch; wire protocol 1 and persisted formats are unchanged).
+
 ## [0.6.4] - 2026-11-15
 
 ### Fixed
