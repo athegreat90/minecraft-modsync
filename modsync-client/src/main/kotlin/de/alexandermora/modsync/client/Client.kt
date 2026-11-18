@@ -459,22 +459,33 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
  * @return One line describing what went wrong and what to do next.
  */
 internal fun describeFailure(ex: Throwable, configFile: Path): String {
-    val causes=generateSequence(ex) { it.cause }.take(8).toList()
+    val unreachable=generateSequence(ex) { it.cause }.take(8).firstOrNull(::isConnectionFailure)
     val message=ex.message?.takeIf { it.isNotBlank() }
+    val generic="${ex.javaClass.simpleName}; check arguments, connectivity and local state"
     return when {
-        ex is NoSuchFileException && ex.file == configFile.toString() -> "Client not set up: no configuration at $configFile. Run `modsync setup --server-url <https-url> --trust-server-id <uuid>`, then `modsync login --username <name>`"
+        ex is NoSuchFileException && ex.file == configFile.toString() ->
+            "Client not set up: no configuration at $configFile. Run `modsync setup --server-url <https-url> --trust-server-id <uuid>`, " +
+                "then `modsync login --username <name>`"
         ex is NoSuchFileException -> "File not found: ${ex.file}"
-        causes.any { it is ConnectException || it is HttpTimeoutException || it is UnknownHostException || it is UnresolvedAddressException } -> "Cannot reach the server (${causes.first { it is ConnectException || it is HttpTimeoutException || it is UnknownHostException || it is UnresolvedAddressException }.javaClass.simpleName}); check the server URL with `modsync config show`, your network and that the server is running"
-        ex is SerializationException -> "A JSON document is invalid or has an unexpected format; the local state may be corrupt or the server may be a different version (`modsync doctor`)"
+        unreachable != null ->
+            "Cannot reach the server (${unreachable.javaClass.simpleName}); " +
+                "check the server URL with `modsync config show`, your network and that the server is running"
+        ex is SerializationException ->
+            "A JSON document is invalid or has an unexpected format; " +
+                "the local state may be corrupt or the server may be a different version (`modsync doctor`)"
         ex is IllegalArgumentException || ex is IllegalStateException -> when (message) {
-            null -> "${ex.javaClass.simpleName}; check arguments, connectivity and local state"
+            null -> generic
             "Login required" -> "Login required: run `modsync login --username <name>`"
-            "Instance not registered" -> "Instance not registered: pick a name shown by `modsync doctor`, or add one with `modsync instances add <name> <path> --minecraft-version <version> --loader <loader>`"
+            "Instance not registered" ->
+                "Instance not registered: pick a name shown by `modsync doctor`, " +
+                    "or add one with `modsync instances add <name> <path> --minecraft-version <version> --loader <loader>`"
             else -> message
         }
-        else -> "${ex.javaClass.simpleName}; check arguments, connectivity and local state"
+        else -> generic
     }
 }
+/** True for the exceptions that mean the server could not be reached (connect refused, timeout, unknown host). */
+private fun isConnectionFailure(e: Throwable) = e is ConnectException || e is HttpTimeoutException || e is UnknownHostException || e is UnresolvedAddressException
 /**
  * Builds the command line with all subcommand groups and a handler that logs a safe explanation of each failure and returns exit code 1.
  *
