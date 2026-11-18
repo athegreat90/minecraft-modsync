@@ -68,6 +68,35 @@ class PublicationDecisionTest {
         assertEquals(listOf("new.jar", "ghost.jar"), assertIs<PublicationDecision.ReviewRequired>(result).files)
     }
 
+    /** A published manual artifact (no URL) with the same hash is carried over under TRUSTED_AUTO and recorded as an approval. */
+    @Test fun unidentifiedPublishedManualArtifactIsCarriedOver() {
+        val manual = artifact("manual-local", hashA).copy(url = null, classification = Classification.BOTH_REQUIRED)
+        val ready = assertIs<PublicationDecision.Ready>(decidePublication(PublicationPolicy.TRUSTED_AUTO, listOf(entry("local", hashA)), emptyMap(), emptyMap(), resolver(), mapOf(hashA to manual)))
+        assertEquals("manual-local", ready.artifacts.single().projectId)
+        assertEquals(null, ready.artifacts.single().url)
+        assertEquals(Classification.BOTH_REQUIRED, ready.artifacts.single().classification)
+        assertEquals(listOf(Approval(hashA, Classification.BOTH_REQUIRED, "Automatically carried over from the latest published manifest")), ready.approvals)
+    }
+
+    /** Under REVIEW_UNKNOWN a carried artifact still needs an approval of its exact hash, and then it needs no new one. */
+    @Test fun carriedArtifactNeedsApprovalUnderReviewUnknown() {
+        val manual = artifact("manual-local", hashA).copy(url = null, classification = Classification.BOTH_REQUIRED)
+        val entries = listOf(entry("local", hashA))
+        val blocked = assertIs<PublicationDecision.ReviewRequired>(decidePublication(PublicationPolicy.REVIEW_UNKNOWN, entries, emptyMap(), emptyMap(), resolver(), mapOf(hashA to manual)))
+        assertEquals(listOf("local.jar"), blocked.files)
+        val ready = assertIs<PublicationDecision.Ready>(decidePublication(PublicationPolicy.REVIEW_UNKNOWN, entries, mapOf(hashA to Classification.BOTH_REQUIRED), emptyMap(), resolver(), mapOf(hashA to manual)))
+        assertEquals(emptyList(), ready.approvals)
+    }
+
+    /** A new unidentifiable file, or a published one classified UNKNOWN, still requires review and says why. */
+    @Test fun unidentifiedWithoutTrustedPublicationRequiresReview() {
+        val unknown = artifact("manual-local", hashA).copy(url = null, classification = Classification.UNKNOWN)
+        val result = decidePublication(PublicationPolicy.TRUSTED_AUTO, listOf(entry("local", hashA), entry("fresh", hashB)), emptyMap(), emptyMap(), resolver(), mapOf(hashA to unknown))
+        val review = assertIs<PublicationDecision.ReviewRequired>(result)
+        assertEquals(listOf("local.jar", "fresh.jar"), review.files)
+        assertEquals(setOf("local.jar", "fresh.jar"), review.reasons.keys)
+    }
+
     /** An UNKNOWN trusted or approved classification is never inherited. */
     @Test fun unknownClassificationIsNotTrusted() {
         val result = decidePublication(PublicationPolicy.TRUSTED_AUTO, listOf(entry("p", hashA)), mapOf(hashA to Classification.UNKNOWN), mapOf("p" to Classification.UNKNOWN), resolver(artifact("p", hashA)))

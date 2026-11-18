@@ -41,7 +41,8 @@ sonar {
 }
 kotlin {
     jvmToolchain(25)
-    compilerOptions { jvmTarget.set(JvmTarget.JVM_25) }
+    // Keeps parameter names so the command-line usage reads `--instance=<instance>`, not `--instance=<arg0>`.
+    compilerOptions { jvmTarget.set(JvmTarget.JVM_25); javaParameters.set(true) }
 }
 dependencies {
     "implementation"(platform("org.jetbrains.kotlin:kotlin-bom:2.4.21"))

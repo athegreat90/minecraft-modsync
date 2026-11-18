@@ -9,9 +9,15 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import picocli.CommandLine
 import picocli.CommandLine.*
 import java.io.File
+import java.net.ConnectException
+import java.net.UnknownHostException
+import java.net.http.HttpTimeoutException
+import java.nio.channels.UnresolvedAddressException
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Files
 import java.time.Instant
@@ -443,14 +449,52 @@ fun nextDelaySeconds(baseMinutes: Int, failures: Int, jitter: Double): Long {
     }
 }
 /**
- * Builds the command line with all subcommand groups and a handler that logs failures without details and returns exit code 1.
+ * Explains a failed command in terms the user can act on, without leaking response bodies, tokens or file contents.
+ *
+ * Only messages this client wrote itself (`require`, `check`, `error`) and the missing-file path are shown; a JSON
+ * decoding error (which may quote a local file) and any other exception are reduced to a fixed sentence.
+ *
+ * @param ex Exception thrown by the command.
+ * @param configFile Location of the client configuration file, used to tell "not set up" from other missing files.
+ * @return One line describing what went wrong and what to do next.
+ */
+internal fun describeFailure(ex: Throwable, configFile: Path): String {
+    val unreachable=generateSequence(ex) { it.cause }.take(8).firstOrNull(::isConnectionFailure)
+    val message=ex.message?.takeIf { it.isNotBlank() }
+    val generic="${ex.javaClass.simpleName}; check arguments, connectivity and local state"
+    return when {
+        ex is NoSuchFileException && ex.file == configFile.toString() ->
+            "Client not set up: no configuration at $configFile. Run `modsync setup --server-url <https-url> --trust-server-id <uuid>`, " +
+                "then `modsync login --username <name>`"
+        ex is NoSuchFileException -> "File not found: ${ex.file}"
+        unreachable != null ->
+            "Cannot reach the server (${unreachable.javaClass.simpleName}); " +
+                "check the server URL with `modsync config show`, your network and that the server is running"
+        ex is SerializationException ->
+            "A JSON document is invalid or has an unexpected format; " +
+                "the local state may be corrupt or the server may be a different version (`modsync doctor`)"
+        ex is IllegalArgumentException || ex is IllegalStateException -> when (message) {
+            null -> generic
+            "Login required" -> "Login required: run `modsync login --username <name>`"
+            "Instance not registered" ->
+                "Instance not registered: pick a name shown by `modsync doctor`, " +
+                    "or add one with `modsync instances add <name> <path> --minecraft-version <version> --loader <loader>`"
+            else -> message
+        }
+        else -> generic
+    }
+}
+/** True for the exceptions that mean the server could not be reached (connect refused, timeout, unknown host). */
+private fun isConnectionFailure(e: Throwable) = e is ConnectException || e is HttpTimeoutException || e is UnknownHostException || e is UnresolvedAddressException
+/**
+ * Builds the command line with all subcommand groups and a handler that logs a safe explanation of each failure and returns exit code 1.
  *
  * @param root Client instance shared by the subcommands.
  * @return Configured [CommandLine].
  */
 fun clientCommandLine(root: Client = Client()): CommandLine = CommandLine(root).apply {
     addSubcommand("config", ConfigCommands(root)); addSubcommand("connection", ConnectionCommands(root)); addSubcommand("servers", ServerCommands(root)); addSubcommand("instances", InstanceCommands(root)); addSubcommand("mods", ModCommands(root)); addSubcommand("personal", PersonalCommands(root)); addSubcommand("sync", SyncCommands(root)); addSubcommand("auto", AutoCommands(root))
-    setExecutionExceptionHandler { ex, _, _ -> logger.error { "Command failed: ${ex.javaClass.simpleName}; check arguments, connectivity and local state" }; 1 }
+    setExecutionExceptionHandler { ex, _, _ -> logger.error { "Command failed: ${describeFailure(ex, root.configFile)}" }; 1 }
 }
 /**
  * Runs the client command line and exits with its status code.
