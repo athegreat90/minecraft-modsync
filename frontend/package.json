@@ -1,6 +1,6 @@
 {
   "name": "modsync-admin",
-  "version": "0.6.5",
+  "version": "0.7.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
     "lint": "ng lint",
-    "test:coverage": "ng test --watch=false --coverage --coverage-reporters=lcov --coverage-reporters=text-summary"
+    "test:coverage": "ng test --watch=false --coverage --coverage-reporters=lcov --coverage-reporters=text-summary",
+    "test:e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.20.0",
@@ -26,10 +27,13 @@
     "@angular/build": "^22.2.7",
     "@angular/cli": "^22.2.7",
     "@angular/compiler-cli": "^22.2.0",
+    "@axe-core/playwright": "^4.14.1",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@vitest/coverage-v8": "^5.1.0",
     "angular-eslint": "22.6.0",
     "axe-core": "^4.14.0",
+    "bootstrap": "^5.3.9",
     "eslint": "^10.12.0",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
