@@ -87,7 +87,7 @@ describe('ServerPageView mods table', () => {
     const fixture = await open([entry(1), entry(2), entry(3)]);
 
     expect(modRows(fixture)).toEqual(['mod-01.jar', 'mod-02.jar', 'mod-03.jar']);
-    expect(root(fixture).querySelector('#mods-table')?.classList.contains('ms-table')).toBe(true);
+    expect(root(fixture).querySelector('#mods-table')?.classList.contains('ms-table-stack')).toBe(true);
     expect(root(fixture).querySelector('nav[aria-label="Pages"]')).toBeNull();
   });
 
@@ -114,7 +114,7 @@ describe('ServerPageView mods table', () => {
   it('shows classifications and review state as readable labels', async () => {
     const fixture = await open([entry(1, null), entry(2, 'SERVER_ONLY')]);
 
-    const badges = Array.from(root(fixture).querySelectorAll('#mods-table .ms-badge')).map((b) => b.textContent?.trim());
+    const badges = Array.from(root(fixture).querySelectorAll('#mods-table .badge')).map((b) => b.textContent?.trim());
     expect(badges).toEqual(['Unreviewed', 'Server only']);
     const options = Array.from(root(fixture).querySelectorAll('select option')).map((o) => o.textContent?.trim());
     expect(options).toContain('Trusted auto');
@@ -168,7 +168,7 @@ describe('ServerPageView mods table', () => {
     const details = root(fixture).querySelector('details')!;
     expect(details.open).toBe(false);
     expect(details.querySelector('summary')?.textContent?.trim()).toBe('Latest manifest (94 artifacts)');
-    expect(details.querySelectorAll('table.ms-table tbody tr')).toHaveLength(94);
+    expect(details.querySelectorAll('table.ms-table-stack tbody tr')).toHaveLength(94);
     expect(details.querySelector('td[data-label="Project"]')).not.toBeNull();
   });
 });
@@ -223,7 +223,7 @@ describe('ServerPageView loading', () => {
     fixture.detectChanges();
 
     expect(root(fixture).querySelector('[role="status"]')?.textContent).toContain('Loading server…');
-    expect(root(fixture).querySelector('.ms-skeleton')).not.toBeNull();
+    expect(root(fixture).querySelector('.placeholder-glow')).not.toBeNull();
     http.expectOne('/ui/api/servers/s1');
   });
 });

@@ -53,7 +53,7 @@ describe('Login notice roles', () => {
     fixture.detectChanges();
     http.expectOne('/ui/api/sso/providers').flush({ providers: [] });
 
-    expect((fixture.nativeElement as HTMLElement).querySelector('.notice')?.getAttribute('role')).toBe(role);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.alert')?.getAttribute('role')).toBe(role);
   });
 });
 
@@ -76,6 +76,6 @@ describe('Login notices', () => {
     fixture.detectChanges();
     http.expectOne('/ui/api/sso/providers').flush({ providers: [] });
 
-    expect((fixture.nativeElement as HTMLElement).querySelector('.notice')?.textContent).toContain(message);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.alert')?.textContent).toContain(message);
   });
 });

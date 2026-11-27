@@ -4,6 +4,7 @@ import { AdminApi, describeError } from '../../core/api/admin-api';
 import { runCommand } from '../../core/api/run-command';
 import { IdentitiesView } from '../../core/api/models';
 import { ASSIGN_LOCATION } from '../../core/navigation';
+import { ThemeSwitcher } from '../../shared/components/theme-switcher/theme-switcher';
 
 /** Display names of the sign-in providers the server may offer. */
 const PROVIDER_NAMES: Readonly<Record<string, string>> = { google: 'Google', github: 'GitHub' };
@@ -11,6 +12,7 @@ const PROVIDER_NAMES: Readonly<Record<string, string>> = { google: 'Google', git
 /** Lets the signed-in administrator link or unlink Google and GitHub. The local password always keeps working. */
 @Component({
   selector: 'ms-account-page',
+  imports: [ThemeSwitcher],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './account-page.html',
 })

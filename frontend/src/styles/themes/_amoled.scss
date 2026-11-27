@@ -1,0 +1,16 @@
+// AMOLED Black: true-black major surfaces, no gradient, no shadows. Raised surfaces stay near-black so few pixels light up.
+// `border` only separates surfaces; `border-control` outlines inputs and controls and must reach 3:1 against black.
+@use '../tokens' as t;
+
+$amoled: (
+  bg: #000,
+  surface: #000,
+  surface-raised: #101010,
+  border: #363636,
+  border-control: #6b6b6b,
+  page: #000,
+);
+
+[data-theme='amoled'] {
+  @include t.emit($amoled);
+}

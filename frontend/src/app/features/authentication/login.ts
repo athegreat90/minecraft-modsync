@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { ActivatedRoute } from '@angular/router';
 import { AdminApi } from '../../core/api/admin-api';
 import { readXsrfToken } from '../../core/auth/csrf';
+import { ThemeSwitcher } from '../../shared/components/theme-switcher/theme-switcher';
 
 /** Display names of the sign-in providers the server may offer. */
 const PROVIDER_NAMES: Readonly<Record<string, string>> = { google: 'Google', github: 'GitHub' };
@@ -20,8 +21,8 @@ interface Notice {
  */
 @Component({
   selector: 'ms-login',
+  imports: [ThemeSwitcher],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './login.scss',
   templateUrl: './login.html',
 })
 export class Login implements OnInit {

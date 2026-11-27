@@ -1,35 +1,56 @@
-<h1>Account</h1>
-@if (error()) {
-  <p class="ms-alert error" role="alert">{{ error() }}</p>
-}
-@if (notice()) {
-  <p class="ms-alert success" role="status">{{ notice() }}</p>
-}
-<section class="ms-card" aria-labelledby="sso">
-  <h2 id="sso">Sign-in with Google or GitHub</h2>
-  <p class="ms-muted">
-    Linking lets you sign in with a provider account. It never changes your role, and your password keeps working.
-  </p>
-  @if (view(); as v) {
-    @if (v.available.length === 0) {
-      <p class="ms-muted">No provider is configured on this server.</p>
-    } @else {
-      <ul class="providers">
-        @for (id of v.available; track id) {
-          <li>
-            <strong>{{ nameOf(id) }}</strong>
-            @if (isLinked(id)) {
-              <span class="ms-badge ok">linked</span>
-              <button class="ms-button secondary" type="button" (click)="unlink(id)">Unlink {{ nameOf(id) }}</button>
-            } @else {
-              <span class="ms-badge">not linked</span>
-              <button class="ms-button" type="button" (click)="link(id)">Link {{ nameOf(id) }}</button>
-            }
-          </li>
-        }
-      </ul>
-    }
-  } @else if (!error()) {
-    <p class="ms-muted" role="status">Loading…</p>
+<h1 class="mb-3">Account</h1>
+<div class="row g-3">
+  @if (error()) {
+    <div class="col-12 col-lg-8 col-xl-6">
+      <p class="alert alert-danger mb-0" role="alert">{{ error() }}</p>
+    </div>
   }
-</section>
+  @if (notice()) {
+    <div class="col-12 col-lg-8 col-xl-6">
+      <p class="alert alert-success mb-0" role="status">{{ notice() }}</p>
+    </div>
+  }
+  <div class="col-12 col-lg-8 col-xl-6">
+    <section class="card h-100" aria-labelledby="sso">
+      <div class="card-body">
+        <h2 id="sso" class="h4">Sign-in with Google or GitHub</h2>
+        <p class="text-body-secondary">
+          Linking lets you sign in with a provider account. It never changes your role, and your password keeps working.
+        </p>
+        @if (view(); as v) {
+          @if (v.available.length === 0) {
+            <p class="text-body-secondary mb-0">No provider is configured on this server.</p>
+          } @else {
+            <ul class="list-unstyled d-grid gap-3 mb-0">
+              @for (id of v.available; track id) {
+                <li class="d-flex flex-wrap align-items-center gap-2">
+                  <strong>{{ nameOf(id) }}</strong>
+                  @if (isLinked(id)) {
+                    <span class="badge text-bg-success">linked</span>
+                    <button class="btn btn-outline-secondary ms-sm-auto" type="button" (click)="unlink(id)">Unlink {{ nameOf(id) }}</button>
+                  } @else {
+                    <span class="badge border text-body">not linked</span>
+                    <button class="btn btn-primary ms-sm-auto" type="button" (click)="link(id)">Link {{ nameOf(id) }}</button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        } @else if (!error()) {
+          <p class="text-body-secondary mb-0" role="status">Loading…</p>
+        }
+      </div>
+    </section>
+  </div>
+  <div class="col-12 col-lg-8 col-xl-6">
+    <section class="card h-100" aria-labelledby="appearance">
+      <div class="card-body">
+        <h2 id="appearance" class="h4">Appearance</h2>
+        <p class="text-body-secondary">
+          Valhalla Dark is the default. AMOLED Black uses true black surfaces. The choice is saved in this browser only.
+        </p>
+        <ms-theme-switcher />
+      </div>
+    </section>
+  </div>
+</div>

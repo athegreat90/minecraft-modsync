@@ -1,53 +1,56 @@
-<h1>Users</h1>
-<form class="ms-toolbar" [formGroup]="filter" (ngSubmit)="search()" role="search">
-  <label>Username <input id="user-q" name="q" type="search" autocomplete="off" formControlName="q" /></label>
-  <label>
-    Role
-    <select id="user-role" name="role" formControlName="role">
+<h1 class="mb-3">Users</h1>
+<form class="row g-2 align-items-end mb-3" [formGroup]="filter" (ngSubmit)="search()" role="search">
+  <div class="col-12 col-sm-auto">
+    <label class="form-label" for="user-q">Username</label>
+    <input class="form-control" id="user-q" name="q" type="search" autocomplete="off" formControlName="q" />
+  </div>
+  <div class="col-12 col-sm-auto">
+    <label class="form-label" for="user-role">Role</label>
+    <select class="form-select" id="user-role" name="role" formControlName="role">
       <option value="">Any</option>
       <option value="ADMIN">Administrator</option>
       <option value="CLIENT">Client</option>
     </select>
-  </label>
-  <label>
-    Status
-    <select id="user-status" name="status" formControlName="status">
+  </div>
+  <div class="col-12 col-sm-auto">
+    <label class="form-label" for="user-status">Status</label>
+    <select class="form-select" id="user-status" name="status" formControlName="status">
       <option value="">Any</option>
       <option value="enabled">Enabled</option>
       <option value="disabled">Disabled</option>
     </select>
-  </label>
-  <button class="ms-button" type="submit">Search</button>
-  <a class="ms-button" routerLink="/users/new">New account</a>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary" type="submit">Search</button></div>
+  <div class="col-auto"><a class="btn btn-outline-secondary" routerLink="/users/new">New account</a></div>
 </form>
 @if (error()) {
-  <p class="ms-alert error" role="alert">{{ error() }}</p>
+  <p class="alert alert-danger" role="alert">{{ error() }}</p>
 }
-<p class="ms-muted" role="status">{{ count() }}</p>
+<p class="text-body-secondary" role="status">{{ count() }}</p>
 @if (result(); as r) {
   @if (r.users.length === 0) {
-    <p class="ms-muted">No accounts match.</p>
+    <p class="text-body-secondary">No accounts match.</p>
   } @else {
-    <table class="ms-table">
+    <table class="table ms-table-stack align-middle">
       <thead><tr><th>Username</th><th>Role</th><th>Status</th></tr></thead>
       <tbody>
         @for (u of r.users; track u.id) {
           <tr>
-            <td data-label="Username" class="wrap"><a [routerLink]="['/users', u.id]">{{ u.username }}</a></td>
+            <td data-label="Username" class="text-break"><a [routerLink]="['/users', u.id]">{{ u.username }}</a></td>
             <td data-label="Role">{{ u.role }}</td>
             <td data-label="Status">
-              <span class="ms-badge" [class.ok]="u.enabled" [class.warn]="!u.enabled">{{ u.enabled ? 'enabled' : 'disabled' }}</span>
+              <span class="badge" [class.text-bg-success]="u.enabled" [class.text-bg-warning]="!u.enabled">{{ u.enabled ? 'enabled' : 'disabled' }}</span>
             </td>
           </tr>
         }
       </tbody>
     </table>
-    <nav class="ms-toolbar" aria-label="Pages">
-      <button class="ms-button secondary" type="button" [disabled]="r.page === 0" (click)="go(r.page - 1)">Previous</button>
+    <nav class="d-flex flex-wrap align-items-center gap-2" aria-label="Pages">
+      <button class="btn btn-outline-secondary" type="button" [disabled]="r.page === 0" (click)="go(r.page - 1)">Previous</button>
       <span>Page {{ r.page + 1 }} of {{ r.totalPages }}</span>
-      <button class="ms-button secondary" type="button" [disabled]="r.page + 1 >= r.totalPages" (click)="go(r.page + 1)">Next</button>
+      <button class="btn btn-outline-secondary" type="button" [disabled]="r.page + 1 >= r.totalPages" (click)="go(r.page + 1)">Next</button>
     </nav>
   }
 } @else if (!error()) {
-  <p class="ms-muted" role="status">Loading users…</p>
+  <p class="text-body-secondary" role="status">Loading users…</p>
 }

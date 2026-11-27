@@ -1,26 +1,45 @@
-<h1>New account</h1>
-@if (error()) {
-  <p class="ms-alert error" role="alert">{{ error() }}</p>
-}
-<form class="ms-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-  <label>
-    Username
-    <input formControlName="username" autocomplete="off" />
-  </label>
-  @if (form.controls.username.touched && form.controls.username.invalid) {
-    <p class="ms-field-error" role="alert">Use 1 to 100 letters, digits, "_", "." or "-".</p>
-  }
-  <label>
-    Password
-    <input type="password" formControlName="password" autocomplete="new-password" />
-  </label>
-  @if (form.controls.password.touched && form.controls.password.invalid) {
-    <p class="ms-field-error" role="alert">Passwords need 16 to 256 characters.</p>
-  }
-  <label>
-    Confirm password
-    <input type="password" formControlName="confirmation" autocomplete="new-password" />
-  </label>
-  <button class="ms-button" type="submit">Create account</button>
-  <a routerLink="/users">Cancel</a>
-</form>
+<h1 class="mb-3">New account</h1>
+<div class="row">
+  <div class="col-12 col-md-10 col-lg-8 col-xl-6">
+    @if (error()) {
+      <p class="alert alert-danger" role="alert">{{ error() }}</p>
+    }
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="new-username">Username</label>
+        <input
+          class="form-control"
+          id="new-username"
+          formControlName="username"
+          autocomplete="off"
+          [class.is-invalid]="form.controls.username.touched && form.controls.username.invalid"
+        />
+        @if (form.controls.username.touched && form.controls.username.invalid) {
+          <div class="invalid-feedback d-block" role="alert">Use 1 to 100 letters, digits, "_", "." or "-".</div>
+        }
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="new-password">Password</label>
+        <input
+          class="form-control"
+          id="new-password"
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+        />
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <div class="invalid-feedback d-block" role="alert">Passwords need 16 to 256 characters.</div>
+        }
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="new-confirmation">Confirm password</label>
+        <input class="form-control" id="new-confirmation" type="password" formControlName="confirmation" autocomplete="new-password" />
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        <button class="btn btn-primary" type="submit">Create account</button>
+        <a routerLink="/users">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

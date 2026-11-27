@@ -1,27 +1,34 @@
-<a class="ms-visually-hidden" href="#main">Skip to content</a>
-<header class="bar">
-  <button
-    class="ms-button menu"
-    type="button"
-    [attr.aria-expanded]="drawerOpen()"
-    aria-controls="nav"
-    (click)="toggleDrawer()"
-  >
-    Menu
-  </button>
-  <span class="brand">ModSync</span>
-  <span class="grow"></span>
-  <span class="user">{{ sessions.session()?.username }}</span>
-  <form method="post" action="/logout">
-    <input type="hidden" name="_csrf" [value]="csrf" />
-    <button class="ms-button secondary" type="submit">Sign out</button>
-  </form>
-</header>
-<nav id="nav" class="nav" [class.open]="drawerOpen()" aria-label="Main">
-  <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeDrawer()">Servers</a>
-  <a routerLink="/users" routerLinkActive="active" (click)="closeDrawer()">Users</a>
-  <a routerLink="/account" routerLinkActive="active" (click)="closeDrawer()">Account</a>
-</nav>
-<main id="main" class="content">
-  <router-outlet />
-</main>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div class="d-flex flex-column min-vh-100">
+  <header class="d-flex flex-wrap align-items-center gap-2 gap-md-3 px-3 py-2 bg-body-tertiary border-bottom">
+    <button
+      class="btn btn-outline-secondary d-lg-none"
+      type="button"
+      [attr.aria-expanded]="drawerOpen()"
+      aria-controls="nav"
+      (click)="toggleDrawer()"
+    >
+      Menu
+    </button>
+    <span class="h5 mb-0 text-secondary">ModSync</span>
+    <span class="ms-auto"></span>
+    <ms-theme-switcher compact />
+    <span class="text-body-secondary text-break">{{ sessions.session()?.username }}</span>
+    <form method="post" action="/logout">
+      <input type="hidden" name="_csrf" [value]="csrf" />
+      <button class="btn btn-outline-secondary" type="submit">Sign out</button>
+    </form>
+  </header>
+  <div class="d-lg-flex flex-grow-1">
+    <nav id="nav" class="collapse d-lg-block ms-sidebar bg-body-tertiary" [class.show]="drawerOpen()" aria-label="Main">
+      <div class="nav nav-pills flex-column p-2">
+        <a class="nav-link" routerLink="/" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: true }" (click)="closeDrawer()">Servers</a>
+        <a class="nav-link" routerLink="/users" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeDrawer()">Users</a>
+        <a class="nav-link" routerLink="/account" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeDrawer()">Account</a>
+      </div>
+    </nav>
+    <main id="main" class="flex-grow-1 min-w-0 p-3 p-md-4">
+      <router-outlet />
+    </main>
+  </div>
+</div>

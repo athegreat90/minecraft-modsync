@@ -1,27 +1,31 @@
-<h1>Servers</h1>
+<h1 class="mb-3">Servers</h1>
 @if (error()) {
-  <p class="ms-alert error" role="alert">{{ error() }}</p>
+  <p class="alert alert-danger" role="alert">{{ error() }}</p>
 } @else if (servers() === null) {
-  <p class="ms-muted" role="status">Loading servers…</p>
+  <p class="text-body-secondary" role="status">Loading servers…</p>
 } @else if (servers()!.length === 0) {
-  <p class="ms-muted">No servers are registered yet. Enroll a scanner agent to see its server here.</p>
+  <p class="text-body-secondary">No servers are registered yet. Enroll a scanner agent to see its server here.</p>
 } @else {
-  <ul class="ms-grid" aria-label="Servers">
+  <ul class="row row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-4 g-3 list-unstyled" aria-label="Servers">
     @for (row of servers(); track row.info.id) {
-      <li class="ms-card">
-        <h2><a [routerLink]="['/servers', row.info.id]">{{ row.info.name }}</a></h2>
-        <p class="ms-muted">{{ row.info.loader }} · Minecraft {{ row.info.minecraftVersion }}</p>
-        <p>
-          <span class="ms-badge">{{ row.policy }}</span>
-          @if (row.info.publishedRevision !== null) {
-            <span class="ms-badge ok">manifest r{{ row.info.publishedRevision }}</span>
-          } @else {
-            <span class="ms-badge warn">unpublished</span>
-          }
-          @if (row.info.inventoryAt !== null && row.info.inventoryStale) {
-            <span class="ms-badge warn">stale inventory</span>
-          }
-        </p>
+      <li class="col">
+        <div class="card h-100">
+          <div class="card-body">
+            <h2 class="h4 text-break"><a [routerLink]="['/servers', row.info.id]">{{ row.info.name }}</a></h2>
+            <p class="text-body-secondary">{{ row.info.loader }} · Minecraft {{ row.info.minecraftVersion }}</p>
+            <p class="mb-0 d-flex flex-wrap gap-2">
+              <span class="badge border text-body">{{ row.policy }}</span>
+              @if (row.info.publishedRevision !== null) {
+                <span class="badge text-bg-success">manifest r{{ row.info.publishedRevision }}</span>
+              } @else {
+                <span class="badge text-bg-warning">unpublished</span>
+              }
+              @if (row.info.inventoryAt !== null && row.info.inventoryStale) {
+                <span class="badge text-bg-warning">stale inventory</span>
+              }
+            </p>
+          </div>
+        </div>
       </li>
     }
   </ul>
