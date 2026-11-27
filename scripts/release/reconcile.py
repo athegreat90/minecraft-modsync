@@ -16,7 +16,7 @@ def version(sha, timestamp):
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("Expected full commit SHA")
     stamp = dt.datetime.fromtimestamp(int(timestamp),dt.timezone.utc).strftime("%Y%m%d%H%M%S")
-    return f"v0.6.5-dev.{stamp}.{sha}"
+    return f"v0.7.0-dev.{stamp}.{sha}"
 
 def tag_version(tag):
     """Application version part of a development tag, for example `0.5.0` for `v0.5.0-dev.<time>.<sha>`."""

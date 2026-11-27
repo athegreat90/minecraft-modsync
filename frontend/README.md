@@ -1,5 +1,7 @@
 # Frontend
 
+Project conventions (Bootstrap 5, the Valhalla Dark and AMOLED Black themes, responsive layout, tests) are in [docs/development/FRONTEND.md](../docs/development/FRONTEND.md). The rest of this file is the stock Angular CLI reference.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.7.
 
 ## Development server

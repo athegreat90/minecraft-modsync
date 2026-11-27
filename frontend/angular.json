@@ -35,6 +35,11 @@
             "styles": [
               "src/styles.scss"
             ],
+            "stylePreprocessorOptions": {
+              "sass": {
+                "silenceDeprecations": ["import", "global-builtin", "color-functions", "if-function"]
+              }
+            },
             "baseHref": "/ui/",
             "outputPath": {
               "base": "dist",

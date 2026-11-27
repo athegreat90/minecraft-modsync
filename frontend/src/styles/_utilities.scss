@@ -1,0 +1,120 @@
+// What Bootstrap cannot express: the Valhalla identity on top of its components, focus, and the stacked table.
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+
+body {
+  min-height: 100vh;
+  background: var(--ms-page);
+}
+
+// Bootstrap removes the outline on its own focused controls (it draws a box-shadow instead, which forced-colours
+// mode drops), so the focus ring is restated for each of them.
+:focus-visible,
+.btn:focus-visible,
+.btn-check:focus-visible + .btn,
+.form-control:focus,
+.form-select:focus {
+  outline: 3px solid var(--ms-focus);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  --bs-btn-border-color: var(--ms-gold);
+  --bs-btn-hover-bg: var(--ms-teal);
+  --bs-btn-hover-border-color: var(--ms-gold);
+  --bs-btn-active-bg: var(--ms-teal);
+  --bs-btn-active-border-color: var(--ms-gold);
+  --bs-btn-disabled-border-color: var(--ms-gold);
+}
+
+.card {
+  --bs-card-bg: var(--ms-surface);
+  --bs-card-border-color: var(--ms-border);
+  border-top: 2px solid var(--ms-gold);
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--ms-border);
+}
+
+// Bootstrap draws check marks, radio dots and the select chevron as `data:` images, which the CSP blocks.
+.form-check-input,
+.form-select {
+  appearance: auto;
+}
+
+.form-check-input {
+  accent-color: var(--ms-emerald);
+}
+
+// Sidebar from lg up; below lg the nav is a collapsible panel under the header.
+.ms-sidebar {
+  border-bottom: 1px solid var(--ms-border);
+
+  @include media-breakpoint-up(lg) {
+    flex: none;
+    width: 14rem;
+    border-right: 1px solid var(--ms-border);
+    border-bottom: 0;
+  }
+}
+
+details > summary h2 {
+  display: inline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .placeholder-glow .placeholder {
+    animation: none;
+  }
+}
+
+// Below md a table becomes stacked cards: each cell prints its data-label. Bootstrap has no equivalent, and this
+// avoids horizontal scrolling and keeps the column names for screen readers.
+.ms-table-stack {
+  @include media-breakpoint-down(md) {
+    thead {
+      @include visually-hidden;
+    }
+
+    &,
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: 100%;
+    }
+
+    tr {
+      margin-bottom: 1rem;
+      border: 1px solid var(--ms-border);
+      border-radius: var(--bs-border-radius);
+      background: var(--ms-surface);
+    }
+
+    td {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    td:last-child {
+      border-bottom: 0;
+    }
+
+    td::before {
+      content: attr(data-label);
+      color: var(--bs-secondary-color);
+      flex: none;
+    }
+  }
+}
+
+// A native select ignores the padding that gives other inputs their 44px touch target.
+.form-select {
+  min-height: 2.75rem;
+}

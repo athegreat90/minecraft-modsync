@@ -1,0 +1,16 @@
+// Valhalla Dark: dark forest surfaces with the page gradient. The default theme.
+@use '../tokens' as t;
+
+$dark: (
+  bg: #0b0f0e,
+  surface: #131a19,
+  surface-raised: #1a2423,
+  border: #2a3836,
+  border-control: #6b7d79,
+  page: radial-gradient(ellipse at top, #12201d 0%, #0b0f0e 55%),
+);
+
+:root,
+[data-theme='dark'] {
+  @include t.emit($dark);
+}

@@ -2,13 +2,13 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { readXsrfToken } from '../../core/auth/csrf';
 import { SessionService } from '../../core/auth/session';
+import { ThemeSwitcher } from '../components/theme-switcher/theme-switcher';
 
-/** Authenticated page frame: top bar, navigation drawer on narrow screens, sidebar on wide ones. */
+/** Authenticated page frame: top bar, navigation drawer below `lg`, sidebar from `lg` up. */
 @Component({
   selector: 'ms-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, ThemeSwitcher],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './shell.scss',
   templateUrl: './shell.html',
 })
 export class Shell {

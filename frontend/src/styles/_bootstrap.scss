@@ -1,0 +1,94 @@
+// Bootstrap 5.3 as CSS only: no Bootstrap JavaScript is shipped, Angular owns all interactive state.
+// Bootstrap still publishes Sass as @import, so the deprecation is silenced in angular.json.
+// Variables are set before the partials; only the partials, colours and utilities the app uses are compiled,
+// because the stylesheet counts toward the initial-bundle budget.
+@use 'tokens' as t;
+
+$enable-shadows: false;
+$enable-gradients: false;
+// The CSP has no img-src, so every `data:` image Bootstrap embeds is blocked. Disable the validation icons, the
+// select chevron, and the check mark / radio dot / switch images; checkboxes and radios fall back to native
+// rendering in _utilities.scss.
+$enable-validation-icons: false;
+$form-select-indicator: none;
+$form-select-indicator-dark: none;
+$form-check-input-checked-bg-image: none;
+$form-check-radio-checked-bg-image: none;
+$form-check-input-indeterminate-bg-image: none;
+$form-switch-bg-image: none;
+$form-switch-checked-bg-image: none;
+$form-switch-focus-bg-image: none;
+$form-switch-bg-image-dark: none;
+// Only the gutters and row-cols the templates use.
+$gutters: (2: 0.5rem, 3: 1rem);
+$grid-row-columns: 4;
+
+$primary: t.$forest;
+$secondary: t.$gold;
+$success: t.$emerald;
+$info: t.$teal;
+$warning: t.$warning;
+$danger: t.$danger;
+
+$headings-font-family: t.$font-display;
+$headings-font-weight: 600;
+// One padding value gives buttons and inputs the 44px touch target (24px line + 2 * 9px + 2px border).
+$input-btn-padding-y: 0.5625rem;
+$nav-link-padding-y: 0.625rem;
+// Focus is drawn by the global :focus-visible outline, not by a box-shadow ring.
+$input-btn-focus-width: 0;
+$input-border-color: var(--ms-border-control);
+$form-check-input-border: var(--bs-border-width) solid var(--ms-border-control);
+
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+
+$theme-colors: map-remove($theme-colors, 'info', 'light', 'dark');
+$table-variants: ();
+
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+
+// Keep only the utilities the templates use; responsive variants only where a breakpoint prefix is used.
+$ms-utilities: (
+  'align-items', 'align-self', 'background-color', 'border', 'border-bottom', 'display', 'flex',
+  'flex-direction', 'flex-grow', 'flex-wrap', 'gap', 'height', 'justify-content', 'margin', 'margin-bottom',
+  'margin-start', 'margin-top', 'margin-x', 'margin-y', 'min-viewport-height', 'padding', 'padding-x', 'padding-y', 'rounded', 'color',
+  'text-align', 'text-color', 'width', 'word-wrap'
+);
+$ms-responsive: ('display', 'gap', 'margin-start', 'padding');
+$kept: ();
+@each $name in $ms-utilities {
+  $definition: map-get($utilities, $name);
+  @if not index($ms-responsive, $name) {
+    $definition: map-merge($definition, (responsive: false));
+  }
+  $kept: map-merge($kept, ($name: $definition));
+}
+$kept: map-merge($kept, ('display': map-merge(map-get($kept, 'display'), (values: none block flex grid))));
+$utilities: map-merge($kept, ('min-width': (property: min-width, class: min-w, values: (0: 0))));
+
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/type';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/grid';
+@import 'bootstrap/scss/tables';
+@import 'bootstrap/scss/forms/labels';
+@import 'bootstrap/scss/forms/form-control';
+@import 'bootstrap/scss/forms/form-select';
+@import 'bootstrap/scss/forms/form-check';
+@import 'bootstrap/scss/forms/validation';
+@import 'bootstrap/scss/buttons';
+@import 'bootstrap/scss/button-group';
+@import 'bootstrap/scss/nav';
+@import 'bootstrap/scss/card';
+@import 'bootstrap/scss/badge';
+@import 'bootstrap/scss/alert';
+@import 'bootstrap/scss/placeholders';
+@import 'bootstrap/scss/transitions';
+@import 'bootstrap/scss/helpers/color-bg';
+@import 'bootstrap/scss/helpers/visually-hidden';
+@import 'bootstrap/scss/utilities/api';

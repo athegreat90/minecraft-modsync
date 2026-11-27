@@ -6,6 +6,33 @@ published automatically from `main` as `v<version>-dev.<UTC timestamp>.<sha>` (s
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-27
+
+### Added
+
+- The administration interface has a theme choice: **Valhalla Dark** (the default, unchanged look) and **AMOLED Black**, which paints the page, navigation and cards pure black with no background gradient or shadows. A selector appears in the header, on the sign-in page and under a new *Appearance* section on the Account page. The choice applies immediately without a reload, survives refreshes, sign-in, sign-out and OAuth redirects, and follows changes made in another browser tab. It is stored only in the browser (`localStorage`, key `modsync.theme`); no server call is made. A small same-origin script (`/ui/theme-init.js`) applies the saved theme before the first paint, so there is no flash of the wrong theme and the Content Security Policy is unchanged.
+- Bootstrap 5.3 is the layout and component foundation of the interface, shipped as CSS only (no Bootstrap JavaScript, no new runtime dependency).
+- Theme, accessibility and responsive tests: unit tests for the theme service, the init script and the selector (117 unit tests, up from 79), axe checks for every page in both themes, and a local real-browser suite (`npm run test:e2e`, Playwright) that checks horizontal overflow, colour contrast, CSP violations, theme persistence and touch targets at viewports from 320 px to 3440 px.
+
+### Changed
+
+- Every page now uses Bootstrap's mobile-first grid with a container strategy per page: data-heavy pages (servers, server details, users) use the full width and a four-column card grid on ultrawide screens; sign-in, account and forms are constrained to comfortable widths. The navigation is a sidebar from 992 px and a collapsible panel below it.
+- The custom `.ms-*` styles were replaced by Bootstrap components and utilities (buttons, cards, grid, badges, alerts, form controls, placeholders, tables); only the stacked mobile table (`.ms-table-stack`) and the sidebar remain custom. The two component stylesheets were removed.
+- Colours and tokens are defined once as a Sass map per theme; one mixin emits both the application tokens and Bootstrap's variables. Input and control outlines use a dedicated token that meets the 3:1 non-text contrast requirement.
+- The production stylesheet grows from 4.4 kB to 77.5 kB (1.3 kB to 11.2 kB transferred) because Bootstrap is real CSS; the initial bundle is 348.7 kB, still below the 350 kB warning budget.
+- Version bumped 0.6.5 -> 0.7.0 (minor: new theme and layout features; wire protocol 1, API contracts and persisted formats are unchanged).
+
+### Fixed
+
+- The interface no longer scrolls horizontally at 320 px wide: the header overflowed by 28 px on every page after sign-in.
+- Link buttons (for example *New account* and the sign-in provider buttons) now honour the 44 px touch target and no longer show a link underline.
+- The provider list on the Account page was an unstyled bullet list; it now matches the rest of the page.
+- The Actions column header of the mods table now has an accessible name instead of an empty header.
+
+### Removed
+
+- The component stylesheets `shell.scss` and `login.scss` and the bespoke `.ms-button`, `.ms-card`, `.ms-grid`, `.ms-muted`, `.ms-badge`, `.ms-alert`, `.ms-form`, `.ms-field-error`, `.ms-toolbar`, `.ms-filter`, `.ms-check`, `.ms-skeleton`, `.ms-table` and `.ms-visually-hidden` rules.
+
 ## [0.6.5] - 2026-11-18
 
 ### Fixed

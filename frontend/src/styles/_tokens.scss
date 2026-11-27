@@ -1,41 +1,71 @@
-// Design tokens: the single source for colour, type, spacing, motion and breakpoints.
+// Design tokens: the single source for colour, type and theme emission.
+// Accents and text are shared by every theme; each theme only supplies surfaces, borders and the page background
+// (see themes/). The `emit` mixin writes both the `--ms-*` tokens and the Bootstrap variables from the same values.
+@use 'sass:color';
+@use 'sass:map';
+
+$forest: #1f4a3a;
+$teal: #1f6f73;
+$emerald: #3fd0a8;
+$gold: #b99a5b;
+$danger: #e0786a;
+$warning: #d9b45a;
+$focus: #7ee7c8;
+$text: #ece6d8;
+$text-muted: #a9b3ae;
+
+$font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+
 :root {
-  --ms-bg: #0b0f0e;
-  --ms-surface: #131a19;
-  --ms-surface-raised: #1a2423;
-  --ms-border: #2a3836;
-  --ms-text: #ece6d8;
-  --ms-text-muted: #a9b3ae;
-  --ms-forest: #1f4a3a;
-  --ms-teal: #1f6f73;
-  --ms-emerald: #3fd0a8;
-  --ms-gold: #b99a5b;
-  --ms-danger: #e0786a;
-  --ms-warning: #d9b45a;
-  --ms-focus: #7ee7c8;
-
-  --ms-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --ms-font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-
-  --ms-space-1: 0.25rem;
-  --ms-space-2: 0.5rem;
-  --ms-space-3: 1rem;
-  --ms-space-4: 1.5rem;
-  --ms-space-5: 2.5rem;
-  --ms-radius: 0.375rem;
-  --ms-touch: 2.75rem;
-
-  --ms-motion-fast: 120ms;
-  --ms-motion-base: 200ms;
+  --ms-forest: #{$forest};
+  --ms-teal: #{$teal};
+  --ms-emerald: #{$emerald};
+  --ms-gold: #{$gold};
+  --ms-danger: #{$danger};
+  --ms-warning: #{$warning};
+  --ms-focus: #{$focus};
+  --ms-text: #{$text};
+  --ms-text-muted: #{$text-muted};
 }
 
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --ms-motion-fast: 0ms;
-    --ms-motion-base: 0ms;
-  }
+// "r, g, b" for Bootstrap's `--bs-*-rgb` companions.
+@function triplet($c) {
+  @return '#{color.channel($c, "red", $space: rgb)}, #{color.channel($c, "green", $space: rgb)}, #{color.channel($c, "blue", $space: rgb)}';
 }
 
-// Breakpoints (min-width): compact < 48rem, regular >= 48rem, wide >= 64rem.
-$ms-bp-regular: 48rem;
-$ms-bp-wide: 64rem;
+// Required keys: bg, surface, surface-raised, border, border-control (>= 3:1 on every surface, for input and
+// control boundaries), page (the body background, a colour or a gradient).
+@mixin emit($theme) {
+  $bg: map.get($theme, bg);
+  $raised: map.get($theme, surface-raised);
+  $surface: map.get($theme, surface);
+
+  --ms-bg: #{$bg};
+  --ms-surface: #{$surface};
+  --ms-surface-raised: #{$raised};
+  --ms-border: #{map.get($theme, border)};
+  --ms-border-control: #{map.get($theme, border-control)};
+  --ms-page: #{map.get($theme, page)};
+
+  --bs-body-bg: #{$bg};
+  --bs-body-bg-rgb: #{triplet($bg)};
+  --bs-body-color: #{$text};
+  --bs-body-color-rgb: #{triplet($text)};
+  --bs-emphasis-color: #{$text};
+  --bs-emphasis-color-rgb: #{triplet($text)};
+  --bs-secondary-color: #{$text-muted};
+  --bs-secondary-color-rgb: #{triplet($text-muted)};
+  --bs-secondary-bg: #{$raised};
+  --bs-secondary-bg-rgb: #{triplet($raised)};
+  --bs-tertiary-color: #{$text-muted};
+  --bs-tertiary-color-rgb: #{triplet($text-muted)};
+  --bs-tertiary-bg: #{$surface};
+  --bs-tertiary-bg-rgb: #{triplet($surface)};
+  --bs-border-color: #{map.get($theme, border)};
+  --bs-border-color-translucent: #{map.get($theme, border)};
+  --bs-link-color: #{$emerald};
+  --bs-link-color-rgb: #{triplet($emerald)};
+  --bs-link-hover-color: #{$focus};
+  --bs-link-hover-color-rgb: #{triplet($focus)};
+  --bs-code-color: #{$gold};
+}

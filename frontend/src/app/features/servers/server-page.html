@@ -1,172 +1,198 @@
 @if (error()) {
-  <p class="ms-alert error" role="alert">{{ error() }}</p>
+  <p class="alert alert-danger" role="alert">{{ error() }}</p>
 }
 @if (notice()) {
-  <p class="ms-alert success" role="status">{{ notice() }}</p>
+  <p class="alert alert-success" role="status">{{ notice() }}</p>
 }
 @if (page(); as p) {
-  <h1>{{ p.info.name }}</h1>
-  <p class="ms-muted">
+  <h1 class="text-break">{{ p.info.name }}</h1>
+  <p class="text-body-secondary">
     Minecraft {{ p.info.minecraftVersion }}, {{ p.info.loader }}
     @if (p.info.loaderVersion) { {{ p.info.loaderVersion }} }
     · manifest {{ p.manifestRevision !== null ? 'r' + p.manifestRevision : 'unpublished' }}
     · inventory {{ p.info.inventoryAt ? (p.info.inventoryAt | msTimestamp) : 'none' }}
-    @if (p.info.inventoryAt && p.info.inventoryStale) { <span class="ms-badge warn">stale</span> }
+    @if (p.info.inventoryAt && p.info.inventoryStale) { <span class="badge text-bg-warning">stale</span> }
   </p>
 
-  <section class="ms-card" aria-labelledby="publication">
-    <h2 id="publication">Automatic publication</h2>
-    <form class="ms-form" [formGroup]="policyForm" (ngSubmit)="savePolicy()">
-      <label>
-        Policy
-        <select formControlName="policy">
-          @for (option of policies; track option) {
-            <option [value]="option">{{ option | msLabel }}</option>
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-xxl-6">
+      <section class="card h-100" aria-labelledby="publication">
+        <div class="card-body">
+          <h2 id="publication" class="h4">Automatic publication</h2>
+          <form class="row g-2 align-items-end mb-3" [formGroup]="policyForm" (ngSubmit)="savePolicy()">
+            <div class="col-12 col-sm-8 col-md-6">
+              <label class="form-label" for="policy">Policy</label>
+              <select class="form-select" id="policy" formControlName="policy">
+                @for (option of policies; track option) {
+                  <option [value]="option">{{ option | msLabel }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-primary" type="submit">Save</button>
+            </div>
+          </form>
+          <p>
+            <button class="btn btn-outline-secondary" type="button" [disabled]="!p.info.inventoryAt" (click)="reevaluate()">
+              Re-evaluate now
+            </button>
+          </p>
+          @if (p.history.length > 0) {
+            <table class="table ms-table-stack align-middle mb-0">
+              <thead><tr><th>When</th><th>Outcome</th><th>Revision</th><th>Detail</th><th>Actor</th></tr></thead>
+              <tbody>
+                @for (h of p.history; track h.id) {
+                  <tr>
+                    <td data-label="When">{{ h.createdAt | msTimestamp }}</td>
+                    <td data-label="Outcome"><span class="badge" [class.text-bg-success]="h.outcome === 'PUBLISHED'" [class.border]="h.outcome !== 'PUBLISHED'" [class.text-body]="h.outcome !== 'PUBLISHED'">{{ h.outcome | msLabel }}</span></td>
+                    <td data-label="Revision">{{ h.revision ?? '—' }}</td>
+                    <td data-label="Detail" class="text-break">{{ h.detail }}</td>
+                    <td data-label="Actor">{{ h.actor }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           }
-        </select>
-      </label>
-      <button class="ms-button" type="submit">Save</button>
-    </form>
-    <p>
-      <button class="ms-button secondary" type="button" [disabled]="!p.info.inventoryAt" (click)="reevaluate()">
-        Re-evaluate now
-      </button>
-    </p>
-    @if (p.history.length > 0) {
-      <table class="ms-table">
-        <thead><tr><th>When</th><th>Outcome</th><th>Revision</th><th>Detail</th><th>Actor</th></tr></thead>
-        <tbody>
-          @for (h of p.history; track h.id) {
-            <tr>
-              <td data-label="When">{{ h.createdAt | msTimestamp }}</td>
-              <td data-label="Outcome"><span class="ms-badge" [class.ok]="h.outcome === 'PUBLISHED'">{{ h.outcome | msLabel }}</span></td>
-              <td data-label="Revision">{{ h.revision ?? '—' }}</td>
-              <td data-label="Detail" class="wrap">{{ h.detail }}</td>
-              <td data-label="Actor" class="wrap">{{ h.actor }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
-  </section>
+        </div>
+      </section>
+    </div>
 
-  <section class="ms-card" aria-labelledby="coverage">
-    <h2 id="coverage">Client coverage</h2>
-    @if (p.coverage === null) {
-      <p class="ms-muted">Publish a manifest to see client coverage.</p>
-    } @else if (p.coverage.rows.length === 0) {
-      <p class="ms-muted">No client instance selected this server yet.</p>
-    } @else {
-      <table class="ms-table">
-        <thead><tr><th>Instance</th><th>Status</th><th>Applied</th><th>Missing</th><th>Verified</th></tr></thead>
-        <tbody>
-          @for (r of p.coverage.rows; track r.instanceId) {
-            <tr>
-              <td data-label="Instance" class="wrap">{{ r.instanceName }}</td>
-              <td data-label="Status"><span class="ms-badge">{{ r.status | msLabel }}</span></td>
-              <td data-label="Applied">{{ r.appliedRevision ?? '—' }}</td>
-              <td data-label="Missing">{{ r.missingCount }}</td>
-              <td data-label="Verified">{{ r.verifiedAt | msTimestamp }}</td>
-            </tr>
+    <div class="col-12 col-xxl-6">
+      <section class="card h-100" aria-labelledby="coverage">
+        <div class="card-body">
+          <h2 id="coverage" class="h4">Client coverage</h2>
+          @if (p.coverage === null) {
+            <p class="text-body-secondary mb-0">Publish a manifest to see client coverage.</p>
+          } @else if (p.coverage.rows.length === 0) {
+            <p class="text-body-secondary mb-0">No client instance selected this server yet.</p>
+          } @else {
+            <table class="table ms-table-stack align-middle mb-0">
+              <thead><tr><th>Instance</th><th>Status</th><th>Applied</th><th>Missing</th><th>Verified</th></tr></thead>
+              <tbody>
+                @for (r of p.coverage.rows; track r.instanceId) {
+                  <tr>
+                    <td data-label="Instance" class="text-break">{{ r.instanceName }}</td>
+                    <td data-label="Status"><span class="badge border text-body">{{ r.status | msLabel }}</span></td>
+                    <td data-label="Applied">{{ r.appliedRevision ?? '—' }}</td>
+                    <td data-label="Missing">{{ r.missingCount }}</td>
+                    <td data-label="Verified">{{ r.verifiedAt | msTimestamp }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           }
-        </tbody>
-      </table>
-    }
-  </section>
+        </div>
+      </section>
+    </div>
+  </div>
 
-  <section class="ms-card" aria-labelledby="mods">
-    <h2 id="mods">Server mods</h2>
-    <p class="ms-muted">{{ p.unreviewed }} of {{ p.entries.length }} still need review.</p>
-    @if (selected(); as entry) {
-      <form id="classify-form" class="ms-form" [formGroup]="classifyForm" (ngSubmit)="saveClassification()">
-        <h3>Classify {{ entry.fileName }}</h3>
-        <label>
-          Classification
-          <select formControlName="classification">
-            @for (option of classifications; track option) {
-              <option [value]="option">{{ option | msLabel }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Reason
-          <input formControlName="reason" maxlength="500" />
-        </label>
-        @if (classifyForm.controls.reason.touched && classifyForm.controls.reason.invalid) {
-          <p class="ms-field-error" role="alert">Give a reason for this approval.</p>
-        }
-        <button class="ms-button" type="submit">Approve</button>
-        <button class="ms-button secondary" type="button" (click)="cancel()">Cancel</button>
-      </form>
-    }
-    @if (p.entries.length > 0) {
-      <div class="ms-toolbar ms-filter" role="search">
-        <label for="mods-filter">
-          Filter mods by file name
-          <input id="mods-filter" name="filter" type="search" [value]="filterText()" (input)="setFilter($event)" />
-        </label>
-        <label class="ms-check" for="mods-needs-review">
-          <input id="mods-needs-review" name="needsReview" type="checkbox" [checked]="needsReview()" (change)="setNeedsReview($event)" />
-          Needs review
-        </label>
-      </div>
-      <p id="mods-count" class="ms-muted" role="status">Showing {{ filtered().length }} of {{ p.entries.length }} mods</p>
-      @if (filtered().length === 0) {
-        <p class="ms-muted">No mods match.</p>
-      } @else {
-        <table id="mods-table" class="ms-table">
-          <thead><tr><th>File</th><th>Hash</th><th>Classification</th><th></th></tr></thead>
-          <tbody>
-            @for (e of visibleMods(); track e.sha512) {
-              <tr>
-                <td data-label="File" class="wrap">{{ e.fileName }}</td>
-                <td data-label="Hash"><code>{{ e.shortHash }}</code></td>
-                <td data-label="Classification">
-                  @if (e.classification) { <span class="ms-badge ok">{{ e.classification | msLabel }}</span> }
-                  @else { <span class="ms-badge warn">Unreviewed</span> }
-                </td>
-                <td data-label="Action">
-                  <button class="ms-button secondary" type="button" [attr.data-sha]="e.sha512" (click)="select(e)">Classify</button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        @if (pageCount() > 1) {
-          <nav class="ms-toolbar" aria-label="Pages">
-            <button class="ms-button secondary" type="button" [disabled]="pageIndex() === 0" (click)="go(pageIndex() - 1)">Previous</button>
-            <span>Page {{ pageIndex() + 1 }} of {{ pageCount() }}</span>
-            <button class="ms-button secondary" type="button" [disabled]="pageIndex() + 1 >= pageCount()" (click)="go(pageIndex() + 1)">Next</button>
-          </nav>
+  <section class="card mb-3" aria-labelledby="mods">
+    <div class="card-body">
+      <h2 id="mods" class="h4">Server mods</h2>
+      <p class="text-body-secondary">{{ p.unreviewed }} of {{ p.entries.length }} still need review.</p>
+      @if (selected(); as entry) {
+        <form id="classify-form" class="mb-4" [formGroup]="classifyForm" (ngSubmit)="saveClassification()">
+          <h3 class="h5 text-break">Classify {{ entry.fileName }}</h3>
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="form-label" for="classification">Classification</label>
+              <select class="form-select" id="classification" formControlName="classification">
+                @for (option of classifications; track option) {
+                  <option [value]="option">{{ option | msLabel }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="form-label" for="reason">Reason</label>
+              <input
+                class="form-control"
+                id="reason"
+                formControlName="reason"
+                maxlength="500"
+                [class.is-invalid]="classifyForm.controls.reason.touched && classifyForm.controls.reason.invalid"
+              />
+              @if (classifyForm.controls.reason.touched && classifyForm.controls.reason.invalid) {
+                <div class="invalid-feedback d-block" role="alert">Give a reason for this approval.</div>
+              }
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="submit">Approve</button>
+            <button class="btn btn-outline-secondary" type="button" (click)="cancel()">Cancel</button>
+          </div>
+        </form>
+      }
+      @if (p.entries.length > 0) {
+        <div class="row g-3 align-items-end mb-3" role="search">
+          <div class="col-12 col-sm-8 col-md-6 col-xl-4">
+            <label class="form-label" for="mods-filter">Filter mods by file name</label>
+            <input class="form-control" id="mods-filter" name="filter" type="search" [value]="filterText()" (input)="setFilter($event)" />
+          </div>
+          <div class="col-auto"><div class="form-check py-2 mb-0">
+            <input class="form-check-input" id="mods-needs-review" name="needsReview" type="checkbox" [checked]="needsReview()" (change)="setNeedsReview($event)" />
+            <label class="form-check-label" for="mods-needs-review">Needs review</label>
+          </div></div>
+        </div>
+        <p id="mods-count" class="text-body-secondary" role="status">Showing {{ filtered().length }} of {{ p.entries.length }} mods</p>
+        @if (filtered().length === 0) {
+          <p class="text-body-secondary">No mods match.</p>
+        } @else {
+          <table id="mods-table" class="table ms-table-stack align-middle">
+            <thead><tr><th>File</th><th>Hash</th><th>Classification</th><th><span class="visually-hidden">Action</span></th></tr></thead>
+            <tbody>
+              @for (e of visibleMods(); track e.sha512) {
+                <tr>
+                  <td data-label="File" class="text-break">{{ e.fileName }}</td>
+                  <td data-label="Hash"><code>{{ e.shortHash }}</code></td>
+                  <td data-label="Classification">
+                    @if (e.classification) { <span class="badge text-bg-success">{{ e.classification | msLabel }}</span> }
+                    @else { <span class="badge text-bg-warning">Unreviewed</span> }
+                  </td>
+                  <td data-label="Action">
+                    <button class="btn btn-outline-secondary" type="button" [attr.data-sha]="e.sha512" (click)="select(e)">Classify</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (pageCount() > 1) {
+            <nav class="d-flex flex-wrap align-items-center gap-2" aria-label="Pages">
+              <button class="btn btn-outline-secondary" type="button" [disabled]="pageIndex() === 0" (click)="go(pageIndex() - 1)">Previous</button>
+              <span>Page {{ pageIndex() + 1 }} of {{ pageCount() }}</span>
+              <button class="btn btn-outline-secondary" type="button" [disabled]="pageIndex() + 1 >= pageCount()" (click)="go(pageIndex() + 1)">Next</button>
+            </nav>
+          }
         }
       }
-    }
+    </div>
   </section>
 
-  <section class="ms-card" aria-labelledby="manifest">
-    @if (p.manifest.length === 0) {
-      <h2 id="manifest">Latest manifest</h2>
-      <p class="ms-muted">Nothing published yet.</p>
-    } @else {
-      <details>
-        <summary><h2 id="manifest">Latest manifest ({{ p.manifest.length }} {{ p.manifest.length === 1 ? 'artifact' : 'artifacts' }})</h2></summary>
-        <table class="ms-table">
-          <thead><tr><th>File</th><th>Project</th><th>Version</th><th>Classification</th></tr></thead>
-          <tbody>
-            @for (m of p.manifest; track m.fileName) {
-              <tr>
-                <td data-label="File" class="wrap">{{ m.fileName }}</td>
-                <td data-label="Project" class="wrap">{{ m.projectId }}</td>
-                <td data-label="Version" class="wrap">{{ m.versionId }}</td>
-                <td data-label="Classification"><span class="ms-badge">{{ m.classification | msLabel }}</span></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </details>
-    }
+  <section class="card" aria-labelledby="manifest">
+    <div class="card-body">
+      @if (p.manifest.length === 0) {
+        <h2 id="manifest" class="h4">Latest manifest</h2>
+        <p class="text-body-secondary mb-0">Nothing published yet.</p>
+      } @else {
+        <details>
+          <summary><h2 id="manifest" class="h4">Latest manifest ({{ p.manifest.length }} {{ p.manifest.length === 1 ? 'artifact' : 'artifacts' }})</h2></summary>
+          <table class="table ms-table-stack align-middle mt-3 mb-0">
+            <thead><tr><th>File</th><th>Project</th><th>Version</th><th>Classification</th></tr></thead>
+            <tbody>
+              @for (m of p.manifest; track m.fileName) {
+                <tr>
+                  <td data-label="File" class="text-break">{{ m.fileName }}</td>
+                  <td data-label="Project" class="text-break">{{ m.projectId }}</td>
+                  <td data-label="Version" class="text-break">{{ m.versionId }}</td>
+                  <td data-label="Classification"><span class="badge border text-body">{{ m.classification | msLabel }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </details>
+      }
+    </div>
   </section>
 } @else if (!error()) {
-  <p class="ms-muted" role="status">Loading server…</p>
-  <div class="ms-skeleton" aria-hidden="true"></div>
+  <p class="text-body-secondary" role="status">Loading server…</p>
+  <div class="placeholder-glow" aria-hidden="true"><div class="placeholder col-12 py-5 rounded"></div></div>
 }

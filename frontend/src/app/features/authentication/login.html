@@ -1,23 +1,40 @@
-<main class="login">
-  <h1>ModSync</h1>
-  <p class="tagline">Administration</p>
-  @if (notice(); as n) {
-    <p class="notice" [attr.role]="n.role">{{ n.text }}</p>
-  }
-  <form method="post" action="/login">
-    <input type="hidden" name="_csrf" [value]="csrf()" />
-    <label for="username">Username</label>
-    <input id="username" name="username" autocomplete="username" required />
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required />
-    <button class="ms-button" type="submit">Sign in</button>
-  </form>
-  @if (providers().length > 0) {
-    <p class="ms-muted divider">or</p>
-    <div class="providers">
-      @for (provider of providers(); track provider.id) {
-        <a class="ms-button secondary" [href]="'/oauth2/authorization/' + provider.id">Continue with {{ provider.name }}</a>
-      }
+<!-- The card sits a fixed distance from the top. Centring would move it up when the provider buttons arrive after the
+     form, which is a layout shift. -->
+<main class="container-fluid min-vh-100">
+  <div class="row justify-content-center">
+    <div class="col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4 col-xxl-3 mt-5">
+      <div class="d-flex justify-content-end mb-3">
+        <ms-theme-switcher compact />
+      </div>
+      <div class="card">
+        <div class="card-body p-4">
+          <h1 class="h2">ModSync</h1>
+          <p class="text-body-secondary">Administration</p>
+          @if (notice(); as n) {
+            <p class="alert alert-warning" [attr.role]="n.role">{{ n.text }}</p>
+          }
+          <form method="post" action="/login">
+            <input type="hidden" name="_csrf" [value]="csrf()" />
+            <div class="mb-3">
+              <label class="form-label" for="username">Username</label>
+              <input class="form-control" id="username" name="username" autocomplete="username" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="password">Password</label>
+              <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required />
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Sign in</button>
+          </form>
+          @if (providers().length > 0) {
+            <p class="text-body-secondary text-center my-3">or</p>
+            <div class="d-grid gap-2">
+              @for (provider of providers(); track provider.id) {
+                <a class="btn btn-outline-secondary" [href]="'/oauth2/authorization/' + provider.id">Continue with {{ provider.name }}</a>
+              }
+            </div>
+          }
+        </div>
+      </div>
     </div>
-  }
+  </div>
 </main>

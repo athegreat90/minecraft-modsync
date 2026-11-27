@@ -1,0 +1,17 @@
+<fieldset>
+  <legend [class]="compact() ? 'visually-hidden' : 'h6'">Theme</legend>
+  <div class="btn-group">
+    @for (theme of themes; track theme.id) {
+      <input
+        type="radio"
+        class="btn-check"
+        [name]="group"
+        [id]="group + '-' + theme.id"
+        [value]="theme.id"
+        [checked]="themeService.theme() === theme.id"
+        (change)="themeService.select(theme.id)"
+      />
+      <label class="btn btn-outline-secondary" [for]="group + '-' + theme.id">{{ compact() ? theme.short : theme.label }}</label>
+    }
+  </div>
+</fieldset>

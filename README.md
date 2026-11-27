@@ -35,6 +35,7 @@ Install JDK 25, Python 3, network access to Gradle/Maven repositories, and Docke
 python3 scripts/check-architecture.py
 python3 scripts/openapi.py --check
 (cd frontend && npm ci && npm run lint && npm test)   # Angular administration UI (Node 24)
+(cd frontend && npm run build && npm run test:e2e)       # optional real-browser checks (Chromium); see docs/development/FRONTEND.md
 python3 -m unittest discover -s scripts/release -p 'test_*.py'
 python3 scripts/integration/distributed.py
 ```
